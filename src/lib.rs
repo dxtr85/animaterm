@@ -2,31 +2,147 @@ use std::collections::HashMap;
 use std::default::Default;
 use std::env;
 use std::io;
+use std::io::Read;
 use std::io::Write;
 use std::mem::replace;
 use std::ops::{Add, AddAssign, Sub};
 use std::process::Command;
-use std::time::Instant;
+use std::sync::mpsc;
+use std::thread;
+//use std::thread::sleep;
+use std::time::{Duration, Instant};
 use termios::{tcsetattr, Termios, ECHO, ICANON, TCSANOW};
 
 pub struct Manager {
-    screen: Screen,
+    scrn_size: (usize, usize),
+    join_handle: thread::JoinHandle<()>,
+    next_id: usize,
+    //kb_join_handle: thread::JoinHandle<()>,
+    sender: mpsc::Sender<Message>,
+}
+
+enum Message {
+    Finish,
+    AddAnimation(usize, Animation, usize, (usize, usize)),
+    StartAnimation(usize),
+    PauseAnimation(usize),
+    StopAnimation(usize),
+    RestartAnimation(usize),
+    AddGraphic(usize, Graphic, usize, (usize, usize)),
+    SetGraphic(usize, usize),
+    DeleteGraphic(usize),
 }
 
 impl Manager {
-    pub fn new(cols: Option<usize>, rows: Option<usize>, glyph: Option<Glyph>) -> Self {
+    pub fn new(
+        cols: Option<usize>,
+        rows: Option<usize>,
+        glyph: Option<Glyph>,
+    ) -> (Self, mpsc::Receiver<u8>) {
         let mut screen = Screen::new(cols, rows, glyph);
+        let cols = screen.cols;
+        let rows = screen.rows;
         screen.initialize();
         screen.cls();
+        let (sender, receiver) = mpsc::channel();
+        // current granularity of Timestamp structure is 1ms
+        let timeout = Duration::from_millis(1);
+        let join_handle = thread::spawn(move || {
+            let mut finish = false;
+            while !finish {
+                if let Ok(value) = receiver.recv_timeout(timeout) {
+                    match value {
+                        Message::Finish => {
+                            finish = true;
+                        }
+                        Message::AddAnimation(aid, anim, layer, offset) => {
+                            screen.add_animation(anim, layer, offset);
+                        }
+                        Message::StartAnimation(aid) => {
+                            screen.start_animation(&aid);
+                        }
+                        Message::PauseAnimation(aid) => {
+                            screen.pause_animation(&aid);
+                        }
+                        Message::StopAnimation(aid) => {
+                            screen.stop_animation(&aid);
+                        }
+                        Message::RestartAnimation(aid) => {
+                            screen.restart_animation(&aid);
+                        }
+                        Message::AddGraphic(gid, gr, layer, offset) => {
+                            screen.add_graphic(gr, layer, offset);
+                        }
+                        Message::SetGraphic(gid, fid) => {
+                            screen.set_graphic((&gid, &fid));
+                        }
+                        Message::DeleteGraphic(gid) => {
+                            screen.delete_graphic(&gid);
+                        }
+                    }
+                }
+                screen.update_animations();
+            }
+            screen.cleanup();
+        });
 
-        Manager { screen }
+        let (key_sender, key_receiver) = mpsc::channel();
+        let mut reader = io::stdin();
+
+        let mut buffer = [0; 1]; // read exactly one byte
+                                 // print!("Hit a key! ");
+                                 //let mut keys_read = HashSet::with_capacity(32);
+                                 //let mut i = 0;
+        let kb_join_handle = thread::spawn(move || {
+            let mut finish = false;
+            while !finish {
+                reader.read_exact(&mut buffer);
+                if key_sender.send(buffer[0]).is_err() {
+                    finish = true;
+                }
+            }
+        });
+
+        (
+            Manager {
+                scrn_size: (cols, rows),
+                join_handle,
+                next_id: 0,
+                // kb_join_handle,
+                sender,
+            },
+            key_receiver,
+        )
     }
 
-    pub fn add_animation() {}
-    pub fn start_animation(anim_id: usize) {}
-    pub fn pause_animation(anim_id: usize) {}
-    pub fn stop_animation(anim_id: usize) {}
-    pub fn restart_animation(anim_id: usize) {}
+    pub fn screen_size(&self) -> (usize, usize) {
+        self.scrn_size
+    }
+
+    pub fn add_animation(
+        &mut self,
+        anim: Animation,
+        layer: usize,
+        offset: (usize, usize),
+    ) -> usize {
+        let anim_id = self.next_id;
+        self.next_id += 1;
+        self.sender
+            .send(Message::AddAnimation(anim_id, anim, layer, offset));
+        anim_id
+    }
+    pub fn start_animation(&self, anim_id: usize) {
+        self.sender.send(Message::StartAnimation(anim_id));
+    }
+    pub fn pause_animation(&self, anim_id: usize) {
+        self.sender.send(Message::PauseAnimation(anim_id));
+    }
+    pub fn stop_animation(&self, anim_id: usize) {
+        self.sender.send(Message::StopAnimation(anim_id));
+    }
+    pub fn restart_animation(&self, anim_id: usize) {
+        self.sender.send(Message::RestartAnimation(anim_id));
+    }
     fn update_animations() {}
 
     pub fn cls() {}
@@ -34,12 +150,23 @@ impl Manager {
     pub fn new_display(keep_existing: bool) {}
     pub fn restore_display(display_id: usize, keep_existing: bool) {}
 
-    pub fn add_graphic(gr: usize, layer: usize, offset: (usize, usize)) {}
-    pub fn set_graphic(ids: (usize, usize)) {}
-    pub fn delete_graphic(gid: usize) {}
+    pub fn add_graphic(&mut self, gr: Graphic, layer: usize, offset: (usize, usize)) -> usize {
+        let gid = self.next_id;
+        self.next_id += 1;
+        self.sender
+            .send(Message::AddGraphic(gid, gr, layer, offset));
+        gid
+    }
+    pub fn set_graphic(&self, gid: usize, fid: usize) {
+        self.sender.send(Message::SetGraphic(gid, fid));
+    }
+    pub fn delete_graphic(&self, gid: usize) {
+        self.sender.send(Message::DeleteGraphic(gid));
+    }
 
     pub fn terminate(self) {
-        self.screen.cleanup();
+        self.sender.send(Message::Finish);
+        self.join_handle.join();
     }
 }
 
@@ -77,7 +204,7 @@ pub struct Screen {
     c_y: usize,
     c_plain: bool,
     c_bright: bool,
-    c_dim: bool,
+    // c_dim: bool,
     c_italic: bool,
     c_underline: bool,
     c_blink: bool,
@@ -136,7 +263,7 @@ impl Screen {
             c_y,
             c_plain: dglyph.plain,
             c_bright: dglyph.bright,
-            c_dim: dglyph.dim,
+            // c_dim: dglyph.dim,
             c_italic: dglyph.italic,
             c_blink: dglyph.blink,
             c_blink_fast: dglyph.blink_fast,
@@ -411,18 +538,19 @@ impl Screen {
         }
         if self.c_bright && !glyph.bright {
             self.c_bright = false;
-            modifier.push_str("01;");
+            modifier.push_str("2;");
+            // modifier.push_str("01;");
         } else if !self.c_bright && glyph.bright {
             self.c_bright = true;
             modifier.push_str("1;");
         }
-        if self.c_dim && !glyph.dim {
-            self.c_dim = false;
-            modifier.push_str("22;");
-        } else if !self.c_dim && glyph.dim {
-            self.c_dim = true;
-            modifier.push_str("2;");
-        }
+        // if self.c_dim && !glyph.dim {
+        //     self.c_dim = false;
+        //     modifier.push_str("22;");
+        // } else if !self.c_dim && glyph.dim {
+        //     self.c_dim = true;
+        //     modifier.push_str("2;");
+        // }
         if self.c_italic && !glyph.italic {
             self.c_italic = false;
             modifier.push_str("23;");
@@ -672,14 +800,18 @@ impl Animation {
     }
 
     pub fn start(&mut self, t: Timestamp) {
+        if self.running {
+            return;
+        }
         self.trigger_time = t + self.trigger_time;
         self.running = true;
     }
 
     pub fn restart(&mut self, t: Timestamp) {
-        self.trigger_time = t + self.trigger_time;
-        // self.current_frame = 0;
+        self.trigger_time = t; // + self.trigger_time;
+                               // self.current_frame = 0;
         self.next_frame = self.ordering[0].0;
+        self.current_frame = 0;
         self.running = true;
     }
 
@@ -823,7 +955,7 @@ pub struct Glyph {
     pub background: Color,
     pub plain: bool,
     pub bright: bool,
-    pub dim: bool,
+    // pub dim: bool,
     pub italic: bool,
     pub underline: bool,
     pub blink: bool,
@@ -839,7 +971,7 @@ impl Glyph {
         background: Color,
         plain: bool,
         bright: bool,
-        dim: bool,
+        // dim: bool,
         italic: bool,
         underline: bool,
         blink: bool,
@@ -853,7 +985,7 @@ impl Glyph {
             background,
             plain,
             bright,
-            dim,
+            // dim,
             italic,
             underline,
             blink,
@@ -869,7 +1001,7 @@ impl Glyph {
             background: Color::Black,
             plain: true,
             bright: false,
-            dim: false,
+            // dim: false,
             italic: false,
             underline: false,
             blink: false,
@@ -899,7 +1031,7 @@ impl Default for Glyph {
             background: Color::Black,
             plain: false,
             bright: false,
-            dim: false,
+            // dim: false,
             italic: false,
             underline: false,
             blink: false,

@@ -1,156 +1,64 @@
-use animaterm::{message_box, Animation, Color, Glyph, Graphic, Screen, Timestamp};
-use std::collections::HashMap;
+use animaterm::{message_box, Animation, Color, Glyph, Graphic, Manager, Timestamp};
+use std::collections::{HashMap, HashSet};
 use std::default::Default;
 use std::env;
-// use std::io;
-// use std::io::Read;
+use std::io;
+use std::io::Read;
 // use std::io::Write;
 // use std::ops::{Shl, Shr};
 use std::process::exit;
 use std::thread::sleep;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 static ROWS_MIN: usize = 4;
 static COLS_MIN: usize = 5;
 
 fn main() {
-    let start = Instant::now();
-    let mut now = Timestamp::now();
     let args = parse_arguments();
-    let rows = args.rows;
-    if let Some(a_rows) = rows {
-        if a_rows < ROWS_MIN {
-            eprintln!(
-                "\x1b[97;41;5mERR\x1b[m Min rows: {}, you provided: {}",
-                ROWS_MIN, a_rows
-            );
-            exit(1)
-        }
-    }
     let cols = args.cols;
-    if let Some(a_cols) = cols {
-        if a_cols < COLS_MIN {
-            eprintln!(
-                "\x1b[97;41;5mERR\x1b[m Min cols: {}, you provided: {}",
-                COLS_MIN, a_cols
-            );
-            exit(1)
-        }
-    }
+    let rows = args.rows;
+    verify_cols_and_rows(cols, rows);
     let gl = Glyph::default();
-    let mut screen = Screen::new(cols, rows, Some(gl.clone()));
-    println!(
-        "Created screen with dimentions: {}x{}",
-        &screen.cols, &screen.rows
-    );
-    //let ps = gr.set_graphic(&id.unwrap());
-    // println!("Received to print: {:?}", ps);
-    screen.initialize();
-    screen.cls();
-    // let mut reader = io::stdin();
-    // let mut buffer = [0; 1]; // read exactly one byte
-    //                          // print!("Hit a key! ");
-    let rows = screen.rows;
-    let cols = screen.cols;
-    // let stdout = io::stdout();
 
-    let anim = build_animation_one(gl.clone(), cols, rows);
-    let anim_id = screen.add_animation(anim, 0, (0, 0));
-    let anim2 = build_animation_two(gl.clone(), cols, rows);
-    let _anim_id2 = screen.add_animation(anim2, 0, (0, 0));
-    let anim3 = build_animation_three(gl.clone(), cols, rows);
-    let _anim_id3 = screen.add_animation(anim3, 0, (0, 0));
+    let (mut mgr, keys) = Manager::new(cols, rows, None);
+    let (cols, rows) = mgr.screen_size();
+    let anim_id = mgr.add_animation(build_animation_one(gl, cols, rows), 0, (0, 0));
+    let anim2_id = mgr.add_animation(build_animation_two(gl, cols, rows), 0, (0, 0));
+    let anim3_id = mgr.add_animation(build_animation_three(gl, cols, rows), 0, (0, 0));
 
-    let pause = Timestamp::new(3, 100);
-    let strt = Timestamp::new(4, 100);
-    let reset = Timestamp::new(6, 900);
-    let stp = Timestamp::new(30, 600);
-    let end = Timestamp::new(5, 0);
-    let display_id: Option<usize> = None;
-    let mut gid = 100;
-    while now.tick() < end {
-        screen.update_animations();
-        sleep(Duration::from_millis(1));
-        if now == reset {
-            screen.restart_animation(&anim_id);
-        }
-        if now == strt {
-            //screen.start_animation(&anim_id);
-            if let Some(_did) = display_id {
-                //(screen, display_id) = screen.restore_display(did, false);
+    let (gr, pid) = build_graphic(130, 10, None, None);
+    sleep(Duration::from_secs(1));
+    let gid = mgr.add_graphic(gr, 2, (3, 15));
+
+    let mut keep_running = true;
+    let mut key_iter = keys.into_iter();
+    while keep_running {
+        while let Some(key) = key_iter.next() {
+            match key {
+                27 => {
+                    keep_running = false;
+                    break;
+                }
+                97 => mgr.set_graphic(gid, pid),
+                98 => mgr.set_graphic(gid, pid + 1),
+                99 => mgr.delete_graphic(3),
+                100 => mgr.start_animation(anim_id),
+                101 => mgr.pause_animation(anim_id),
+                102 => mgr.stop_animation(anim_id),
+                103 => mgr.restart_animation(anim_id),
+                104 => mgr.start_animation(anim2_id),
+                105 => mgr.pause_animation(anim2_id),
+                106 => mgr.stop_animation(anim2_id),
+                107 => mgr.restart_animation(anim2_id),
+                108 => mgr.start_animation(anim3_id),
+                109 => mgr.pause_animation(anim3_id),
+                110 => mgr.stop_animation(anim3_id),
+                111 => mgr.restart_animation(anim3_id),
+                _ => continue,
             }
-            screen.set_graphic((&3, &1));
-        }
-        if now == pause {
-            //screen.pause_animation(&anim_id);
-            //(screen, display_id) = screen.new_display(true);
-            //println!("Created new display with id: {:?}", display_id);
-            if display_id.is_some() {}
-            let mut gr = Graphic::new(130, 10, None, None);
-            let pid = gr
-                .add_to_library(vec![
-                    Glyph::new(
-                        '\u{2580}',
-                        Color::White,
-                        Color::Red,
-                        false,
-                        true,
-                        false,
-                        false,
-                        false,
-                        false,
-                        false,
-                        false,
-                        false,
-                    );
-                    1300
-                ])
-                .unwrap();
-            let _pid2 = gr
-                .add_to_library(vec![
-                    Glyph::new(
-                        '\u{2580}',
-                        Color::Yellow,
-                        Color::Blue,
-                        false,
-                        true,
-                        false,
-                        false,
-                        false,
-                        false,
-                        false,
-                        false,
-                        false,
-                    );
-                    1300
-                ])
-                .unwrap();
-            gid = screen.add_graphic(gr, 2, (3, 15));
-            screen.set_graphic((&gid, &pid));
-        }
-        if now == stp {
-            screen.stop_animation(&anim_id);
         }
     }
-    screen.delete_graphic(&gid);
-    sleep(Duration::from_millis(600));
-    screen.cla(0, 7, 1, screen.cols - 13, screen.rows - 6);
-    sleep(Duration::from_millis(400));
-    screen.cla(0, 1, screen.rows - 5, screen.cols, 5);
-    sleep(Duration::from_millis(400));
-    //    screen.cla(1, 1, 1, 5, screen.rows - 5);
-    screen.cla(0, 1, 1, 5, screen.rows - 6);
-    sleep(Duration::from_millis(400));
-    screen.cla(0, screen.cols - 5, 1, 5, screen.rows - 6);
-    sleep(Duration::from_secs(1));
-    screen.cleanup();
-    let dif = Instant::now() - start;
-    println!(
-        "Took: {:?}s + {:?}ms = {:?}ms",
-        dif.as_secs(),
-        dif.subsec_millis(),
-        dif.as_millis()
-    );
+    mgr.terminate();
 }
 
 struct Arguments {
@@ -270,7 +178,7 @@ fn build_animation_one(mut gl: Glyph, cols: usize, rows: usize) -> Animation {
     for c in colors {
         gl.set_background(c);
         gl.set_color(colors[(i + 1) % 7]);
-        ordering.push(((i + 1) % 7, Timestamp::new(0, 250)));
+        ordering.push(((i + 1) % 7, Timestamp::new(0, 200)));
         frames.insert(
             i,
             message_box(
@@ -330,7 +238,7 @@ Giovinazziego jeżeli chce jeszcze pojechać w F1."
         );
         i += 1;
     }
-    Animation::new(frames, true, true, ordering, Timestamp::new(0, 0))
+    Animation::new(frames, true, true, ordering, Timestamp::new(0, 100))
 }
 
 fn build_animation_two(mut gl: Glyph, cols: usize, rows: usize) -> Animation {
@@ -429,5 +337,72 @@ fn build_animation_three(mut gl: Glyph, cols: usize, rows: usize) -> Animation {
             rows.saturating_sub(5),
         ),
     );
-    Animation::new(frames, true, true, ordering, Timestamp::new(1, 0))
+    Animation::new(frames, true, true, ordering, Timestamp::new(0, 500))
+}
+
+fn build_graphic(
+    cols: usize,
+    rows: usize,
+    glyphs: Option<Vec<Glyph>>,
+    library: Option<HashMap<usize, Vec<Glyph>>>,
+) -> (Graphic, usize) {
+    let mut gr = Graphic::new(cols, rows, glyphs, library);
+    let pid = gr
+        .add_to_library(vec![
+            Glyph::new(
+                '\u{2580}',
+                Color::White,
+                Color::Red,
+                false,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+            );
+            1300
+        ])
+        .unwrap();
+    let _pid2 = gr
+        .add_to_library(vec![
+            Glyph::new(
+                '\u{2580}',
+                Color::Yellow,
+                Color::Blue,
+                false,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+            );
+            1300
+        ])
+        .unwrap();
+    (gr, pid)
+}
+
+fn verify_cols_and_rows(cols: Option<usize>, rows: Option<usize>) {
+    if let Some(a_rows) = rows {
+        if a_rows < ROWS_MIN {
+            eprintln!(
+                "\x1b[97;41;5mERR\x1b[m Min rows: {}, you provided: {}",
+                ROWS_MIN, a_rows
+            );
+            exit(1)
+        }
+    }
+    if let Some(a_cols) = cols {
+        if a_cols < COLS_MIN {
+            eprintln!(
+                "\x1b[97;41;5mERR\x1b[m Min cols: {}, you provided: {}",
+                COLS_MIN, a_cols
+            );
+            exit(1)
+        }
+    }
 }
