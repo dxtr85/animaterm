@@ -1,4 +1,4 @@
-use animaterm::{message_box, Animation, Color, Glyph, Graphic, Manager, Timestamp};
+use animaterm::{message_box, progress_bar, Animation, Color, Glyph, Graphic, Manager, Timestamp};
 use std::collections::{HashMap, HashSet};
 use std::default::Default;
 use std::env;
@@ -41,7 +41,31 @@ fn main() {
                 }
                 97 => mgr.set_graphic(gid, pid),
                 98 => mgr.set_graphic(gid, pid + 1),
-                99 => mgr.delete_graphic(3),
+                99 => {
+                    mgr.delete_graphic(3);
+                    //     mgr.add_graphic(
+                    //         progress_bar(
+                    //             20,
+                    //             Glyph::default(),
+                    //             Glyph::new(
+                    //                 '\u{2580}',
+                    //                 Color::White,
+                    //                 Color::Red,
+                    //                 false,
+                    //                 true,
+                    //                 false,
+                    //                 false,
+                    //                 false,
+                    //                 false,
+                    //                 false,
+                    //                 false,
+                    //             ),
+                    //             None,
+                    //         ),
+                    //         2,
+                    //         (0, 0),
+                    //     )
+                }
                 100 => mgr.start_animation(anim_id),
                 101 => mgr.pause_animation(anim_id),
                 102 => mgr.stop_animation(anim_id),
@@ -238,7 +262,7 @@ Giovinazziego jeżeli chce jeszcze pojechać w F1."
         );
         i += 1;
     }
-    Animation::new(frames, true, true, ordering, Timestamp::new(0, 100))
+    Animation::new(frames, false, false, ordering, Timestamp::new(0, 100))
 }
 
 fn build_animation_two(mut gl: Glyph, cols: usize, rows: usize) -> Animation {
@@ -346,7 +370,7 @@ fn build_graphic(
     glyphs: Option<Vec<Glyph>>,
     library: Option<HashMap<usize, Vec<Glyph>>>,
 ) -> (Graphic, usize) {
-    let mut gr = Graphic::new(cols, rows, glyphs, library);
+    let mut gr = Graphic::new(cols, rows, glyphs, library, None);
     let pid = gr
         .add_to_library(vec![
             Glyph::new(

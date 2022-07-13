@@ -337,6 +337,7 @@ impl Screen {
         let mut clear_info = None;
         if let Some((graphic, layer, offset)) = self.graphics.get_mut(id) {
             clear_info = Some((*layer, offset.0, offset.1, graphic.cols, graphic.rows));
+            graphic.set_graphic(&0, *offset, true);
             //            results.push((graphic.set_graphic(&0, *offset, true), *layer));
         }
         if let Some(c) = clear_info {
@@ -542,7 +543,7 @@ impl Screen {
             // modifier.push_str("01;");
         } else if !self.c_bright && glyph.bright {
             self.c_bright = true;
-            modifier.push_str("1;");
+            modifier.push_str("0;1;");
         }
         // if self.c_dim && !glyph.dim {
         //     self.c_dim = false;
@@ -679,8 +680,10 @@ pub struct Graphic {
     rows: usize,
     cols: usize,
     next_lib_id: usize,
+    next_anim_id: usize,
     glyphs: Vec<Glyph>,
     library: HashMap<usize, Vec<Glyph>>,
+    animations: HashMap<usize, Animation>,
 }
 
 impl Graphic {
@@ -689,6 +692,7 @@ impl Graphic {
         rows: usize,
         glyphs: Option<Vec<Glyph>>,
         library: Option<HashMap<usize, Vec<Glyph>>>,
+        animations: Option<HashMap<usize, Animation>>,
     ) -> Self {
         let g = if glyphs.is_some() {
             glyphs.unwrap()
@@ -703,12 +707,23 @@ impl Graphic {
         } else {
             HashMap::new()
         };
+        let mut next_anim_id = 0;
+        let a = if animations.is_some() {
+            let anim = animations.unwrap();
+            next_anim_id = anim.keys().max().unwrap() + 1;
+            anim
+        } else {
+            HashMap::new()
+        };
+
         Graphic {
             rows,
             cols,
             next_lib_id,
+            next_anim_id,
             glyphs: g,
             library: l,
+            animations: a,
         }
     }
     pub fn add_to_library(&mut self, item: Vec<Glyph>) -> Option<usize> {
@@ -718,6 +733,14 @@ impl Graphic {
             result = Some(self.next_lib_id);
             self.next_lib_id += 1;
         }
+        result
+    }
+
+    pub fn add_animation(&mut self, anim: Animation) -> Option<usize> {
+        let mut result = None;
+        self.animations.insert(self.next_anim_id, anim);
+        result = Some(self.next_anim_id);
+        self.next_anim_id += 1;
         result
     }
 
@@ -740,6 +763,7 @@ impl Graphic {
             let gplain = Glyph::plain();
             let mut result = Vec::with_capacity(size);
             for i in 0..size {
+                self.glyphs.insert(i, gplain.clone());
                 result.push(Pixel::new(
                     1 + offset.0 + (i % self.cols),
                     1 + offset.1 + (i / self.cols),
@@ -800,18 +824,16 @@ impl Animation {
     }
 
     pub fn start(&mut self, t: Timestamp) {
-        if self.running {
-            return;
+        if !self.running {
+            self.trigger_time = t + self.trigger_time;
+            self.running = true;
         }
-        self.trigger_time = t + self.trigger_time;
-        self.running = true;
     }
 
     pub fn restart(&mut self, t: Timestamp) {
         self.trigger_time = t; // + self.trigger_time;
-                               // self.current_frame = 0;
-        self.next_frame = self.ordering[0].0;
         self.current_frame = 0;
+        self.next_frame = 0;
         self.running = true;
     }
 
@@ -828,21 +850,22 @@ impl Animation {
     }
 
     pub fn update(&mut self, dtime: Timestamp) -> Option<Vec<Pixel>> {
-        if dtime >= self.trigger_time && self.running {
+        if !self.running || dtime < self.trigger_time {
+            return None;
+        } else {
             let frame = self.frames.get(&self.current_frame).unwrap();
             let (current_frame, delta_time) = self.ordering[self.next_frame];
             self.current_frame = current_frame;
             self.trigger_time += delta_time;
-            if self.next_frame == self.ord_max {
-                if self.looping {
-                    self.next_frame = 0;
+            self.next_frame += 1;
+            if self.next_frame > self.ord_max {
+                self.next_frame = 0;
+                if !self.looping {
+                    self.running = false;
+                    self.trigger_time = Timestamp::now();
                 }
-            } else {
-                self.next_frame += 1;
             }
             Some(frame.to_vec().clone())
-        } else {
-            None
         }
     }
 }
@@ -1169,6 +1192,18 @@ mod tests {
         assert_eq!(gc.glyphs.len(), 3);
         assert_eq!(gc.get_glyph().character, '1');
     }
+}
+pub fn progress_bar(
+    width: usize,
+    empty: Glyph,
+    full: Glyph,
+    stages: Option<Vec<Glyph>>,
+) -> Vec<Pixel> {
+    let mut pb = Vec::with_capacity(width);
+    for i in 1..width + 1 {
+        pb.push(Pixel::new(i, 1, true, empty.clone()))
+    }
+    pb
 }
 
 pub fn message_box(
