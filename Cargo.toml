@@ -2,6 +2,10 @@
 name = "animaterm"
 version = "0.1.0"
 edition = "2021"
+authors = ["Jakub Mitoraj <dxtr85@gmail.com>"]
+description = "An easy to use terminal user interface library."
+license = "MIT"
+repository = "https://github.com/dxtr85/animaterm"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
