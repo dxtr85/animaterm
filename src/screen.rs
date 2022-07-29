@@ -522,7 +522,7 @@ impl Screen {
         print!("{}{}", formated, glyph.character);
     }
 
-    fn gformat(&mut self, glyph: Glyph) -> String {
+    fn gformat_old(&mut self, glyph: Glyph) -> String {
         let mut modifier = String::new(); //"\x1b[".to_string();
                                           // let mut add_modifier = false;
                                           // Plain = 0,
@@ -614,6 +614,91 @@ impl Screen {
         }
 
         self.c_background = glyph.background;
+        //};
+        modifier
+    }
+
+    fn gformat(&mut self, glyph: Glyph) -> String {
+        let mut modifier = String::new(); //"\x1b[".to_string();
+                                          // let mut add_modifier = false;
+                                          // Plain = 0,
+                                          // if self.c_plain && !glyph.plain {
+                                          //     self.c_plain = false;
+                                          // } else if !self.c_plain && glyph.plain {
+                                          //     self.c_plain = true;
+                                          //     modifier.push_str("0;");
+                                          // }
+        if !glyph.bright {
+            //  self.c_bright = false;
+            modifier.push_str("2;");
+            // modifier.push_str("01;");
+        } else {
+            //self.c_bright = true;
+            modifier.push_str("0;1;");
+        }
+        if !glyph.italic {
+            // self.c_italic = false;
+            modifier.push_str("23;");
+        } else {
+            //self.c_italic = true;
+            modifier.push_str("3;");
+        }
+        if !glyph.underline {
+            // self.c_underline = false;
+            modifier.push_str("24;");
+        } else {
+            //self.c_underline = true;
+            modifier.push_str("4;");
+        }
+        if !glyph.blink {
+            // self.c_blink = false;
+            modifier.push_str("25;");
+        } else {
+            //self.c_blink = true;
+            modifier.push_str("5;");
+        }
+        if !glyph.blink_fast {
+            // self.c_blink_fast = false;
+            modifier.push_str("26;");
+        } else {
+            //self.c_blink_fast = true;
+            modifier.push_str("6;");
+        }
+        if !glyph.reverse {
+            // self.c_reverse = false;
+            modifier.push_str("27;");
+        } else {
+            //self.c_reverse = true;
+            modifier.push_str("7;");
+        }
+        if !glyph.strike {
+            // self.c_strike = false;
+            modifier.push_str("29;");
+        } else {
+            //self.c_strike = true;
+            modifier.push_str("9;");
+        }
+        match glyph.color {
+            NewColor::Basic(color) => modifier.push_str(&format!("3{};", color as u8)),
+            NewColor::EightBit(color) => modifier.push_str(&format!("38;5;{};", color)),
+            NewColor::Grayscale(brightness) => modifier.push_str(&format!("38;5;{};", brightness)),
+            NewColor::Truecolor(red, green, blue) => {
+                modifier.push_str(&format!("38;2;{};{};{};", red, green, blue))
+            }
+        }
+        //self.c_color = glyph.color;
+        //if self.c_background != glyph.background {
+        //modifier.push_str(&format!("4{}", glyph.background as u8));
+        match glyph.background {
+            NewColor::Basic(color) => modifier.push_str(&format!("4{}", color as u8)),
+            NewColor::EightBit(color) => modifier.push_str(&format!("48;5;{}", color)),
+            NewColor::Grayscale(brightness) => modifier.push_str(&format!("48;5;{}", brightness)),
+            NewColor::Truecolor(red, green, blue) => {
+                modifier.push_str(&format!("48;2;{};{};{}", red, green, blue))
+            }
+        }
+
+        //self.c_background = glyph.background;
         //};
         modifier
     }
