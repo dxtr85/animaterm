@@ -45,17 +45,20 @@ fn main() {
     let graphic_id = mgr.add_graphic(gr, layer, offset);
     let screen_size = mgr.screen_size();
     let title = "Navigation help".to_string();
-    let text = "Press 0 to set current frame to 0\n Press 1 to set current frame to 1\n Press q or Shift+q to quit\n".to_string();
+    let text = "Use arrows to move graphic around \nPress q or Shift+q to quit\n".to_string();
     let mbox = new_message_box(Some(title), text, Glyph::default(), 37, 5);
     let mbid = mgr.add_graphic(mbox, 1, (1, screen_size.1 - 6));
+    mgr.set_graphic(graphic_id, start_frame, true);
     mgr.set_graphic(mbid, 0, true);
 
     let mut keep_running = true;
     while keep_running {
         if let Some(key) = mgr.read_key() {
             match key {
-                Key::Zero => mgr.set_graphic(graphic_id, start_frame, true),
-                Key::One => mgr.set_graphic(graphic_id, start_frame + 1, true),
+                Key::Left => mgr.move_graphic(graphic_id, layer, (-1, 0)),
+                Key::Right => mgr.move_graphic(graphic_id, layer, (1, 0)),
+                Key::Up => mgr.move_graphic(graphic_id, layer, (0, -1)),
+                Key::Down => mgr.move_graphic(graphic_id, layer, (0, 1)),
                 Key::Q | Key::q => {
                     keep_running = false;
                 }

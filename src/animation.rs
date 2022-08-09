@@ -1,13 +1,11 @@
-use super::pixel::Pixel;
 use super::time::Timestamp;
-use std::collections::HashMap;
 pub struct Animation {
     current_frame: usize,
     stop_frame: Option<usize>,
     next_frame: usize,
     pub running: bool,
     looping: bool,
-    frames: HashMap<usize, Vec<Pixel>>,
+    //frames: HashMap<usize, Vec<Pixel>>,
     ordering: Vec<(usize, Timestamp)>,
     ord_max: usize,
     trigger_time: Timestamp,
@@ -15,7 +13,7 @@ pub struct Animation {
 
 impl Animation {
     pub fn new(
-        frames: HashMap<usize, Vec<Pixel>>,
+        //frames: HashMap<usize, Vec<Pixel>>,
         running: bool,
         looping: bool,
         ordering: Vec<(usize, Timestamp)>,
@@ -28,7 +26,7 @@ impl Animation {
             next_frame: 0,
             running,
             looping,
-            frames,
+            //frames,
             ordering,
             ord_max,
             trigger_time: start_time,
@@ -54,8 +52,12 @@ impl Animation {
         self.running = false;
     }
 
-    pub fn pause_on_frame(&mut self, frame: usize) {
-        self.stop_frame = Some(frame);
+    pub fn freeze(&mut self, t: Timestamp) {
+        self.trigger_time = self.trigger_time - t;
+    }
+
+    pub fn pause_on_frame(&mut self, frame_id: usize) {
+        self.stop_frame = Some(frame_id);
     }
 
     pub fn stop(&mut self) {
@@ -68,24 +70,28 @@ impl Animation {
     pub fn new_update(&mut self, dtime: Timestamp) -> Option<(usize, bool)> {
         let mut frame = None;
         if self.running {
+            if let Some(stop_frame) = self.stop_frame {
+                if stop_frame == self.current_frame {
+                    self.running = false;
+                    self.stop_frame = None;
+                }
+            }
             if dtime >= self.trigger_time {
-                frame = Some(self.next_frame);
                 let (current_frame, delta_time) = self.ordering[self.next_frame];
+                // println!(
+                //     "Next frame: {}, current frame: {}",
+                //     self.next_frame, current_frame
+                // );
                 self.current_frame = current_frame;
+                frame = Some(self.current_frame);
                 self.trigger_time += delta_time;
                 self.next_frame += 1;
                 if self.next_frame > self.ord_max {
                     self.next_frame = 0;
                     if !self.looping {
                         self.running = false;
-                        self.trigger_time = Timestamp::now();
+                        //self.trigger_time = Timestamp::now();
                     }
-                }
-            }
-            if let Some(stop_frame) = self.stop_frame {
-                if stop_frame == self.current_frame {
-                    self.running = false;
-                    self.stop_frame = None;
                 }
             }
         }
@@ -95,23 +101,23 @@ impl Animation {
         None
     }
 
-    pub fn update(&mut self, dtime: Timestamp) -> Option<Vec<Pixel>> {
-        if !self.running || dtime < self.trigger_time {
-            return None;
-        } else {
-            let frame = self.frames.get(&self.current_frame).unwrap();
-            let (current_frame, delta_time) = self.ordering[self.next_frame];
-            self.current_frame = current_frame;
-            self.trigger_time += delta_time;
-            self.next_frame += 1;
-            if self.next_frame > self.ord_max {
-                self.next_frame = 0;
-                if !self.looping {
-                    self.running = false;
-                    self.trigger_time = Timestamp::now();
-                }
-            }
-            Some(frame.to_vec().clone())
-        }
-    }
+    // pub fn update(&mut self, dtime: Timestamp) -> Option<Vec<Pixel>> {
+    //     if !self.running || dtime < self.trigger_time {
+    //         return None;
+    //     } else {
+    //         let frame = self.frames.get(&self.current_frame).unwrap();
+    //         let (current_frame, delta_time) = self.ordering[self.next_frame];
+    //         self.current_frame = current_frame;
+    //         self.trigger_time += delta_time;
+    //         self.next_frame += 1;
+    //         if self.next_frame > self.ord_max {
+    //             self.next_frame = 0;
+    //             if !self.looping {
+    //                 self.running = false;
+    //                 self.trigger_time = Timestamp::now();
+    //             }
+    //         }
+    //         Some(frame.to_vec().clone())
+    //     }
+    // }
 }

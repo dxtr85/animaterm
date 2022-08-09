@@ -1,12 +1,10 @@
-use super::error::AnimError;
-
-#[derive(Debug)]
-pub enum AnimResult {
-    Ok(AnimOk),
-    Err(AnimError),
-}
-
+use super::glyph::Glyph;
 #[derive(Debug)]
 pub enum AnimOk {
     AnimationAdded(usize),
+    FrameAdded(usize, usize),
+    AllResultsRead,
+    DisplayCreated(usize),
+    DisplayRestored(usize),
+    GlyphRetrieved(usize, Glyph),
 }

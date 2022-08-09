@@ -1,7 +1,10 @@
 use super::animation::Animation;
+use super::error::AnimError;
 use super::pixel::Pixel;
 use super::time::Timestamp;
+use super::utilities::text_to_frame;
 use super::Glyph;
+
 use std::collections::HashMap;
 use std::mem::replace;
 
@@ -9,6 +12,7 @@ pub struct Graphic {
     pub rows: usize,
     pub cols: usize,
     pub current_frame: usize,
+    pub invisible: bool,
     pub running_anim: Option<usize>,
     next_lib_id: usize,
     next_anim_id: usize,
@@ -38,11 +42,46 @@ impl Graphic {
             rows,
             cols,
             current_frame: start_frame,
+            invisible: false,
             running_anim: None,
             next_lib_id,
             next_anim_id,
             library,
             animations: a,
+        }
+    }
+
+    pub fn from_text(cols: usize, text: &str, glyph: Glyph) -> Self {
+        let mut library = HashMap::with_capacity(1);
+        library.insert(0, text_to_frame(text, glyph));
+        Graphic {
+            rows: 1,
+            cols: cols,
+            current_frame: 0,
+            invisible: false,
+            running_anim: None,
+            next_lib_id: 1,
+            next_anim_id: 0,
+            library: library,
+            animations: HashMap::new(),
+        }
+    }
+
+    pub fn from_texts(cols: usize, texts: Vec<(&str, Glyph)>) -> Self {
+        let mut library = HashMap::with_capacity(1);
+        for (i, (text, glyph)) in texts.iter().enumerate() {
+            library.insert(i, text_to_frame(text, *glyph));
+        }
+        Graphic {
+            rows: 1,
+            cols: cols,
+            current_frame: 0,
+            invisible: false,
+            running_anim: None,
+            next_lib_id: 1,
+            next_anim_id: 0,
+            library: library,
+            animations: HashMap::new(),
         }
     }
     pub fn add_to_library(&mut self, item: Vec<Glyph>) -> Option<usize> {
@@ -53,6 +92,10 @@ impl Graphic {
             self.next_lib_id += 1;
         }
         result
+    }
+
+    pub fn set_invisible(&mut self, invisible: bool) {
+        self.invisible = invisible;
     }
 
     pub fn empty_frame(&mut self) -> Option<usize> {
@@ -97,9 +140,9 @@ impl Graphic {
         }
     }
 
-    pub fn pause_animation_on_frame(&mut self, anim_id: usize, frame: usize) {
+    pub fn pause_animation_on_frame(&mut self, anim_id: usize, frame_id: usize) {
         if let Some(animation) = self.animations.get_mut(&anim_id) {
-            animation.pause_on_frame(frame);
+            animation.pause_on_frame(frame_id);
             //self.running_anim = None;
         }
     }
@@ -132,7 +175,23 @@ impl Graphic {
     }
 
     pub fn current_frame(&self) -> Vec<Glyph> {
-        self.library.get(&self.current_frame).unwrap().clone()
+        if self.invisible {
+            vec![Glyph::transparent(); self.cols * self.rows]
+        } else {
+            self.library.get(&self.current_frame).unwrap().clone()
+        }
+    }
+
+    pub fn get_frame(&self, frame_id: usize) -> Result<Vec<Glyph>, AnimError> {
+        if self.invisible {
+            Ok(vec![Glyph::transparent(); self.cols * self.rows])
+        } else {
+            if let Some(frame) = self.library.get(&frame_id) {
+                return Ok(frame.clone());
+            } else {
+                return Err(AnimError::FrameNotFound);
+            }
+        }
     }
 
     pub fn set_glyph(&mut self, glyph: Glyph, col: usize, row: usize) {
@@ -144,33 +203,26 @@ impl Graphic {
         }
     }
 
-    pub fn set_graphic(&mut self, id: &usize, offset: (usize, usize), force: bool) -> Vec<Pixel> {
-        // if empty {
-        // let size = self.cols * self.rows;
-        // let gplain = Glyph::plain();
-        // let mut result = Vec::with_capacity(size);
-        // for i in 0..size {
-        //     self.glyphs.insert(i, gplain.clone());
-        //     result.push(Pixel::new(
-        //         1 + offset.0 + (i % self.cols),
-        //         1 + offset.1 + (i / self.cols),
-        //         true,
-        //         gplain.clone(),
-        //     ));
-        // }
-        // return result;
-        //}
+    pub fn get_glyph(&self, col: usize, row: usize) -> Option<Glyph> {
+        let index = self.cols * (row - 1) + col - 1;
+        if index < self.rows * self.cols {
+            let frame = self.current_frame();
+            return frame.get(index).cloned();
+        }
+        None
+    }
+
+    pub fn set_frame(&mut self, id: &usize, offset: (usize, usize), force: bool) -> Vec<Pixel> {
         let mut changed = Vec::with_capacity(self.cols);
-        if let Some(glyphs) = self.library.get(id) {
+        if let Ok(glyphs) = self.get_frame(*id) {
+            //let glyphs = self.get_frame(*id);
             for (i, (old_glyph, new_glyph)) in self
-                .library
-                .get(&self.current_frame)
-                .unwrap()
+                .current_frame()
                 .iter()
                 .zip(glyphs.into_iter())
                 .enumerate()
             {
-                if force || *new_glyph != *old_glyph {
+                if force || new_glyph != *old_glyph {
                     changed.push(Pixel::new(
                         1 + offset.0 + (i % self.cols),
                         1 + offset.1 + (i / self.cols),

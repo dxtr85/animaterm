@@ -1,14 +1,10 @@
 use animaterm::{
     prelude::*,
-    utilities::{message_box, new_message_box, progress_bar},
+    utilities::{message_box, progress_bar},
 };
 use std::collections::HashMap;
 use std::default::Default;
 use std::env;
-// use std::io;
-// use std::io::Read;
-// use std::io::Write;
-// use std::ops::{Shl, Shr};
 use std::process::exit;
 
 static ROWS_MIN: usize = 4;
@@ -20,25 +16,16 @@ fn main() {
     let rows = args.rows;
     verify_cols_and_rows(cols, rows);
     let mut mgr = Manager::new(true, cols, rows, None);
-    //let mut key_iter = mgr.get_key_receiver().unwrap().into_iter();
-    let mut result_iter = mgr.get_result_iter().unwrap();
     let (cols, rows) = mgr.screen_size();
-    // let mut results = vec![];
 
     let gl = Glyph::default();
-    // let anim_id = mgr.add_animation(build_animation_one(gl, cols, rows), 0, (0, 0));
-    // results.push(result_iter.next());
-    // let anim2_id = mgr.add_animation(build_animation_two(gl, cols, rows), 0, (0, 0));
-    // results.push(result_iter.next());
-    // let anim3_id = mgr.add_animation(build_animation_three(gl, cols, rows), 0, (0, 0));
-    // results.push(result_iter.next());
     let (gr, pid) = build_graphic(130, 10);
     let gid = mgr.add_graphic(gr, 0, (3, 15));
     mgr.set_graphic(gid, pid, true);
 
     let pbid = mgr.add_graphic(build_progress_bar(cols - 4), 1, (2, rows - 2));
     mgr.set_graphic(pbid, 0, true);
-    mgr.new_start_animation(pbid, 0);
+    mgr.start_animation(pbid, 0);
     let mut mbox_created = false;
 
     let mut keep_running = true;
@@ -49,7 +36,6 @@ fn main() {
     while keep_running {
         let mut c: usize = 1;
         let mut r: usize = 1;
-        // while let Some(key) = key_iter.next() {
         if let Some(key) = mgr.read_key() {
             match key {
                 Key::PgUp | Key::u => {
@@ -89,7 +75,7 @@ fn main() {
                     mgr.move_graphic(1, 1, (0, -1));
                 }
                 Key::Up | Key::k => {
-                    mgr.new_stop_animation(gid);
+                    mgr.stop_animation(gid);
                     mgr.move_graphic(gid, 0, (0, -1));
                     mgr.set_graphic(gid, 0, true);
                     //mgr.set_graphic(pbid, 0, true);
@@ -102,7 +88,7 @@ fn main() {
                     mgr.move_graphic(1, 1, (0, 1));
                 }
                 Key::Down | Key::j => {
-                    mgr.pause_animation_on_frame(pbid, 0, 100);
+                    mgr.pause_animation_on_frame(pbid, 100);
                     mgr.move_graphic(gid, 0, (0, 1));
                     mgr.set_graphic(gid, pid, true);
                     //mgr.set_graphic(pbid, 1, true);
@@ -116,8 +102,8 @@ fn main() {
                 }
                 Key::Left | Key::h => {
                     mgr.move_graphic(gid, 0, (-1, 0));
-                    mgr.new_start_animation(gid, 0);
-                    mgr.new_start_animation(pbid, 0);
+                    mgr.start_animation(gid, 0);
+                    mgr.start_animation(pbid, 0);
                     //mgr.set_graphic(pbid, 2, true);
                     c.saturating_sub(1);
                 }
@@ -158,10 +144,10 @@ fn main() {
                     break;
                 }
                 Key::Ctrl_a => {
-                    mgr.new_start_animation(gid, 0);
+                    mgr.start_animation(gid, 0);
                 }
                 Key::Ctrl_b => {
-                    mgr.new_stop_animation(gid);
+                    mgr.stop_animation(gid);
                 }
                 Key::Insert => {
                     // mgr.pause_animation(anim_id);
@@ -176,7 +162,7 @@ fn main() {
                     //mgr.restart_animation(anim_id);
                     mgr.set_glyph(gid, Glyph::default(), c, r);
                     mgr.move_graphic(gid, 0, (0, 0));
-                    //mgr.empty_frame(gid);
+                    mgr.empty_frame(gid);
                 }
                 _ => {
                     println!("You pressed: {:?}", key);
@@ -185,7 +171,6 @@ fn main() {
         }
     }
     mgr.terminate();
-    //    println!("Added Animation IDs: {:?}", results);
 }
 
 struct Arguments {
@@ -201,11 +186,13 @@ impl Default for Arguments {
         }
     }
 }
+
 enum ArgType {
     Rows,
     Cols,
     // Unknown,
 }
+
 enum WhatToParse {
     Name,
     Number,
@@ -289,121 +276,6 @@ fn parse_arguments() -> Arguments {
     arguments
 }
 
-fn build_animation_one(mut gl: Glyph, cols: usize, rows: usize) -> Animation {
-    let colors = [
-        Color::Green,
-        Color::Yellow,
-        Color::Blue,
-        Color::Magenta,
-        Color::Cyan,
-        Color::White,
-        Color::Red,
-    ];
-    let mut ordering = Vec::new();
-    let mut frames = HashMap::new();
-    let mut i = 0;
-    for c in colors {
-        gl.set_background(animaterm::NewColor::Basic(c));
-        gl.set_color(animaterm::NewColor::Basic(colors[(i + 1) % 7]));
-        ordering.push(((i + 1) % 7, Timestamp::new(0, 200)));
-        frames.insert(
-            i,
-            message_box(
-                Some("\u{2660} \u{2665} \u{2666} \u{2663} 🖕 Mesydż in a baaaato".to_string()),
-                "    Bardzo niespodziewane wieści przekazuje po Grand Prix Azerbejdżanu
-dziennikarz Joe Saward. Według jego doniesień, do Formuły 1 może wrócić
-Antonio Giovinazzi. Wszyscy za sprawą decyzji Ferrari.
-
-Antonio Giovinazzi odszedł z Formuły 1 pod koniec ubiegłego roku, tracąc miejsce w
-Alfie Romeo, gdzie pojawili się Valtteri Bottas i Guanyu Zhou. Włoch znalazł miejsce
-w ekipie Dragon Penske, jednej z najsłabszych w stawce i po 9 rundach sezonu
-zajmuje ostatnie miejsce z zerowym dorobkiem punktowym.
-
-Antonio był niedawno pytany o swoją przyszłość, jednak powiedział, że jest ona
-otwarta i nie wie, czy zostanie w Formule E.
-
-Giovinazzi w Formule 1 pełni rolę kierowcy rezerwowego Ferrari i dość często
-pojawia się na wyścigach. Pracuje także sporo – również podczas weekendów
-wyścigowych – w symulatorze ekipy.
-
- Podobno świetne wyścigowe ustawienia Ferrari w Australii były zasługą
- świetnej pracy w symulatorze w Maranello. 
-
- Spójrzmy zatem, kto jest Stigiem z symulatora:#F1 #F1pl #elevenf1
- pic.twitter.com/hRVqGgWYp1
-
- — Powrót Roberta (@powrotroberta) April 21, 2022
-
-Obecnie Włosi nie mają swojego kierowcy w F1 i dla Ferrari ważne byłoby zmienienie
-tego. Ekipa z Maranello nie ma już dużych wpływów w Alfie Romeo i nie może
-decydować o obsadzie foteli w Hinwil. Inaczej jest jednak w Haasie, który w ostatnich
-latach mocno zacieśnił współpracę z Ferrari.
-
-Jak pisze w swoim blogu po Grand Prix Azerbejdżanu Joe Saward, Haas szuka
-kierowcy do swojej ekipy za Micka Schumachera, notującego fatalne wyniki.
-
-„Amerykanie mogliby być zainteresowani Oscarem Piastrim, ale prawda jest taka, że
-Ferrari ma głos w sprawie obsady drugiego kierowcy Haasa i jako że Mick
-Schumacher nie spisuje się dobrze, mówi się, że Haas prawdopodobnie skończy w
-2023 roku z rezerwowym kierowcą Ferrari, Antonio Giovinazzim” – pisze Saward.
-
-Nie byłaby to raczej duża zmiana jakościowa, gdyż Giovinazzi w swoich startach w F1
-spisywał się słabo. W 62 wyścigach zdobył 21 punktów, a jego partner zespołowy,
-Kimi Raikkonen w 60 startach zebrał 57 punktów, a przecież najlepsze lata ma już za
-sobą.
-
-Ferrari nie ma obecnie mocnej akademii juniorskiej co było również powodem
-przedłużenia kontraktu z Carlosem Sainzem do 2024 roku. To szansa dla
-Giovinazziego jeżeli chce jeszcze pojechać w F1."
-                    .to_string(),
-                gl.clone(),
-                7 + 2 * i,
-                1,
-                cols.saturating_sub(12 + (4 * i)),
-                rows.saturating_sub(5 + (2 * i)),
-            ),
-        );
-        i += 1;
-    }
-    Animation::new(frames, false, false, ordering, Timestamp::new(0, 100))
-}
-
-fn build_animation_two(mut gl: Glyph, cols: usize, rows: usize) -> Animation {
-    let mut frames = HashMap::new();
-    let mut ordering = vec![];
-    let mut i = 0;
-    gl.set_color(animaterm::NewColor::Basic(Color::Blue));
-    let colors = [
-        Color::Green,
-        Color::Yellow,
-        Color::Blue,
-        Color::Magenta,
-        Color::Cyan,
-        Color::White,
-        Color::Red,
-    ];
-
-    for c in colors {
-        gl.set_background(animaterm::NewColor::Basic(c));
-        ordering.push(((i + 1) % 7, Timestamp::new(0, 100)));
-        frames.insert(
-            i,
-            message_box(
-                Some("\u{2660} \u{2665} \u{2666} \u{2663} awendżed sewenfold".to_string()),
-                "Dooo pah".to_string(),
-                gl.clone(),
-                1,
-                rows - 4, //(3 * (1 + i)),
-                cols,
-                5,
-            ),
-        );
-        i += 1;
-    }
-
-    Animation::new(frames, true, true, ordering, Timestamp::new(0, 500))
-}
-
 fn build_graphic(cols: usize, rows: usize) -> (Graphic, usize) {
     let start_frame = 0;
     let mut library = HashMap::with_capacity(2);
@@ -412,8 +284,8 @@ fn build_graphic(cols: usize, rows: usize) -> (Graphic, usize) {
         vec![
             Glyph::new(
                 '\u{2580}',
-                animaterm::NewColor::new8Bit(0, 5, 0),
-                animaterm::NewColor::new8Bit(0, 0, 5),
+                animaterm::Color::new_8bit(0, 5, 0),
+                animaterm::Color::new_8bit(0, 0, 5),
                 false,
                 true,
                 false,
@@ -430,7 +302,6 @@ fn build_graphic(cols: usize, rows: usize) -> (Graphic, usize) {
     animations.insert(
         0,
         Animation::new(
-            HashMap::new(),
             false,
             true,
             vec![(1, Timestamp::new(0, 500)), (0, Timestamp::new(0, 500))],
@@ -443,8 +314,8 @@ fn build_graphic(cols: usize, rows: usize) -> (Graphic, usize) {
         .add_to_library(vec![
             Glyph::new(
                 '\u{2580}',
-                animaterm::NewColor::newTruecolor(0, 255, 255),
-                animaterm::NewColor::newTruecolor(0, 0, 255),
+                animaterm::Color::new_truecolor(0, 255, 255),
+                animaterm::Color::new_truecolor(0, 0, 255),
                 false,
                 true,
                 false,
@@ -461,13 +332,13 @@ fn build_graphic(cols: usize, rows: usize) -> (Graphic, usize) {
 }
 
 fn build_mbox(cols: usize, rows: usize, title: String, content: String) -> Graphic {
-    new_message_box(
+    message_box(
         Some(title),
         content,
         Glyph::new(
             ' ',
-            animaterm::NewColor::newGray(22),
-            animaterm::NewColor::newGray(0),
+            animaterm::Color::new_gray(22),
+            animaterm::Color::new_gray(0),
             false,
             false,
             false,
@@ -485,8 +356,8 @@ fn build_mbox(cols: usize, rows: usize, title: String, content: String) -> Graph
 fn build_progress_bar(length: usize) -> Graphic {
     let glf = Glyph::new(
         '\u{2588}',
-        animaterm::NewColor::new(Color::Red),
-        animaterm::NewColor::new(Color::White),
+        animaterm::Color::new(ColorName::Red),
+        animaterm::Color::new(ColorName::White),
         false,
         true,
         false,
@@ -503,8 +374,8 @@ fn build_progress_bar(length: usize) -> Graphic {
         Some(vec![
             Glyph::new(
                 '\u{258F}',
-                animaterm::NewColor::red(),
-                animaterm::NewColor::cyan(),
+                animaterm::Color::red(),
+                animaterm::Color::cyan(),
                 false,
                 true,
                 false,
@@ -516,8 +387,8 @@ fn build_progress_bar(length: usize) -> Graphic {
             ),
             Glyph::new(
                 '\u{258E}',
-                animaterm::NewColor::red(),
-                animaterm::NewColor::cyan(),
+                animaterm::Color::red(),
+                animaterm::Color::cyan(),
                 false,
                 true,
                 false,
@@ -529,8 +400,8 @@ fn build_progress_bar(length: usize) -> Graphic {
             ),
             Glyph::new(
                 '\u{258D}',
-                animaterm::NewColor::red(),
-                animaterm::NewColor::cyan(),
+                animaterm::Color::red(),
+                animaterm::Color::cyan(),
                 false,
                 true,
                 false,
@@ -542,8 +413,8 @@ fn build_progress_bar(length: usize) -> Graphic {
             ),
             Glyph::new(
                 '\u{258C}',
-                animaterm::NewColor::red(),
-                animaterm::NewColor::cyan(),
+                animaterm::Color::red(),
+                animaterm::Color::cyan(),
                 false,
                 true,
                 false,
@@ -555,8 +426,8 @@ fn build_progress_bar(length: usize) -> Graphic {
             ),
             Glyph::new(
                 '\u{258B}',
-                animaterm::NewColor::red(),
-                animaterm::NewColor::cyan(),
+                animaterm::Color::red(),
+                animaterm::Color::cyan(),
                 false,
                 true,
                 false,
@@ -568,8 +439,8 @@ fn build_progress_bar(length: usize) -> Graphic {
             ),
             Glyph::new(
                 '\u{258A}',
-                animaterm::NewColor::red(),
-                animaterm::NewColor::cyan(),
+                animaterm::Color::red(),
+                animaterm::Color::cyan(),
                 false,
                 true,
                 false,
@@ -581,8 +452,8 @@ fn build_progress_bar(length: usize) -> Graphic {
             ),
             Glyph::new(
                 '\u{2589}',
-                animaterm::NewColor::newTruecolor(128, 0, 0),
-                animaterm::NewColor::cyan(),
+                animaterm::Color::new_truecolor(128, 0, 0),
+                animaterm::Color::cyan(),
                 false,
                 true,
                 false,
@@ -595,6 +466,7 @@ fn build_progress_bar(length: usize) -> Graphic {
         ]),
     )
 }
+
 fn verify_cols_and_rows(cols: Option<usize>, rows: Option<usize>) {
     if let Some(a_rows) = rows {
         if a_rows < ROWS_MIN {

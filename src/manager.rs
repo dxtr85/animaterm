@@ -1,10 +1,12 @@
 use super::animation::Animation;
+use super::error::AnimError;
 use super::glyph::Glyph;
 use super::graphic::Graphic;
 use super::helpers::map_bytes_to_key;
 use super::key::Key;
-use super::response::{AnimOk::*, AnimResult};
+use super::response::AnimOk::{self, *};
 use super::screen::Screen;
+use super::time::Timestamp;
 use std::io;
 use std::io::Read;
 use std::mem::replace;
@@ -15,28 +17,32 @@ use std::time::Duration;
 enum Message {
     Finish,
     EmptyFrame(usize),
-    AddAnimation(usize, Animation, usize, (usize, usize)),
-    StartAnimation(usize),
-    NewStartAnimation(usize, usize),
+    CloneFrame(usize, Option<usize>),
+    AddAnimation(usize, Animation),
+    StartAnimation(usize, usize),
     PauseAnimation(usize),
-    PauseAnimationOnFrame(usize, usize, usize),
+    PauseAnimationOnFrame(usize, usize),
     StopAnimation(usize),
-    NewStopAnimation(usize),
     RestartAnimation(usize),
     AddGraphic(usize, Graphic, usize, (usize, usize)),
     SetGlyph(usize, Glyph, usize, usize),
+    GetGlyph(usize, usize, usize),
     SetGraphic(usize, usize, bool),
+    SetInvisible(usize, bool),
     MoveGraphic(usize, usize, (isize, isize)),
     DeleteGraphic(usize),
+    NewDisplay(usize, bool),
+    RestoreDisplay(usize, bool),
 }
 
 pub struct Manager {
     scrn_size: (usize, usize),
     join_handle: thread::JoinHandle<()>,
     next_id: usize,
+    next_screen_id: usize,
     sender: mpsc::Sender<Message>,
     key_receiver: Option<mpsc::Receiver<u8>>,
-    result_receiver: Option<mpsc::IntoIter<AnimResult>>,
+    result_receiver: Option<mpsc::IntoIter<Result<AnimOk, AnimError>>>,
 }
 
 impl Manager {
@@ -63,27 +69,25 @@ impl Manager {
                         Message::Finish => {
                             finish = true;
                         }
-                        Message::AddAnimation(aid, anim, layer, offset) => {
-                            let id = screen.add_animation(anim, layer, offset);
-                            result_sender.send(AnimResult::Ok(AnimationAdded(id)));
+                        Message::AddAnimation(gid, anim) => {
+                            let add_result = screen.add_animation(gid, anim);
+                            if let Some(id) = add_result {
+                                result_sender.send(Result::Ok(AnimationAdded(id)))
+                            } else {
+                                result_sender.send(Result::Err(AnimError::FailAddingAnimation(gid)))
+                            };
                         }
-                        Message::StartAnimation(aid) => {
-                            screen.start_animation(&aid);
+                        Message::StartAnimation(gid, aid) => {
+                            screen.start_animation(&gid, aid);
                         }
-                        Message::NewStartAnimation(gid, aid) => {
-                            screen.new_start_animation(&gid, aid);
+                        Message::PauseAnimation(gid) => {
+                            screen.pause_animation(&gid);
                         }
-                        Message::PauseAnimation(aid) => {
-                            screen.pause_animation(&aid);
+                        Message::PauseAnimationOnFrame(gid, fid) => {
+                            screen.pause_animation_on_frame(&gid, fid);
                         }
-                        Message::PauseAnimationOnFrame(gid, aid, fid) => {
-                            screen.pause_animation_on_frame(&gid, aid, fid);
-                        }
-                        Message::StopAnimation(aid) => {
-                            screen.stop_animation(&aid);
-                        }
-                        Message::NewStopAnimation(gid) => {
-                            screen.new_stop_animation(&gid);
+                        Message::StopAnimation(gid) => {
+                            screen.stop_animation(&gid);
                         }
                         Message::RestartAnimation(aid) => {
                             screen.restart_animation(&aid);
@@ -97,13 +101,50 @@ impl Manager {
                         Message::SetGlyph(gid, glyph, col, row) => {
                             screen.set_glyph(gid, glyph, col, row);
                         }
+                        Message::GetGlyph(gid, col, row) => {
+                            let result = screen.get_glyph(gid, col, row);
+                            if let Some(glyph) = result {
+                                result_sender.send(Result::Ok(GlyphRetrieved(gid, glyph)))
+                            } else {
+                                result_sender.send(Result::Err(AnimError::FailGettingGlyph(gid)))
+                            };
+                        }
                         Message::SetGraphic(gid, fid, force) => {
                             screen.set_graphic((&gid, &fid), force);
+                        }
+                        Message::SetInvisible(gid, invisible) => {
+                            screen.set_invisible(gid, invisible);
                         }
                         Message::DeleteGraphic(gid) => {
                             screen.delete_graphic(&gid);
                         }
-                        Message::EmptyFrame(gid) => screen.empty_frame(gid),
+                        Message::EmptyFrame(gid) => {
+                            let result = screen.empty_frame(gid);
+                            if let Some(id) = result {
+                                result_sender.send(Result::Ok(FrameAdded(gid, id)))
+                            } else {
+                                result_sender.send(Result::Err(AnimError::FailAddingFrame(gid)))
+                            };
+                        }
+                        Message::CloneFrame(gid, fid) => {
+                            let result = screen.clone_frame(gid, fid);
+                            if let Some(id) = result {
+                                result_sender.send(Result::Ok(FrameAdded(gid, id)))
+                            } else {
+                                result_sender.send(Result::Err(AnimError::FailAddingFrame(gid)))
+                            };
+                        }
+                        Message::NewDisplay(display_id, keep_existing) => {
+                            let display_id = screen.new_display(display_id, keep_existing);
+                            //result_sender.send(Result::Ok(DisplayCreated(display_id)));
+                        }
+                        Message::RestoreDisplay(display_id, keep_existing) => {
+                            // if let Some(stored_display_id) =
+                            screen.restore_display(display_id, keep_existing);
+                            // {
+                            //     result_sender.send(Result::Ok(DisplayRestored(stored_display_id)));
+                            // }
+                        }
                     }
                 }
                 //screen.update_animations();
@@ -137,7 +178,7 @@ impl Manager {
             scrn_size: (cols, rows),
             join_handle,
             next_id: 0,
-            // kb_join_handle,
+            next_screen_id: 1,
             sender,
             key_receiver,
             result_receiver: Some(result_receiver.into_iter()),
@@ -170,7 +211,6 @@ impl Manager {
             }
             replace(&mut self.key_receiver, Some(key_rcvr));
             return map_bytes_to_key(keys_read);
-            // return Some(Key::a);
         } else {
             panic!("mgr has no key receiver!")
         }
@@ -181,53 +221,47 @@ impl Manager {
         replace(&mut self.key_receiver, Some(receiver))
     }
 
-    pub fn get_result_iter(&mut self) -> Option<mpsc::IntoIter<AnimResult>> {
+    pub fn get_result_iter(&mut self) -> Option<mpsc::IntoIter<Result<AnimOk, AnimError>>> {
         replace(&mut self.result_receiver, None)
     }
 
     pub fn set_result_iter(
         &mut self,
-        receiver: mpsc::IntoIter<AnimResult>,
-    ) -> Option<mpsc::IntoIter<AnimResult>> {
+        receiver: mpsc::IntoIter<Result<AnimOk, AnimError>>,
+    ) -> Option<mpsc::IntoIter<Result<AnimOk, AnimError>>> {
         replace(&mut self.result_receiver, Some(receiver))
+    }
+
+    pub fn read_result(&mut self) -> Result<AnimOk, AnimError> {
+        if let Some(receiver) = &mut self.result_receiver {
+            if let Some(result) = receiver.next() {
+                return result;
+            } else {
+                return Ok(AnimOk::AllResultsRead);
+            }
+        }
+        Err(AnimError::ResultReceiverNotSet)
     }
 
     pub fn screen_size(&self) -> (usize, usize) {
         self.scrn_size
     }
 
-    // pub fn add_animation(
-    //     &mut self,
-    //     anim: Animation,
-    //     layer: usize,
-    //     offset: (usize, usize),
-    // ) -> usize {
-    //     let anim_id = self.next_id;
-    //     self.next_id += 1;
-    //     self.sender
-    //         .send(Message::AddAnimation(anim_id, anim, layer, offset));
-    //     anim_id
-    // }
-    // pub fn start_animation(&self, anim_id: usize) {
-    //     self.sender.send(Message::StartAnimation(anim_id));
-    // }
-    pub fn new_start_animation(&self, graph_id: usize, anim_id: usize) {
+    pub fn add_animation(&mut self, graphic_id: usize, anim: Animation) {
+        self.sender.send(Message::AddAnimation(graphic_id, anim));
+    }
+    pub fn start_animation(&self, graph_id: usize, anim_id: usize) {
+        self.sender.send(Message::StartAnimation(graph_id, anim_id));
+    }
+    pub fn pause_animation(&self, graphic_id: usize) {
+        self.sender.send(Message::PauseAnimation(graphic_id));
+    }
+    pub fn pause_animation_on_frame(&self, graphic_id: usize, frame_id: usize) {
         self.sender
-            .send(Message::NewStartAnimation(graph_id, anim_id));
+            .send(Message::PauseAnimationOnFrame(graphic_id, frame_id));
     }
-    pub fn pause_animation(&self, anim_id: usize) {
-        self.sender.send(Message::PauseAnimation(anim_id));
-    }
-    pub fn pause_animation_on_frame(&self, graphic_id: usize, anim_id: usize, frame_id: usize) {
-        self.sender.send(Message::PauseAnimationOnFrame(
-            graphic_id, anim_id, frame_id,
-        ));
-    }
-    pub fn stop_animation(&self, anim_id: usize) {
-        self.sender.send(Message::StopAnimation(anim_id));
-    }
-    pub fn new_stop_animation(&self, graph_id: usize) {
-        self.sender.send(Message::NewStopAnimation(graph_id));
+    pub fn stop_animation(&self, graph_id: usize) {
+        self.sender.send(Message::StopAnimation(graph_id));
     }
     pub fn restart_animation(&self, anim_id: usize) {
         self.sender.send(Message::RestartAnimation(anim_id));
@@ -236,8 +270,14 @@ impl Manager {
     pub fn move_graphic(&self, gid: usize, layer: usize, offset: (isize, isize)) {
         self.sender.send(Message::MoveGraphic(gid, layer, offset));
     }
+    pub fn set_invisible(&self, gid: usize, invisible: bool) {
+        self.sender.send(Message::SetInvisible(gid, invisible));
+    }
     pub fn set_glyph(&self, gid: usize, glyph: Glyph, col: usize, row: usize) {
         self.sender.send(Message::SetGlyph(gid, glyph, col, row));
+    }
+    pub fn get_glyph(&self, gid: usize, col: usize, row: usize) {
+        self.sender.send(Message::GetGlyph(gid, col, row));
     }
     pub fn empty_frame(&self, gid: usize) {
         self.sender.send(Message::EmptyFrame(gid));
@@ -246,8 +286,16 @@ impl Manager {
 
     pub fn cls() {}
     pub fn cla() {}
-    pub fn new_display(keep_existing: bool) {}
-    pub fn restore_display(display_id: usize, keep_existing: bool) {}
+    pub fn new_display(&mut self, keep_existing: bool) -> usize {
+        let new_id = self.next_screen_id;
+        self.next_screen_id += 1;
+        self.sender.send(Message::NewDisplay(new_id, keep_existing));
+        new_id
+    }
+    pub fn restore_display(&mut self, display_id: usize, keep_existing: bool) {
+        self.sender
+            .send(Message::RestoreDisplay(display_id, keep_existing));
+    }
 
     pub fn add_graphic(&mut self, gr: Graphic, layer: usize, offset: (usize, usize)) -> usize {
         let gid = self.next_id;

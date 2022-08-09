@@ -33,96 +33,96 @@ pub fn progress_bar(
             );
             library.insert(j, contstruction_state.clone());
             j += 1;
-            ordering.push((j % (total_states * width), Timestamp::new(0, 1)));
+            ordering.push((j % (total_states * width), Timestamp::new(0, 100)));
         }
     }
-    let mut anim = Animation::new(HashMap::new(), true, true, ordering, Timestamp::now());
+    let mut anim = Animation::new(true, true, ordering, Timestamp::now());
     let mut anims = HashMap::new();
     anims.insert(0, anim);
     Graphic::new(width, 1, 0, library, Some(anims))
 }
 
-pub fn message_box(
-    title: Option<String>,
-    content: String,
-    glyph: Glyph,
-    start_x: usize,
-    start_y: usize,
-    width: usize,
-    lenght: usize,
-) -> Vec<Pixel> {
-    let mut mbox = Vec::new();
-    let mut cgl = glyph.clone();
-    cgl.set_char('╭');
-    mbox.push(Pixel::new(start_x, start_y, true, cgl.clone()));
-    let mut i = 1;
-    if let Some(name) = title {
-        for c in name.chars() {
-            if i > width.saturating_sub(2) {
-                break;
-            }
-            cgl.set_char(c);
-            mbox.push(Pixel::new(start_x + i, start_y, true, cgl.clone()));
-            i += 1;
-        }
-    }
-    cgl.set_char('─');
-    for i in start_x + i..start_x + width - 1 {
-        mbox.push(Pixel::new(i, start_y, true, cgl.clone()));
-    }
-    cgl.set_char('╮');
-    mbox.push(Pixel::new(start_x + width - 1, start_y, true, cgl.clone()));
-    let mut text = content.split_whitespace();
-    let mut word = text.next();
-    for j in start_y + 1..start_y + lenght - 1 {
-        cgl.set_char('│');
-        mbox.push(Pixel::new(start_x, j, true, cgl.clone()));
-        i = 2;
-        mbox.push(Pixel::new(start_x + 1, j, true, glyph.clone()));
-        if let Some(mut content) = word {
-            while content.len() < width.saturating_sub(i + 1) {
-                for c in content.chars() {
-                    cgl.set_char(c);
-                    mbox.push(Pixel::new(start_x + i, j, true, cgl.clone()));
-                    i += 1;
-                }
-                mbox.push(Pixel::new(start_x + i, j, true, glyph.clone()));
-                i += 1;
-                word = text.next();
-                if let Some(help) = word {
-                    content = help;
-                } else {
-                    content = "";
-                }
-            }
-            for g in start_x + i..start_x + width - 1 {
-                mbox.push(Pixel::new(g, j, true, glyph.clone()));
-            }
-        } else {
-            for i in start_x + 1..start_x + width - 1 {
-                mbox.push(Pixel::new(i, j, true, glyph.clone()));
-            }
-        }
-        cgl.set_char('│');
-        mbox.push(Pixel::new(start_x + width - 1, j, true, cgl.clone()));
-    }
-    cgl.set_char('╰');
-    mbox.push(Pixel::new(start_x, start_y + lenght - 1, true, cgl.clone()));
-    cgl.set_char('─');
-    for i in start_x + 1..start_x + width - 1 {
-        mbox.push(Pixel::new(i, start_y + lenght - 1, true, cgl.clone()));
-    }
-    cgl.set_char('╯');
-    mbox.push(Pixel::new(
-        start_x + width - 1,
-        start_y + lenght - 1,
-        true,
-        cgl.clone(),
-    ));
-    mbox
-}
+// pub fn message_box(
+//     title: Option<String>,
+//     content: String,
+//     glyph: Glyph,
+//     start_x: usize,
+//     start_y: usize,
+//     width: usize,
+//     lenght: usize,
+// ) -> Vec<Pixel> {
+//     let mut mbox = Vec::new();
+//     let mut cgl = glyph.clone();
+//     cgl.set_char('╭');
+//     mbox.push(Pixel::new(start_x, start_y, true, cgl.clone()));
+//     let mut i = 1;
+//     if let Some(name) = title {
+//         for c in name.chars() {
+//             if i > width.saturating_sub(2) {
+//                 break;
+//             }
+//             cgl.set_char(c);
+//             mbox.push(Pixel::new(start_x + i, start_y, true, cgl.clone()));
+//             i += 1;
+//         }
+//     }
+//     cgl.set_char('─');
+//     for i in start_x + i..start_x + width - 1 {
+//         mbox.push(Pixel::new(i, start_y, true, cgl.clone()));
+//     }
+//     cgl.set_char('╮');
+//     mbox.push(Pixel::new(start_x + width - 1, start_y, true, cgl.clone()));
+//     let mut text = content.split_whitespace();
+//     let mut word = text.next();
+//     for j in start_y + 1..start_y + lenght - 1 {
+//         cgl.set_char('│');
+//         mbox.push(Pixel::new(start_x, j, true, cgl.clone()));
+//         i = 2;
+//         mbox.push(Pixel::new(start_x + 1, j, true, glyph.clone()));
+//         if let Some(mut content) = word {
+//             while content.len() < width.saturating_sub(i + 1) {
+//                 for c in content.chars() {
+//                     cgl.set_char(c);
+//                     mbox.push(Pixel::new(start_x + i, j, true, cgl.clone()));
+//                     i += 1;
+//                 }
+//                 mbox.push(Pixel::new(start_x + i, j, true, glyph.clone()));
+//                 i += 1;
+//                 word = text.next();
+//                 if let Some(help) = word {
+//                     content = help;
+//                 } else {
+//                     content = "";
+//                 }
+//             }
+//             for g in start_x + i..start_x + width - 1 {
+//                 mbox.push(Pixel::new(g, j, true, glyph.clone()));
+//             }
+//         } else {
+//             for i in start_x + 1..start_x + width - 1 {
+//                 mbox.push(Pixel::new(i, j, true, glyph.clone()));
+//             }
+//         }
+//         cgl.set_char('│');
+//         mbox.push(Pixel::new(start_x + width - 1, j, true, cgl.clone()));
+//     }
+//     cgl.set_char('╰');
+//     mbox.push(Pixel::new(start_x, start_y + lenght - 1, true, cgl.clone()));
+//     cgl.set_char('─');
+//     for i in start_x + 1..start_x + width - 1 {
+//         mbox.push(Pixel::new(i, start_y + lenght - 1, true, cgl.clone()));
+//     }
+//     cgl.set_char('╯');
+//     mbox.push(Pixel::new(
+//         start_x + width - 1,
+//         start_y + lenght - 1,
+//         true,
+//         cgl.clone(),
+//     ));
+//     mbox
+// }
 
-pub fn new_message_box(
+pub fn message_box(
     title: Option<String>,
     content: String,
     glyph: Glyph,
@@ -197,4 +197,51 @@ pub fn new_message_box(
     let mut library = HashMap::new();
     library.insert(0, mbox);
     Graphic::new(width, height, 0, library, None)
+}
+
+pub fn wrap_border_around(
+    frame: Vec<Glyph>,
+    cols: usize,
+    border: [Glyph; 8],
+    title: Option<&str>,
+) -> Vec<Glyph> {
+    let mut result = Vec::with_capacity(((frame.len() / cols) + 2) * (cols + 2));
+    result.push(border[0]);
+    let mut start = 0;
+    if let Some(text) = title {
+        let mut g = border[1].clone();
+        for character in text.chars() {
+            g.set_char(character);
+            start += 1;
+            result.push(g);
+        }
+    }
+    for _i in start..cols {
+        result.push(border[1]);
+    }
+    result.push(border[2]);
+
+    for chunk in frame.chunks(cols) {
+        result.push(border[3]);
+        for glyph in chunk {
+            result.push(glyph.clone());
+        }
+        result.push(border[4]);
+    }
+    result.push(border[5]);
+    for _i in 0..cols {
+        result.push(border[6]);
+    }
+    result.push(border[7]);
+
+    result
+}
+
+pub fn text_to_frame(text: &str, mut glyph: Glyph) -> Vec<Glyph> {
+    let mut frame = Vec::with_capacity(text.len());
+    for character in text.chars() {
+        glyph.set_char(character);
+        frame.push(glyph)
+    }
+    frame
 }

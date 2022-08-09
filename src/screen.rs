@@ -1,5 +1,6 @@
 use super::animation::Animation;
-use super::color::{Color, NewColor};
+use super::color::{Color, ColorName};
+use super::display::Display;
 use super::glyphcake::GlyphCake;
 use super::graphic::Graphic;
 use super::helpers::ask_os_for_rows_and_cols;
@@ -21,26 +22,26 @@ pub struct Screen {
     // it should be known which pixels on what layer belong to given id of animation
     // it should be possible to move animation from one layer to another
     // a flag on every pixel should notify if a given pixel should be printed
-    pub display: Vec<GlyphCake>,
+    pub display: Display,
     shelve: HashMap<
         usize,
         (
-            Vec<GlyphCake>,
-            HashMap<usize, (Animation, usize, (usize, usize))>,
+            Display,
+            // HashMap<usize, (Animation, usize, (usize, usize))>,
             HashMap<usize, (Graphic, usize, (usize, usize))>,
         ),
     >,
     shelve_id: usize,
     time: Timestamp,
     next_anim_id: usize,
-    animations: HashMap<usize, (Animation, usize, (usize, usize))>,
+    // animations: HashMap<usize, (Animation, usize, (usize, usize))>,
     graphics: HashMap<usize, (Graphic, usize, (usize, usize))>,
     stdin: i32,
     stdout: io::Stdout,
     termios_orig: Termios,
     termios: Termios,
-    c_color: NewColor,
-    c_background: NewColor,
+    c_color: Color,
+    c_background: Color,
     c_x: usize,
     c_y: usize,
     c_plain: bool,
@@ -78,12 +79,7 @@ impl Screen {
         if glyph.is_some() {
             dglyph = glyph.unwrap();
         }
-        let mut display = Vec::with_capacity(final_cols * final_rows);
-        for j in 1..final_rows + 1 {
-            for i in 1..final_cols + 1 {
-                display.push(GlyphCake::new(i, j, Some(dglyph.clone()), 0));
-            }
-        }
+        let mut display = Display::new(0, dglyph, final_cols, final_rows);
         Screen {
             rows: final_rows,
             cols: final_cols,
@@ -92,7 +88,7 @@ impl Screen {
             shelve_id: 0,
             time: Timestamp::now(),
             next_anim_id: 0,
-            animations: HashMap::with_capacity(5),
+            // animations: HashMap::with_capacity(5),
             graphics: HashMap::with_capacity(5),
             stdin,
             stdout: io::stdout(),
@@ -113,59 +109,45 @@ impl Screen {
             c_strike: dglyph.strike,
         }
     }
+
     // TODO: Functionality to re/store animations and their states
-    pub fn new_display(&mut self, keep_existing: bool) -> Option<usize> {
-        let mut new_display = Vec::with_capacity(self.cols * self.rows);
-        let dglyph = Glyph::default();
-        for j in 1..self.rows + 1 {
-            for i in 1..self.cols + 1 {
-                new_display.push(GlyphCake::new(i, j, Some(dglyph.clone()), 0));
-            }
-        }
+    pub fn new_display(&mut self, display_id: usize, keep_existing: bool) -> usize {
+        let mut new_display = Display::new(display_id, Glyph::default(), self.cols, self.rows);
         let mut return_id = None;
         let old_display = replace(&mut self.display, new_display);
         let current_time = self.time.tick();
-        self.animations
-            .values_mut()
-            .for_each(|(a, _l, (_x, _y))| a.pause(current_time));
-        let old_animations = self.animations.drain().collect();
         let old_graphics = self.graphics.drain().collect();
         if keep_existing {
             //let old_display = self.display;
             self.shelve
-                .insert(self.shelve_id, (old_display, old_animations, old_graphics));
+                .insert(old_display.id, (old_display, old_graphics));
             return_id = Some(self.shelve_id);
             self.shelve_id += 1;
         }
         self.cls();
-        return_id
+        display_id
     }
 
-    pub fn restore_display(
-        mut self,
-        display_id: usize,
-        keep_existing: bool,
-    ) -> (Screen, Option<usize>) {
-        let (shelved_display, mut shelved_animations, shelved_graphics) = self
-            .shelve
-            .remove(&display_id)
-            .expect(&format!("No display with id {} is shelved", display_id));
-        let current_time = self.time.tick();
-        shelved_animations
-            .values_mut()
-            .for_each(|(a, _l, (_x, _y))| a.start(current_time));
+    pub fn restore_display(&mut self, display_id: usize, keep_existing: bool) -> Option<usize> {
         let mut return_id = None;
-        if keep_existing {
-            self.shelve
-                .insert(display_id, (self.display, self.animations, self.graphics));
+        // println!(
+        //     "Restoring display: {}, shelve: {:?}",
+        //     display_id,
+        //     self.shelve.keys()
+        // );
+        if let Some((shelved_display, shelved_graphics)) = self.shelve.remove(&display_id) {
             return_id = Some(display_id);
+            let current_time = self.time.tick();
+            let old_display = replace(&mut self.display, shelved_display);
+            let mut old_graphics = replace(&mut self.graphics, shelved_graphics);
+            if keep_existing {
+                self.shelve
+                    .insert(old_display.id, (old_display, old_graphics));
+            }
+            let to_print = self.refresh(true);
+            self.print_all(to_print);
         }
-        self.display = shelved_display;
-        self.animations = shelved_animations;
-        self.graphics = shelved_graphics;
-        let to_print = self.refresh(true);
-        self.print_all(to_print);
-        (self, return_id)
+        return_id
     }
 
     pub fn add_graphic(&mut self, g: Graphic, layer: usize, offset: (usize, usize)) -> usize {
@@ -191,11 +173,6 @@ impl Screen {
             } else {
                 (current_state.2 .1) + (offset.1 as usize)
             };
-            // eprintln!(
-            //     "orig: {} {}, Deltas: {} {}",
-            //     current_state.2 .0, current_state.2 .1, delta_zero, delta_one
-            // );
-            //let delta_offset = (delta_zero, delta_one);
             new_graphics = Some((delta_zero, delta_one));
             if current_state.1 != layer {
                 cl_args.push((
@@ -275,31 +252,62 @@ impl Screen {
     pub fn set_graphic(&mut self, ids: (&usize, &usize), force: bool) {
         let mut results = Vec::new();
         if let Some((graphic, layer, offset)) = self.graphics.get_mut(ids.0) {
-            results.push((graphic.set_graphic(ids.1, *offset, force), *layer));
+            results.push((graphic.set_frame(ids.1, *offset, force), *layer));
         }
         self.update(results);
         let to_print = self.refresh(false);
         self.print_all(to_print);
     }
 
+    pub fn set_invisible(&mut self, gid: usize, invisible: bool) {
+        if let Some((mut graphic, layer, offset)) = self.graphics.remove(&gid) {
+            graphic.set_invisible(invisible);
+            let fid = graphic.current_frame;
+            self.graphics.insert(gid, (graphic, layer, offset));
+            self.set_graphic((&gid, &fid), true);
+        }
+    }
     pub fn set_glyph(&mut self, gid: usize, glyph: Glyph, col: usize, row: usize) {
         if let Some((mut graphic, layer, offset)) = self.graphics.remove(&gid) {
             graphic.set_glyph(glyph, col, row);
+            let fid = graphic.current_frame;
             self.graphics.insert(gid, (graphic, layer, offset));
+            self.set_graphic((&gid, &fid), true);
         }
     }
 
-    pub fn empty_frame(&mut self, gid: usize) {
+    pub fn get_glyph(&mut self, gid: usize, col: usize, row: usize) -> Option<Glyph> {
+        if let Some((gr, _l, _o)) = self.graphics.get(&gid) {
+            return gr.get_glyph(col, row);
+        }
+        None
+    }
+    pub fn empty_frame(&mut self, gid: usize) -> Option<usize> {
         if let Some((mut graphic, layer, offset)) = self.graphics.remove(&gid) {
             let result = graphic.empty_frame();
             self.graphics.insert(gid, (graphic, layer, offset));
-            //if let Some(fid) = result {
             self.set_graphic((&gid, &result.unwrap()), true);
-            //}
+            return result;
         } else {
             panic!("no graphic")
         }
     }
+
+    pub fn clone_frame(&mut self, gid: usize, frame_id: Option<usize>) -> Option<usize> {
+        if let Some((mut graphic, layer, offset)) = self.graphics.remove(&gid) {
+            let mut fr_id = graphic.current_frame;
+            if let Some(id) = frame_id {
+                fr_id = id;
+            }
+            let result = graphic.clone_frame(fr_id);
+            self.graphics.insert(gid, (graphic, layer, offset));
+            self.set_graphic((&gid, &result.unwrap()), true);
+            return result;
+        } else {
+            panic!("no graphic")
+        }
+    }
+
     pub fn update_graphics_layer(&mut self, gid: usize, layer: usize) {
         if let Some((graphic, old_layer, offset)) = self.graphics.remove(&gid) {
             self.graphics.insert(gid, (graphic, layer, offset));
@@ -310,77 +318,77 @@ impl Screen {
             self.graphics.insert(gid, (graphic, layer, offset));
         }
     }
-    pub fn add_animation(&mut self, a: Animation, layer: usize, offset: (usize, usize)) -> usize {
-        let anim_id = self.next_anim_id;
-        self.next_anim_id += 1;
-        self.animations.insert(anim_id, (a, layer, offset));
-        anim_id
-    }
-
-    pub fn start_animation(&mut self, id: &usize) {
-        if let Some((anim, _layer, _offset)) = self.animations.get_mut(id) {
-            anim.start(self.time.tick());
+    pub fn add_animation(&mut self, graphic_id: usize, a: Animation) -> Option<usize> {
+        if let Some((mut graphic, layer, offset)) = self.graphics.remove(&graphic_id) {
+            let add_result = graphic.add_animation(a);
+            self.graphics.insert(graphic_id, (graphic, layer, offset));
+            add_result
+        } else {
+            None
         }
     }
 
-    pub fn new_start_animation(&mut self, gid: &usize, aid: usize) {
+    pub fn start_animation(&mut self, gid: &usize, aid: usize) {
         if let Some((graphic, layer, offset)) = self.graphics.get_mut(gid) {
             graphic.start_animation(aid, self.time.tick());
         }
     }
 
+    // TODO: rewrite this
     pub fn restart_animation(&mut self, id: &usize) {
-        if let Some((anim, _layer, _offset)) = self.animations.get_mut(id) {
-            anim.restart(self.time.tick());
+        // if let Some((anim, _layer, _offset)) = self.animations.get_mut(id) {
+        //     anim.restart(self.time.tick());
+        // }
+    }
+
+    pub fn pause_animation(&mut self, gid: &usize) {
+        if let Some((graphic, layer, offset)) = self.graphics.get_mut(gid) {
+            if let Some(anim_id) = graphic.running_anim {
+                graphic.pause_animation(anim_id, Timestamp::now());
+            }
         }
     }
 
-    pub fn pause_animation(&mut self, id: &usize) {
-        if let Some((anim, _layer, _offset)) = self.animations.get_mut(id) {
-            anim.pause(self.time.tick());
-        }
-    }
-
-    pub fn pause_animation_on_frame(&mut self, gid: &usize, aid: usize, fid: usize) {
+    pub fn pause_animation_on_frame(&mut self, gid: &usize, fid: usize) {
         if let Some((graphic, _layer, _offset)) = self.graphics.get_mut(gid) {
-            if graphic.running_anim.is_some() {
-                graphic.pause_animation_on_frame(aid, fid);
+            if let Some(anim_id) = graphic.running_anim {
+                graphic.pause_animation_on_frame(anim_id, fid);
             }
             //anim.pause_on_frame(fid);
         }
     }
 
-    pub fn stop_animation(&mut self, id: &usize) {
-        if let Some((anim, _layer, _offset)) = self.animations.get_mut(id) {
-            anim.stop();
-        }
-    }
+    // pub fn stop_animation(&mut self, id: &usize) {
+    //     if let Some((anim, _layer, _offset)) = self.animations.get_mut(id) {
+    //         anim.stop();
+    //     }
+    // }
 
-    pub fn new_stop_animation(&mut self, gid: &usize) {
+    pub fn stop_animation(&mut self, gid: &usize) {
         if let Some((graphic, _layer, _offset)) = self.graphics.get_mut(gid) {
             graphic.stop_animation();
         }
     }
 
-    pub fn update_animations(&mut self) {
-        let mut pixels = vec![];
-        for (_id, (anim, layer, off_set)) in &mut self.animations {
-            if let Some(pxls) = anim.update(self.time.tick()) {
-                let mut n_ps = Vec::with_capacity(pxls.len());
-                for mut p in pxls {
-                    p.offset(*off_set);
-                    n_ps.push(p);
-                }
-                pixels.push((n_ps, layer.clone()));
-            }
-        }
-        //        for (ps, layer) in pixels {
-        //            self.update(ps, *layer);
-        //        }
-        self.update(pixels);
-        let to_print = self.refresh(false);
-        self.print_all(to_print);
-    }
+    // pub fn update_animations(&mut self) {
+    //     let mut pixels = vec![];
+    //     for (_id, (anim, layer, off_set)) in &mut self.animations {
+    //         if let Some(pxls) = anim.update(self.time.tick()) {
+    //             let mut n_ps = Vec::with_capacity(pxls.len());
+    //             for mut p in pxls {
+    //                 p.offset(*off_set);
+    //                 n_ps.push(p);
+    //             }
+    //             pixels.push((n_ps, layer.clone()));
+    //         }
+    //     }
+    //     //        for (ps, layer) in pixels {
+    //     //            self.update(ps, *layer);
+    //     //        }
+    //     self.update(pixels);
+    //     let to_print = self.refresh(false);
+    //     self.print_all(to_print);
+    // }
 
     pub fn update_graphics(&mut self) {
         let mut pixels = vec![];
@@ -389,7 +397,7 @@ impl Screen {
             if let Some(anim_id) = graphic.running_anim {
                 if let Some(anim) = graphic.animations.get_mut(&anim_id) {
                     if let Some((frame_id, running)) = anim.new_update(self.time.tick()) {
-                        pixels.push((graphic.set_graphic(&frame_id, *offset, false), *layer));
+                        pixels.push((graphic.set_frame(&frame_id, *offset, false), *layer));
                         keep_running = running;
                     }
                 }
@@ -418,7 +426,7 @@ impl Screen {
         //}
         // print!("\x1b[H\x1b[37;40m{:<1$}", "", self.cols * self.rows);
         self.stdout.lock().flush().unwrap();
-        self.c_background = NewColor::Basic(Color::Black);
+        self.c_background = Color::Basic(ColorName::Black);
     }
 
     pub fn cla(
@@ -445,30 +453,13 @@ impl Screen {
 
     pub fn refresh(&mut self, force: bool) -> Vec<(usize, usize, Glyph)> {
         let mut to_print = Vec::with_capacity(64);
-        for gcake in self.display.iter_mut() {
+        for gcake in self.display.array.iter_mut() {
             if gcake.modified || force {
                 //println!("Adding glyph {} {}", gcake.col, gcake.row);
                 to_print.push((gcake.col, gcake.row, gcake.get_glyph()));
             }
         }
         to_print
-    }
-
-    pub fn rectangle(
-        &mut self,
-        glyph: Glyph,
-        start_x: usize,
-        start_y: usize,
-        width: usize,
-        lenght: usize,
-    ) -> Vec<Pixel> {
-        let mut rectangle = Vec::new();
-        for j in start_y..start_y + lenght {
-            for i in start_x..start_x + width {
-                rectangle.push(Pixel::new(i, j, true, glyph.clone()));
-            }
-        }
-        rectangle
     }
 
     pub fn print_all(&mut self, glyphs: Vec<(usize, usize, Glyph)>) {
@@ -492,7 +483,7 @@ impl Screen {
                 let x = p.x.saturating_sub(1);
                 let y = p.y.saturating_sub(1);
                 let index = x + (y * self.cols);
-                let cake = self.display.get_mut(index).expect("WTF?!");
+                let cake = self.display.array.get_mut(index).expect("WTF?!");
                 cake.update(p.g, layer);
             }
         }
@@ -591,12 +582,10 @@ impl Screen {
         }
         if self.c_color != glyph.color {
             match glyph.color {
-                NewColor::Basic(color) => modifier.push_str(&format!("3{};", color as u8)),
-                NewColor::EightBit(color) => modifier.push_str(&format!("38;5;{};", color)),
-                NewColor::Grayscale(brightness) => {
-                    modifier.push_str(&format!("38;5;{};", brightness))
-                }
-                NewColor::Truecolor(red, green, blue) => {
+                Color::Basic(color) => modifier.push_str(&format!("3{};", color as u8)),
+                Color::EightBit(color) => modifier.push_str(&format!("38;5;{};", color)),
+                Color::Grayscale(brightness) => modifier.push_str(&format!("38;5;{};", brightness)),
+                Color::Truecolor(red, green, blue) => {
                     modifier.push_str(&format!("38;2;{};{};{};", red, green, blue))
                 }
             }
@@ -605,10 +594,10 @@ impl Screen {
         //if self.c_background != glyph.background {
         //modifier.push_str(&format!("4{}", glyph.background as u8));
         match glyph.background {
-            NewColor::Basic(color) => modifier.push_str(&format!("4{}", color as u8)),
-            NewColor::EightBit(color) => modifier.push_str(&format!("48;5;{}", color)),
-            NewColor::Grayscale(brightness) => modifier.push_str(&format!("48;5;{}", brightness)),
-            NewColor::Truecolor(red, green, blue) => {
+            Color::Basic(color) => modifier.push_str(&format!("4{}", color as u8)),
+            Color::EightBit(color) => modifier.push_str(&format!("48;5;{}", color)),
+            Color::Grayscale(brightness) => modifier.push_str(&format!("48;5;{}", brightness)),
+            Color::Truecolor(red, green, blue) => {
                 modifier.push_str(&format!("48;2;{};{};{}", red, green, blue))
             }
         }
@@ -679,10 +668,10 @@ impl Screen {
             modifier.push_str("9;");
         }
         match glyph.color {
-            NewColor::Basic(color) => modifier.push_str(&format!("3{};", color as u8)),
-            NewColor::EightBit(color) => modifier.push_str(&format!("38;5;{};", color)),
-            NewColor::Grayscale(brightness) => modifier.push_str(&format!("38;5;{};", brightness)),
-            NewColor::Truecolor(red, green, blue) => {
+            Color::Basic(color) => modifier.push_str(&format!("3{};", color as u8)),
+            Color::EightBit(color) => modifier.push_str(&format!("38;5;{};", color)),
+            Color::Grayscale(brightness) => modifier.push_str(&format!("38;5;{};", brightness)),
+            Color::Truecolor(red, green, blue) => {
                 modifier.push_str(&format!("38;2;{};{};{};", red, green, blue))
             }
         }
@@ -690,10 +679,10 @@ impl Screen {
         //if self.c_background != glyph.background {
         //modifier.push_str(&format!("4{}", glyph.background as u8));
         match glyph.background {
-            NewColor::Basic(color) => modifier.push_str(&format!("4{}", color as u8)),
-            NewColor::EightBit(color) => modifier.push_str(&format!("48;5;{}", color)),
-            NewColor::Grayscale(brightness) => modifier.push_str(&format!("48;5;{}", brightness)),
-            NewColor::Truecolor(red, green, blue) => {
+            Color::Basic(color) => modifier.push_str(&format!("4{}", color as u8)),
+            Color::EightBit(color) => modifier.push_str(&format!("48;5;{}", color)),
+            Color::Grayscale(brightness) => modifier.push_str(&format!("48;5;{}", brightness)),
+            Color::Truecolor(red, green, blue) => {
                 modifier.push_str(&format!("48;2;{};{};{}", red, green, blue))
             }
         }
