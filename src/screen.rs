@@ -259,6 +259,42 @@ impl Screen {
         self.print_all(to_print);
     }
 
+    pub fn set_graphic_color(&mut self, gid: usize, color: Color) {
+        let mut results = Vec::new();
+        if let Some((graphic, layer, offset)) = self.graphics.get_mut(&gid) {
+            graphic.set_current_frame_color(color);
+            let curr_frame = graphic.current_frame;
+            results.push((graphic.set_frame(&curr_frame, *offset, true), *layer));
+        }
+        self.update(results);
+        let to_print = self.refresh(true);
+        self.print_all(to_print);
+    }
+
+    pub fn set_graphic_background(&mut self, gid: usize, color: Color) {
+        let mut results = Vec::new();
+        if let Some((graphic, layer, offset)) = self.graphics.get_mut(&gid) {
+            graphic.set_current_frame_background(color);
+            let curr_frame = graphic.current_frame;
+            results.push((graphic.set_frame(&curr_frame, *offset, true), *layer));
+        }
+        self.update(results);
+        let to_print = self.refresh(true);
+        self.print_all(to_print);
+    }
+
+    pub fn set_graphic_style(&mut self, gid: usize, style: Glyph) {
+        let mut results = Vec::new();
+        if let Some((graphic, layer, offset)) = self.graphics.get_mut(&gid) {
+            graphic.set_current_frame_style(style);
+            let curr_frame = graphic.current_frame;
+            results.push((graphic.set_frame(&curr_frame, *offset, true), *layer));
+        }
+        self.update(results);
+        let to_print = self.refresh(true);
+        self.print_all(to_print);
+    }
+
     pub fn set_invisible(&mut self, gid: usize, invisible: bool) {
         if let Some((mut graphic, layer, offset)) = self.graphics.remove(&gid) {
             graphic.set_invisible(invisible);

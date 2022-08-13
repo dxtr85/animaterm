@@ -1,4 +1,5 @@
 use super::animation::Animation;
+use super::color::Color;
 use super::error::AnimError;
 use super::pixel::Pixel;
 use super::time::Timestamp;
@@ -210,6 +211,34 @@ impl Graphic {
             return frame.get(index).cloned();
         }
         None
+    }
+
+    pub fn set_current_frame_color(&mut self, color: Color) {
+        let mut frame = self.library.remove(&self.current_frame).unwrap();
+        for g in frame.iter_mut() {
+            g.set_color(color);
+        }
+        self.library.insert(self.current_frame, frame);
+    }
+
+    pub fn set_current_frame_background(&mut self, color: Color) {
+        let mut frame = self.library.remove(&self.current_frame).unwrap();
+        for g in frame.iter_mut() {
+            g.set_background(color);
+        }
+        self.library.insert(self.current_frame, frame);
+    }
+
+    pub fn set_current_frame_style(&mut self, mut style: Glyph) {
+        let mut new_frame = Vec::with_capacity(self.cols * self.rows);
+        let mut frame = self.library.remove(&self.current_frame).unwrap();
+        for g in frame.iter_mut() {
+            style.set_char(g.character);
+            style.set_color(g.color);
+            style.set_background(g.background);
+            new_frame.push(style)
+        }
+        self.library.insert(self.current_frame, new_frame);
     }
 
     pub fn set_frame(&mut self, id: &usize, offset: (usize, usize), force: bool) -> Vec<Pixel> {

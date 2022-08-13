@@ -94,11 +94,29 @@ impl Glyph {
     pub fn set_background(&mut self, background: Color) {
         self.background = background;
     }
+    pub fn set_transparent(&mut self, transparent: bool) {
+        self.plain = transparent;
+    }
+    pub fn set_bright(&mut self, bright: bool) {
+        self.bright = bright;
+    }
+    pub fn set_italic(&mut self, italic: bool) {
+        self.italic = italic;
+    }
+    pub fn set_underline(&mut self, underline: bool) {
+        self.underline = underline;
+    }
     pub fn set_blink(&mut self, blink: bool) {
         self.blink = blink;
     }
+    pub fn set_blinkfast(&mut self, blink: bool) {
+        self.blink_fast = blink;
+    }
     pub fn set_reverse(&mut self, reverse: bool) {
         self.reverse = reverse;
+    }
+    pub fn set_strike(&mut self, strike: bool) {
+        self.strike = strike;
     }
 }
 impl Default for Glyph {

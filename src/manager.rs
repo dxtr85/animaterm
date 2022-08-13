@@ -1,4 +1,5 @@
 use super::animation::Animation;
+use super::color::Color;
 use super::error::AnimError;
 use super::glyph::Glyph;
 use super::graphic::Graphic;
@@ -28,6 +29,9 @@ enum Message {
     SetGlyph(usize, Glyph, usize, usize),
     GetGlyph(usize, usize, usize),
     SetGraphic(usize, usize, bool),
+    SetGraphicColor(usize, Color),
+    SetGraphicBackground(usize, Color),
+    SetGraphicStyle(usize, Glyph),
     SetInvisible(usize, bool),
     MoveGraphic(usize, usize, (isize, isize)),
     DeleteGraphic(usize),
@@ -111,6 +115,15 @@ impl Manager {
                         }
                         Message::SetGraphic(gid, fid, force) => {
                             screen.set_graphic((&gid, &fid), force);
+                        }
+                        Message::SetGraphicColor(gid, color) => {
+                            screen.set_graphic_color(gid, color);
+                        }
+                        Message::SetGraphicBackground(gid, color) => {
+                            screen.set_graphic_background(gid, color);
+                        }
+                        Message::SetGraphicStyle(gid, style) => {
+                            screen.set_graphic_style(gid, style);
                         }
                         Message::SetInvisible(gid, invisible) => {
                             screen.set_invisible(gid, invisible);
@@ -306,6 +319,15 @@ impl Manager {
     }
     pub fn set_graphic(&self, gid: usize, fid: usize, force: bool) {
         self.sender.send(Message::SetGraphic(gid, fid, force));
+    }
+    pub fn set_graphic_color(&self, gid: usize, color: Color) {
+        self.sender.send(Message::SetGraphicColor(gid, color));
+    }
+    pub fn set_graphic_background(&self, gid: usize, color: Color) {
+        self.sender.send(Message::SetGraphicBackground(gid, color));
+    }
+    pub fn set_graphic_style(&self, gid: usize, glyph: Glyph) {
+        self.sender.send(Message::SetGraphicStyle(gid, glyph));
     }
     pub fn delete_graphic(&self, gid: usize) {
         self.sender.send(Message::DeleteGraphic(gid));

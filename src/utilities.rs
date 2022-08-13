@@ -24,7 +24,8 @@ pub fn progress_bar(
     let mut library = HashMap::with_capacity(width * total_states);
     let mut ordering = Vec::with_capacity(total_states);
     let mut contstruction_state = vec![empty; width];
-    let mut j = 0;
+    library.insert(0, contstruction_state.clone());
+    let mut j = 1;
     for i in 0..width {
         for state_no in 0..total_states {
             replace(
