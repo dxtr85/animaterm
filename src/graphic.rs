@@ -199,7 +199,7 @@ impl Graphic {
         let index = self.cols * (row - 1) + col - 1;
         if index < self.rows * self.cols {
             let mut frame = self.library.remove(&self.current_frame).unwrap();
-            replace(&mut frame[index], glyph);
+            let _r = replace(&mut frame[index], glyph);
             self.library.insert(self.current_frame, frame);
         }
     }

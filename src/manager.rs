@@ -7,7 +7,6 @@ use super::helpers::map_bytes_to_key;
 use super::key::Key;
 use super::response::AnimOk::{self, *};
 use super::screen::Screen;
-use super::time::Timestamp;
 use std::io;
 use std::io::Read;
 use std::mem::replace;
@@ -15,7 +14,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
-enum Message {
+pub enum Message {
     Finish,
     EmptyFrame(usize),
     CloneFrame(usize, Option<usize>),
@@ -46,6 +45,7 @@ pub struct Manager {
     next_screen_id: usize,
     sender: mpsc::Sender<Message>,
     key_receiver: Option<mpsc::Receiver<u8>>,
+    key_recv_timeout: Duration,
     result_receiver: Option<mpsc::IntoIter<Result<AnimOk, AnimError>>>,
 }
 
@@ -55,6 +55,7 @@ impl Manager {
         cols: Option<usize>,
         rows: Option<usize>,
         glyph: Option<Glyph>,
+        screen_refresh_timeout: Option<Duration>,
     ) -> Self {
         let mut screen = Screen::new(cols, rows, glyph);
         let cols = screen.cols;
@@ -63,12 +64,16 @@ impl Manager {
         screen.cls();
         let (sender, receiver) = mpsc::channel();
         let (result_sender, result_receiver) = mpsc::channel();
+
         // current granularity of Timestamp structure is 1ms
-        let timeout = Duration::from_millis(1);
+        let mut refresh_timeout = Duration::from_millis(10);
+        if let Some(dur) = screen_refresh_timeout {
+            refresh_timeout = dur;
+        }
         let join_handle = thread::spawn(move || {
             let mut finish = false;
             while !finish {
-                if let Ok(value) = receiver.recv_timeout(timeout) {
+                if let Ok(value) = receiver.recv_timeout(refresh_timeout) {
                     match value {
                         Message::Finish => {
                             finish = true;
@@ -194,6 +199,7 @@ impl Manager {
             next_screen_id: 1,
             sender,
             key_receiver,
+            key_recv_timeout: Duration::from_millis(1),
             result_receiver: Some(result_receiver.into_iter()),
         }
     }
@@ -202,11 +208,18 @@ impl Manager {
         replace(&mut self.key_receiver, None)
     }
 
+    pub fn set_key_receive_timeout(&mut self, t: Duration) {
+        self.key_recv_timeout = t;
+    }
+
+    pub fn get_message_sender(&mut self) -> mpsc::Sender<Message> {
+        self.sender.clone()
+    }
+
     pub fn read_key(&mut self) -> Option<Key> {
-        let mut k_rcvr = replace(&mut self.key_receiver, None);
+        let k_rcvr = replace(&mut self.key_receiver, None);
         if let Some(key_rcvr) = k_rcvr {
             let mut keys_read: Vec<u8> = Vec::with_capacity(10);
-            let mut multibyte_sequence = false;
             let mut all_bytes_read = false;
             if let Ok(first_byte) = key_rcvr.recv() {
                 keys_read.push(first_byte);
@@ -214,7 +227,7 @@ impl Manager {
                     all_bytes_read = true
                 }
                 while !all_bytes_read {
-                    match key_rcvr.recv_timeout(Duration::from_nanos(1)) {
+                    match key_rcvr.recv_timeout(self.key_recv_timeout) {
                         Ok(byte) => keys_read.push(byte),
                         Err(_error) => {
                             all_bytes_read = true;
@@ -222,12 +235,11 @@ impl Manager {
                     }
                 }
             }
-            replace(&mut self.key_receiver, Some(key_rcvr));
+            let _replaced = replace(&mut self.key_receiver, Some(key_rcvr));
             return map_bytes_to_key(keys_read);
         } else {
             panic!("mgr has no key receiver!")
         }
-        None
     }
 
     pub fn set_key_iter(&mut self, receiver: mpsc::Receiver<u8>) -> Option<mpsc::Receiver<u8>> {

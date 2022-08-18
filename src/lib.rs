@@ -15,12 +15,17 @@
 //! In order to use this library, you need to create a [`Manager`]:
 //! ```no_run
 //! use animaterm::prelude::*;
+//! use std::time::Duration;
 //!
 //! let capture_keyboard = true;
 //! let cols = Some(40);
 //! let rows = None;  // use all rows available
 //! let glyph = Some(Glyph::default());  // initially fill the screen with this
-//! let mut mgr = Manager::new(capture_keyboard, cols, rows, glyph);
+//! // You can crank refresh_timeout down, but anything below 1ms won't make a difference,
+//! // other than high CPU usage.
+//! // With default 10ms you get up to 100 FPS, probably enough for a terminal application.
+//! let refresh_timeout = Some(Duration::from_milis(10));  
+//! let mut mgr = Manager::new(capture_keyboard, cols, rows, glyph, refresh_timeout);
 //! ```
 //!
 //! Please also note that in order to see the progress you are making with this library
@@ -224,7 +229,7 @@
 mod error;
 pub use error::AnimError;
 mod manager;
-pub use manager::Manager;
+pub use manager::{Manager, Message};
 mod response;
 pub use response::AnimOk;
 mod screen;
@@ -236,7 +241,7 @@ mod animation;
 pub use animation::Animation;
 mod color;
 pub use color::{Color, ColorName};
-mod glyph;
+pub mod glyph;
 mod pixel;
 pub use glyph::Glyph;
 mod display;

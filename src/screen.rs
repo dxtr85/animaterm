@@ -1,7 +1,6 @@
 use super::animation::Animation;
 use super::color::{Color, ColorName};
 use super::display::Display;
-use super::glyphcake::GlyphCake;
 use super::graphic::Graphic;
 use super::helpers::ask_os_for_rows_and_cols;
 use super::pixel::Pixel;
@@ -33,7 +32,7 @@ pub struct Screen {
     >,
     shelve_id: usize,
     time: Timestamp,
-    next_anim_id: usize,
+    next_available_id: usize,
     // animations: HashMap<usize, (Animation, usize, (usize, usize))>,
     graphics: HashMap<usize, (Graphic, usize, (usize, usize))>,
     stdin: i32,
@@ -87,7 +86,7 @@ impl Screen {
             shelve: HashMap::new(),
             shelve_id: 0,
             time: Timestamp::now(),
-            next_anim_id: 0,
+            next_available_id: 0,
             // animations: HashMap::with_capacity(5),
             graphics: HashMap::with_capacity(5),
             stdin,
@@ -151,8 +150,8 @@ impl Screen {
     }
 
     pub fn add_graphic(&mut self, g: Graphic, layer: usize, offset: (usize, usize)) -> usize {
-        let graph_id = self.next_anim_id;
-        self.next_anim_id += 1;
+        let graph_id = self.next_available_id;
+        self.next_available_id += 1;
         self.graphics.insert(graph_id, (g, layer, offset));
         graph_id
     }

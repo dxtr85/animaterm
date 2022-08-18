@@ -1,7 +1,6 @@
 use super::animation::Animation;
 use super::glyph::Glyph;
 use super::graphic::Graphic;
-use super::pixel::Pixel;
 use super::time::Timestamp;
 use std::collections::HashMap;
 use std::mem::replace;
@@ -28,7 +27,7 @@ pub fn progress_bar(
     let mut j = 1;
     for i in 0..width {
         for state_no in 0..total_states {
-            replace(
+            let _r = replace(
                 &mut contstruction_state[i],
                 states.get(state_no).unwrap().clone(),
             );

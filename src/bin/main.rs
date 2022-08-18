@@ -15,7 +15,7 @@ fn main() {
     let cols = args.cols;
     let rows = args.rows;
     verify_cols_and_rows(cols, rows);
-    let mut mgr = Manager::new(true, cols, rows, None);
+    let mut mgr = Manager::new(true, cols, rows, None, None);
     let (cols, rows) = mgr.screen_size();
 
     let gl = Glyph::default();
