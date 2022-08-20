@@ -210,7 +210,7 @@ pub fn wrap_border_around(
     let mut start = 0;
     if let Some(text) = title {
         let mut g = border[1].clone();
-        for character in text.chars() {
+        for character in text.chars().take(cols.saturating_sub(2)) {
             g.set_char(character);
             start += 1;
             result.push(g);

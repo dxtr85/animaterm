@@ -7,9 +7,11 @@ use super::helpers::map_bytes_to_key;
 use super::key::Key;
 use super::response::AnimOk::{self, *};
 use super::screen::Screen;
+use std::fs::File;
 use std::io;
-use std::io::Read;
+use std::io::{BufReader, Read};
 use std::mem::replace;
+use std::path::Path;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
@@ -36,6 +38,8 @@ pub enum Message {
     DeleteGraphic(usize),
     NewDisplay(usize, bool),
     RestoreDisplay(usize, bool),
+    PrintScreen,
+    PrintScreenSection((usize, usize), usize, usize),
 }
 
 pub struct Manager {
@@ -66,12 +70,13 @@ impl Manager {
         let (result_sender, result_receiver) = mpsc::channel();
 
         // current granularity of Timestamp structure is 1ms
-        let mut refresh_timeout = Duration::from_millis(10);
+        let mut refresh_timeout = Duration::from_millis(30);
         if let Some(dur) = screen_refresh_timeout {
             refresh_timeout = dur;
         }
         let join_handle = thread::spawn(move || {
             let mut finish = false;
+            let mut i = 0;
             while !finish {
                 if let Ok(value) = receiver.recv_timeout(refresh_timeout) {
                     match value {
@@ -136,6 +141,14 @@ impl Manager {
                         Message::DeleteGraphic(gid) => {
                             screen.delete_graphic(&gid);
                         }
+                        Message::PrintScreen => {
+                            let mut text = screen.print_screen();
+                            result_sender.send(Result::Ok(PrintScreen(text)));
+                        }
+                        Message::PrintScreenSection(offset, cols, rows) => {
+                            let mut text = screen.print_screen_section(offset, cols, rows);
+                            result_sender.send(Result::Ok(PrintScreen(text)));
+                        }
                         Message::EmptyFrame(gid) => {
                             let result = screen.empty_frame(gid);
                             if let Some(id) = result {
@@ -165,7 +178,6 @@ impl Manager {
                         }
                     }
                 }
-                //screen.update_animations();
                 screen.update_graphics();
             }
             screen.cleanup();
@@ -304,6 +316,18 @@ impl Manager {
     pub fn get_glyph(&self, gid: usize, col: usize, row: usize) {
         self.sender.send(Message::GetGlyph(gid, col, row));
     }
+
+    pub fn load_graphic_from_file<P>(&self, filename: P) -> Result<AnimOk, AnimError>
+    where
+        P: AsRef<Path>,
+    {
+        if let Some(graphic) = Graphic::from_file(filename) {
+            return Ok(AnimOk::GraphicCreated(graphic));
+        } else {
+            return Err(AnimError::UnableToBuildGraphicFromFile);
+        }
+    }
+
     pub fn empty_frame(&self, gid: usize) {
         self.sender.send(Message::EmptyFrame(gid));
     }
@@ -343,6 +367,15 @@ impl Manager {
     }
     pub fn delete_graphic(&self, gid: usize) {
         self.sender.send(Message::DeleteGraphic(gid));
+    }
+
+    pub fn print_screen(&self) {
+        self.sender.send(Message::PrintScreen);
+    }
+
+    pub fn print_screen_section(&self, offset: (usize, usize), cols: usize, rows: usize) {
+        self.sender
+            .send(Message::PrintScreenSection(offset, cols, rows));
     }
 
     pub fn terminate(self) {

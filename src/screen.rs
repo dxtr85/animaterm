@@ -109,7 +109,6 @@ impl Screen {
         }
     }
 
-    // TODO: Functionality to re/store animations and their states
     pub fn new_display(&mut self, display_id: usize, keep_existing: bool) -> usize {
         let mut new_display = Display::new(display_id, Glyph::default(), self.cols, self.rows);
         let mut return_id = None;
@@ -254,8 +253,34 @@ impl Screen {
             results.push((graphic.set_frame(ids.1, *offset, force), *layer));
         }
         self.update(results);
-        let to_print = self.refresh(false);
+        let to_print = self.refresh(force);
         self.print_all(to_print);
+    }
+
+    pub fn print_screen(&mut self) -> Vec<String> {
+        let to_print = self.refresh(true);
+        self.get_text(to_print)
+    }
+
+    pub fn print_screen_section(
+        &mut self,
+        offset: (usize, usize),
+        cols: usize,
+        rows: usize,
+    ) -> Vec<String> {
+        let whole_screen = self.refresh(true);
+        let minX = offset.0 + 1;
+        let minY = offset.1 + 1;
+        let maxX = offset.0 + cols;
+        let maxY = offset.1 + rows + 1;
+
+        let mut to_print = Vec::new();
+        for (x, y, glyph) in whole_screen {
+            if x >= minX && x <= maxX && y >= minY && y <= maxY {
+                to_print.push((x, y, glyph));
+            }
+        }
+        self.get_text(to_print)
     }
 
     pub fn set_graphic_color(&mut self, gid: usize, color: Color) {
@@ -393,37 +418,11 @@ impl Screen {
         }
     }
 
-    // pub fn stop_animation(&mut self, id: &usize) {
-    //     if let Some((anim, _layer, _offset)) = self.animations.get_mut(id) {
-    //         anim.stop();
-    //     }
-    // }
-
     pub fn stop_animation(&mut self, gid: &usize) {
         if let Some((graphic, _layer, _offset)) = self.graphics.get_mut(gid) {
             graphic.stop_animation();
         }
     }
-
-    // pub fn update_animations(&mut self) {
-    //     let mut pixels = vec![];
-    //     for (_id, (anim, layer, off_set)) in &mut self.animations {
-    //         if let Some(pxls) = anim.update(self.time.tick()) {
-    //             let mut n_ps = Vec::with_capacity(pxls.len());
-    //             for mut p in pxls {
-    //                 p.offset(*off_set);
-    //                 n_ps.push(p);
-    //             }
-    //             pixels.push((n_ps, layer.clone()));
-    //         }
-    //     }
-    //     //        for (ps, layer) in pixels {
-    //     //            self.update(ps, *layer);
-    //     //        }
-    //     self.update(pixels);
-    //     let to_print = self.refresh(false);
-    //     self.print_all(to_print);
-    // }
 
     pub fn update_graphics(&mut self) {
         let mut pixels = vec![];
@@ -487,7 +486,11 @@ impl Screen {
     }
 
     pub fn refresh(&mut self, force: bool) -> Vec<(usize, usize, Glyph)> {
-        let mut to_print = Vec::with_capacity(64);
+        let mut cap = 64;
+        if force {
+            cap = self.cols * self.rows;
+        }
+        let mut to_print = Vec::with_capacity(cap);
         for gcake in self.display.array.iter_mut() {
             if gcake.modified || force {
                 //println!("Adding glyph {} {}", gcake.col, gcake.row);
@@ -502,6 +505,36 @@ impl Screen {
             self.print(x, y, g);
         }
         self.stdout.lock().flush().unwrap();
+    }
+
+    pub fn get_text(&mut self, glyphs: Vec<(usize, usize, Glyph)>) -> Vec<String> {
+        let mut result = Vec::with_capacity(self.rows);
+        let mut line_text = String::new();
+        let mut last_line = 10;
+        for (_x, y, glyph) in glyphs {
+            if y != last_line {
+                if line_text.len() > 0 {
+                    result.push(line_text);
+                    line_text = String::new();
+                }
+                last_line = y;
+            }
+            let modifier = self.gformat_old(glyph);
+            if !modifier.is_empty() {
+                line_text.push_str(&format!("\x1b[{}m{}", modifier, glyph.character));
+                // line_text.push_str(&modifier);
+                // line_text.push('m');
+            }
+        }
+        if result.len() > 0 {
+            let mut last = result.pop().unwrap();
+            last.push('\x1b');
+            last.push('[');
+            last.push('0');
+            last.push('m');
+            result.push(last);
+        }
+        result
     }
 
     pub fn update(&mut self, pixels: Vec<(Vec<Pixel>, usize)>) {
@@ -653,12 +686,16 @@ impl Screen {
                                           //     modifier.push_str("0;");
                                           // }
         if !glyph.bright {
-            //  self.c_bright = false;
-            modifier.push_str("2;");
+            if self.c_bright {
+                self.c_bright = false;
+                modifier.push_str("2;");
+            }
             // modifier.push_str("01;");
         } else {
-            //self.c_bright = true;
-            modifier.push_str("0;1;");
+            if !self.c_bright {
+                self.c_bright = true;
+                modifier.push_str("0;1;");
+            }
         }
         if !glyph.italic {
             // self.c_italic = false;

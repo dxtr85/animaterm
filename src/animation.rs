@@ -1,4 +1,6 @@
 use super::time::Timestamp;
+
+#[derive(Debug)]
 pub struct Animation {
     current_frame: usize,
     stop_frame: Option<usize>,

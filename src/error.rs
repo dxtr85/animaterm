@@ -5,4 +5,7 @@ pub enum AnimError {
     FailAddingFrame(usize),
     ResultReceiverNotSet,
     FrameNotFound,
+    UnableToOpenFile,
+    UnableToReadFile,
+    UnableToBuildGraphicFromFile,
 }

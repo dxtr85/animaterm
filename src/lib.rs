@@ -23,7 +23,7 @@
 //! let glyph = Some(Glyph::default());  // initially fill the screen with this
 //! // You can crank refresh_timeout down, but anything below 1ms won't make a difference,
 //! // other than high CPU usage.
-//! // With default 10ms you get up to 100 FPS, probably enough for a terminal application.
+//! // With default 30ms you get as high as 33 FPS, probably enough for a terminal application.
 //! let refresh_timeout = Some(Duration::from_milis(10));  
 //! let mut mgr = Manager::new(capture_keyboard, cols, rows, glyph, refresh_timeout);
 //! ```

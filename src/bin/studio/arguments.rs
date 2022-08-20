@@ -14,8 +14,8 @@ pub struct Arguments {
     pub glyphs_offset: Option<(usize, usize)>,
     pub workspace_offset: Option<(usize, usize)>,
     pub workspace_size: Option<(usize, usize)>,
-    // pub input_file: Option<Path>    ,
-    // pub output_file: Option<Path>    ,
+    pub input_file: Option<String>,
+    pub output_file: Option<String>,
     pub glyphs: Option<String>,
 }
 
@@ -30,6 +30,8 @@ impl Default for Arguments {
             glyphs_offset: None,
             workspace_offset: None,
             workspace_size: None,
+            input_file: None,
+            output_file: None,
             glyphs: None,
         }
     }
@@ -44,6 +46,8 @@ enum ArgType {
     GlyphsOffset,
     WorkspaceOffset,
     WorkspaceSize,
+    InputFile,
+    OutputFile,
     Glyphs,
 }
 
@@ -67,7 +71,7 @@ pub fn parse_arguments() -> Arguments {
         if arg == "--help" {
             println!("Usage:");
             println!(
-                "{} --argument value",
+                "{} [--argument [value]]",
                 program_name.split("/").last().unwrap()
             );
             println!("\n Optional arguments:");
@@ -94,6 +98,8 @@ pub fn parse_arguments() -> Arguments {
             println!(
                 " --workspace_size <number>x<number> - Width and Height of Workspace's interior (i.e 20x10)"
             );
+            println!(" --input_file <file_name> - Read a frame into workspace from file");
+            println!(" --output_file <file_name> - Write a workspace frame into file");
             println!(
                 " --glyphs <filename> - index file containing filenames with glyph definitions, each in separate line");
             exit(0)
@@ -129,6 +135,14 @@ pub fn parse_arguments() -> Arguments {
                             what_to_parse = WhatToParse::NumberPair;
                             Some(ArgType::WorkspaceSize)
                         }
+                        "input_file" => {
+                            what_to_parse = WhatToParse::Name;
+                            Some(ArgType::InputFile)
+                        }
+                        "output_file" => {
+                            what_to_parse = WhatToParse::Name;
+                            Some(ArgType::OutputFile)
+                        }
                         "glyphs" => {
                             what_to_parse = WhatToParse::Name;
                             Some(ArgType::Glyphs)
@@ -142,6 +156,12 @@ pub fn parse_arguments() -> Arguments {
                     match &name {
                         &Some(ArgType::Glyphs) => {
                             arguments.glyphs = Some(arg.trim().to_owned());
+                        }
+                        &Some(ArgType::InputFile) => {
+                            arguments.input_file = Some(arg.trim().to_owned());
+                        }
+                        &Some(ArgType::OutputFile) => {
+                            arguments.output_file = Some(arg.trim().to_owned());
                         }
                         _ => {
                             eprintln!(

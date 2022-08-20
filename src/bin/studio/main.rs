@@ -1,10 +1,11 @@
 use animaterm::prelude::*;
 use animaterm::utilities::progress_bar;
 use std::default::Default;
+use std::time::Duration;
 mod helpers;
 use helpers::{
-    build_basic_colors_graphic, build_color_selector, build_empty_matrix, build_glyph_matrix,
-    build_selector, build_style_graphics,
+    build_basic_colors_graphic, build_color_selector, build_glyph_matrix, build_selector,
+    build_style_graphics, build_workspace_matrix,
 };
 mod arguments;
 use arguments::{parse_arguments, verify_cols_and_rows};
@@ -18,7 +19,7 @@ fn main() {
     let cols = args.cols;
     let rows = args.rows;
     verify_cols_and_rows(cols, rows);
-    let mut mgr = Manager::new(true, cols, rows, None, None);
+    let mut mgr = Manager::new(true, cols, rows, None, Some(Duration::from_millis(10)));
     // let (cols, rows) = mgr.screen_size();
     let mut keep_running = true;
     let mut glyphs_offset = (0, 7);
@@ -76,14 +77,14 @@ fn main() {
     mgr.set_graphic(pb1t_id, 0, true);
     glyph.set_color(Color::green());
     let pb2t_id = mgr.add_graphic(
-        Graphic::from_text(6, "Green", glyph),
+        Graphic::from_text(6, "Green ", glyph),
         1,
         (color_offset_cols + 3, color_offset_rows + 4),
     );
     mgr.set_graphic(pb2t_id, 0, true);
     glyph.set_color(Color::blue());
     let pb3t_id = mgr.add_graphic(
-        Graphic::from_text(6, "Blue", glyph),
+        Graphic::from_text(6, "Blue  ", glyph),
         1,
         (color_offset_cols + 3, color_offset_rows + 5),
     );
@@ -219,14 +220,14 @@ fn main() {
     mgr.set_graphic(bg_pb1t_id, 0, true);
     glyph.set_color(Color::green());
     let bg_pb2t_id = mgr.add_graphic(
-        Graphic::from_text(6, "Green", glyph),
+        Graphic::from_text(6, "Green ", glyph),
         1,
         (bg_offset_cols + 3, bg_offset_rows + 4),
     );
     mgr.set_graphic(bg_pb2t_id, 0, true);
     glyph.set_color(Color::blue());
     let bg_pb3t_id = mgr.add_graphic(
-        Graphic::from_text(6, "Blue", glyph),
+        Graphic::from_text(6, "Blue  ", glyph),
         1,
         (bg_offset_cols + 3, bg_offset_rows + 5),
     );
@@ -325,11 +326,20 @@ fn main() {
         matrix_cols = user_workspace_cols;
         matrix_rows = user_workspace_rows;
     }
+    let mut initial_workspace_graphic = None;
+    if let Some(i_file) = args.input_file {
+        initial_workspace_graphic = Graphic::from_file(i_file);
+        if let Some(ref loaded) = initial_workspace_graphic {
+            matrix_cols = loaded.cols;
+            matrix_rows = loaded.rows;
+        }
+    }
     let workspace_id = mgr.add_graphic(
-        build_empty_matrix(matrix_cols, matrix_rows),
+        build_workspace_matrix(matrix_cols, matrix_rows, initial_workspace_graphic),
         0,
         workspace_offset,
     );
+
     mgr.set_graphic(workspace_id, 0, true);
 
     let mut reversed = Glyph::default();
@@ -686,7 +696,7 @@ fn main() {
                 }
 
                 // workspace window
-                Key::Backspace => {
+                Key::Backspace | Key::Delete => {
                     // workspace_window.erase_glyph();
                     mgr.set_glyph(workspace_id, Glyph::default(), c, r);
                     if c > 2 {
@@ -718,9 +728,104 @@ fn main() {
                     style_window.enable_selected_style();
                 }
 
+                Key::Alt_p => {
+                    mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
+                    mgr.print_screen_section(
+                        (workspace_offset.0 + 1, workspace_offset.1 + 1),
+                        matrix_cols,
+                        matrix_rows,
+                    );
+                    mgr.set_glyph(workspace_id, g, c, r);
+                    let result = mgr.read_result();
+                    if let Ok(AnimOk::PrintScreen(print_screen_text)) = result {
+                        use std::fs::OpenOptions;
+                        use std::io::Write;
+
+                        let mut f = OpenOptions::new()
+                            .create_new(true)
+                            .write(true)
+                            .append(true)
+                            .open("pwynik.prnt")
+                            .expect("Unable to create file");
+
+                        for line in print_screen_text.iter() {
+                            f.write_all(line.as_bytes()).expect("Unable to write data");
+                            // f.write_all("\x1b[K".as_bytes())
+                            //     .expect("Unable to write data");
+                            // f.write_all("\x1b[1B".as_bytes())
+                            //     .expect("Unable to write data");
+                            let fmted = format!("\n");
+                            f.write_all(fmted.as_bytes()).expect("Unable to write data");
+                        }
+                        //     let fmted = format!("\n\x1b[{}D", self.wiersze[0].len());
+                        //     f.write_all(fmted.as_bytes()).expect("Unable to write data");
+                    }
+                }
+                Key::Ctrl_p => {
+                    mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
+                    mgr.print_screen();
+                    mgr.set_glyph(workspace_id, g, c, r);
+                    let result = mgr.read_result();
+                    if let Ok(AnimOk::PrintScreen(print_screen_text)) = result {
+                        use std::fs::OpenOptions;
+                        use std::io::Write;
+
+                        let mut f = OpenOptions::new()
+                            .create_new(true)
+                            .write(true)
+                            .append(true)
+                            .open("wynik.prnt")
+                            .expect("Unable to create file");
+
+                        for line in print_screen_text.iter() {
+                            f.write_all(line.as_bytes()).expect("Unable to write data");
+                            // f.write_all("\x1b[K".as_bytes())
+                            //     .expect("Unable to write data");
+                            // f.write_all("\x1b[1B".as_bytes())
+                            //     .expect("Unable to write data");
+                            let fmted = format!("\n");
+                            f.write_all(fmted.as_bytes()).expect("Unable to write data");
+                        }
+                        //     let fmted = format!("\n\x1b[{}D", self.wiersze[0].len());
+                        //     f.write_all(fmted.as_bytes()).expect("Unable to write data");
+                    }
+                }
                 // exit program
                 Key::Escape | Key::Q | Key::Ctrl_q => {
                     keep_running = false;
+                    if let Some(output_file) = args.output_file {
+                        mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
+                        mgr.print_screen_section(
+                            (workspace_offset.0 + 1, workspace_offset.1 + 1),
+                            matrix_cols,
+                            matrix_rows,
+                        );
+                        mgr.set_glyph(workspace_id, g, c, r);
+                        let result = mgr.read_result();
+                        if let Ok(AnimOk::PrintScreen(print_screen_text)) = result {
+                            use std::fs::OpenOptions;
+                            use std::io::Write;
+
+                            let mut f = OpenOptions::new()
+                                .create_new(true)
+                                .write(true)
+                                .append(true)
+                                .open(output_file)
+                                .expect("Unable to create file");
+
+                            for line in print_screen_text.iter() {
+                                f.write_all(line.as_bytes()).expect("Unable to write data");
+                                // f.write_all("\x1b[K".as_bytes())
+                                //     .expect("Unable to write data");
+                                // f.write_all("\x1b[1B".as_bytes())
+                                //     .expect("Unable to write data");
+                                let fmted = format!("\n");
+                                f.write_all(fmted.as_bytes()).expect("Unable to write data");
+                            }
+                            //     let fmted = format!("\n\x1b[{}D", self.wiersze[0].len());
+                            //     f.write_all(fmted.as_bytes()).expect("Unable to write data");
+                        }
+                    }
                     break;
                 }
 

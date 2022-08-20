@@ -1,4 +1,5 @@
-use super::glyph::Glyph;
+use super::Glyph;
+use super::Graphic;
 #[derive(Debug)]
 pub enum AnimOk {
     AnimationAdded(usize),
@@ -7,4 +8,6 @@ pub enum AnimOk {
     DisplayCreated(usize),
     DisplayRestored(usize),
     GlyphRetrieved(usize, Glyph),
+    GraphicCreated(Graphic),
+    PrintScreen(Vec<String>),
 }

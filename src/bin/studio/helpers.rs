@@ -277,7 +277,7 @@ pub fn build_color_selector(title: Option<&str>) -> Graphic {
     Graphic::new(cols + 2, rows + 2, 0, library, None)
 }
 
-pub fn build_empty_matrix(cols: usize, rows: usize) -> Graphic {
+pub fn build_workspace_matrix(cols: usize, rows: usize, graphic: Option<Graphic>) -> Graphic {
     let border = [
         Glyph::default_with_char('\u{256D}'),
         Glyph::default_with_char('\u{2500}'),
@@ -290,11 +290,22 @@ pub fn build_empty_matrix(cols: usize, rows: usize) -> Graphic {
     ];
     let mut library = HashMap::new();
     let g = Glyph::default();
-    let frame = vec![g; cols * rows];
+    let mut frame = vec![g; cols * rows];
+    if let Some(graphic) = graphic {
+        if let Ok(existing_frame) = graphic.get_frame(graphic.current_frame) {
+            frame = existing_frame;
+        }
+    }
     library.insert(
         0,
-        wrap_border_around(frame, cols, border, Some("Workspace")),
+        wrap_border_around(
+            frame,
+            cols,
+            border,
+            Some(&format!("Workspace {}x{}", cols, rows)),
+        ),
     );
+
     Graphic::new(cols + 2, rows + 2, 0, library, None)
 }
 
