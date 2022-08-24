@@ -4,7 +4,7 @@ use std::default::Default;
 use std::time::Duration;
 mod helpers;
 use helpers::{
-    build_basic_colors_graphic, build_color_selector, build_glyph_matrix, build_selector,
+    build_basic_colors_graphic, build_color_selector, build_glyph_matrix, build_glyph_selector,
     build_style_graphics, build_workspace_matrix,
 };
 mod arguments;
@@ -19,14 +19,23 @@ fn main() {
     let cols = args.cols;
     let rows = args.rows;
     verify_cols_and_rows(cols, rows);
-    let mut mgr = Manager::new(true, cols, rows, None, Some(Duration::from_millis(10)));
+    let mut glyph = Glyph::default();
+    glyph.set_char(char::from_u32(9626).unwrap());
+    glyph.set_background(Color::new_gray(7));
+    glyph.set_color(Color::new_gray(17));
+    let mut mgr = Manager::new(
+        true,
+        cols,
+        rows,
+        Some(glyph),
+        Some(Duration::from_millis(10)),
+    );
     // let (cols, rows) = mgr.screen_size();
-    let mut keep_running = true;
     let mut glyphs_offset = (0, 7);
     if let Some(user_offset) = args.glyphs_offset {
         glyphs_offset = user_offset;
     }
-    let selector_id = mgr.add_graphic(build_selector(), 1, glyphs_offset);
+    let selector_id = mgr.add_graphic(build_glyph_selector(), 1, glyphs_offset);
     let glyph_matrix = build_glyph_matrix(args.glyphs);
     let max_glyph_frame_id = glyph_matrix.current_frame;
     let mut glyph_frame_id = 0;
@@ -44,12 +53,11 @@ fn main() {
         0,
         (color_offset_cols, color_offset_rows),
     );
-    let mut glyph = Glyph::default();
     glyph.set_color(Color::black());
     glyph.set_background(Color::white());
     let basic_sel_id = mgr.add_graphic(
         build_basic_colors_graphic(glyph, Glyph::default()),
-        2,
+        1,
         (color_offset_cols + 3, color_offset_rows + 3),
     );
     glyph = Glyph::default();
@@ -88,7 +96,7 @@ fn main() {
         1,
         (color_offset_cols + 3, color_offset_rows + 5),
     );
-    mgr.set_graphic(pb3t_id, 0, true);
+    mgr.set_graphic(pb3t_id, 0, false);
     glyph.set_color(Color::white());
     let pb1_id = mgr.add_graphic(
         progress_bar(
@@ -166,10 +174,12 @@ fn main() {
         pb3t_id,
         glyph_matrix_id,
     );
-    mgr.set_graphic(pb1_id, 0, true);
-    mgr.set_graphic(pb2_id, 0, true);
-    mgr.set_graphic(pb3_id, 0, true);
-    mgr.set_graphic(selector_id, 0, true);
+    mgr.set_graphic(pb1_id, 0, false);
+    mgr.set_graphic(pb2_id, 0, false);
+    mgr.set_graphic(pb3_id, 0, false);
+    //mgr.set_graphic(selector_id, 0, true);
+    mgr.start_animation(selector_id, 0);
+    mgr.set_graphic(basic_sel_id, 0, true);
     mgr.set_graphic(glyph_matrix_id, 0, true);
     mgr.set_graphic(color_selector_id, 0, true);
 
@@ -187,14 +197,6 @@ fn main() {
     );
     mgr.set_graphic(bg_sel_id, 0, true);
 
-    glyph.set_color(Color::black());
-    glyph.set_background(Color::white());
-    let bg_basic_sel_id = mgr.add_graphic(
-        build_basic_colors_graphic(glyph, Glyph::default()),
-        2,
-        (bg_offset_cols + 3, bg_offset_rows + 3),
-    );
-    mgr.set_graphic(bg_basic_sel_id, 0, true);
     glyph = Glyph::default();
     let bg_vc_id = mgr.add_graphic(
         Graphic::from_texts(
@@ -217,26 +219,23 @@ fn main() {
         1,
         (bg_offset_cols + 3, bg_offset_rows + 3),
     );
-    mgr.set_graphic(bg_pb1t_id, 0, true);
+    mgr.set_graphic(bg_pb1t_id, 0, false);
     glyph.set_color(Color::green());
     let bg_pb2t_id = mgr.add_graphic(
         Graphic::from_text(6, "Green ", glyph),
         1,
         (bg_offset_cols + 3, bg_offset_rows + 4),
     );
-    mgr.set_graphic(bg_pb2t_id, 0, true);
+    mgr.set_graphic(bg_pb2t_id, 0, false);
     glyph.set_color(Color::blue());
     let bg_pb3t_id = mgr.add_graphic(
         Graphic::from_text(6, "Blue  ", glyph),
         1,
         (bg_offset_cols + 3, bg_offset_rows + 5),
     );
-    mgr.set_graphic(bg_pb3t_id, 0, true);
+    mgr.set_graphic(bg_pb3t_id, 0, false);
 
     glyph = Glyph::default();
-    mgr.set_graphic(basic_sel_id, 0, false);
-    mgr.set_invisible(basic_sel_id, false);
-
     glyph.set_color(Color::white());
     let bg_pb1_id = mgr.add_graphic(
         progress_bar(
@@ -298,6 +297,14 @@ fn main() {
     mgr.set_invisible(bg_pb2_id, true);
     mgr.set_invisible(bg_pb3t_id, true);
     mgr.set_invisible(bg_pb3_id, true);
+    glyph.set_color(Color::black());
+    glyph.set_background(Color::white());
+    let bg_basic_sel_id = mgr.add_graphic(
+        build_basic_colors_graphic(glyph, Glyph::default()),
+        1,
+        (bg_offset_cols + 3, bg_offset_rows + 3),
+    );
+    mgr.set_graphic(bg_basic_sel_id, 0, true);
 
     let mut backgrounds_window = ColorsWindow::new(
         mgr.get_message_sender(),
@@ -428,10 +435,10 @@ fn main() {
         style_strike_id,
     );
 
-    let mut c = 2; // worskpace column where cursor is placed
-    let mut r = 2; // worskpace row where cursor is placed
-    let mut mc = 2; // glyph matrix column where selector is placed
-    let mut mr = 2; // glyph matrix row where selector is placed
+    let mut c = 1; // worskpace column where cursor is placed
+    let mut r = 1; // worskpace row where cursor is placed
+    let mut mc = 0; // glyph matrix column where selector is placed
+    let mut mr = 0; // glyph matrix row where selector is placed
 
     let mut glyph_under_cursor = Glyph::default();
     mgr.get_glyph(workspace_id, c, r);
@@ -454,132 +461,135 @@ fn main() {
         false,
     );
     mgr.set_glyph(workspace_id, g, c, r);
-    while keep_running {
+    loop {
         if let Some(key) = mgr.read_key() {
             match key {
                 // Colors window
-                Key::Shift_Left => {
+                Key::ShiftLeft => {
                     colors_window.move_left(false);
                 }
-                Key::Shift_Right => {
+                Key::ShiftRight => {
                     colors_window.move_right(false);
                 }
-                Key::Ctrl_Shift_Right => {
+                Key::CtrlShiftRight => {
                     colors_window.move_far_right(false);
                 }
-                Key::Ctrl_Shift_Left => {
+                Key::CtrlShiftLeft => {
                     colors_window.move_far_left(false);
                 }
-                Key::Shift_Up => {
+                Key::ShiftUp => {
                     colors_window.move_up();
                 }
-                Key::Ctrl_Shift_Up => {
+                Key::CtrlShiftUp => {
                     colors_window.move_top();
                 }
-                Key::Shift_Down => {
+                Key::ShiftDown => {
                     colors_window.move_down();
                 }
-                Key::Ctrl_Shift_Down => {
+                Key::CtrlShiftDown => {
                     colors_window.move_bottom();
                 }
-                Key::i => {
+                Key::I => {
                     colors_window.set_invisible(true);
                 }
-                Key::I => {
+                Key::ShiftI => {
                     colors_window.set_invisible(false);
                 }
 
                 // Background window
-                Key::Alt_Left => {
+                Key::AltLeft => {
                     backgrounds_window.move_left(true);
                 }
-                Key::Alt_Right => {
+                Key::AltRight => {
                     backgrounds_window.move_right(true);
                 }
-                Key::Alt_Ctrl_Left => {
+                Key::AltCtrlLeft => {
                     backgrounds_window.move_far_left(true);
                 }
-                Key::Alt_Ctrl_Right => {
+                Key::AltCtrlRight => {
                     backgrounds_window.move_far_right(true);
                 }
-                Key::Alt_Up => {
+                Key::AltUp => {
                     backgrounds_window.move_up();
                 }
-                Key::Alt_Ctrl_Up => {
+                Key::AltCtrlUp => {
                     backgrounds_window.move_top();
                 }
-                Key::Alt_Down => {
+                Key::AltDown => {
                     backgrounds_window.move_down();
                 }
-                Key::Alt_Ctrl_Down => {
+                Key::AltCtrlDown => {
                     backgrounds_window.move_bottom();
                 }
-                Key::Alt_i => {
+                Key::AltI => {
                     backgrounds_window.set_invisible(true);
                 }
-                Key::Alt_I => {
+                Key::AltShiftI => {
                     backgrounds_window.set_invisible(false);
                 }
 
                 //Glyphs window
-                Key::Left => {
-                    if mc > 2 {
+                Key::CtrlLeft => {
+                    if mc > 0 {
                         mc -= 1;
                         mgr.move_graphic(selector_id, 2, (-1, 0))
                     } else {
                         mgr.move_graphic(selector_id, 2, (15, 0));
-                        mc = 17;
+                        mc = 15;
                     }
                 }
 
                 // glyphs
-                Key::Right => {
-                    if mc < 17 {
+                Key::CtrlRight => {
+                    if mc < 15 {
                         mc += 1;
                         mgr.move_graphic(selector_id, 2, (1, 0));
                     } else {
-                        mgr.move_graphic(selector_id, 2, (-15, 0));
-                        mc = 2;
+                        mgr.move_graphic(selector_id, 2, (-16, 0));
+                        mc = 0;
                     }
                 }
 
                 // glyphs
-                Key::Up => {
-                    if mr > 2 {
+                Key::CtrlUp => {
+                    if mr > 0 {
                         mr -= 1;
                         mgr.move_graphic(selector_id, 2, (0, -1))
                     } else {
                         mgr.move_graphic(selector_id, 2, (0, 9));
-                        mr = 11;
+                        mr = 9;
                     }
                 }
 
                 //glyphs
-                Key::Down => {
-                    if mr < 11 {
+                Key::CtrlDown => {
+                    if mr < 9 {
                         mr += 1;
                         mgr.move_graphic(selector_id, 2, (0, 1))
                     } else {
-                        mgr.move_graphic(selector_id, 2, (0, mr as isize * (-1) + 2));
-                        mr = 2;
+                        mgr.move_graphic(selector_id, 2, (0, mr as isize * (-1)));
+                        mr = 0;
                     }
                 }
 
                 //glyphs
                 Key::Space => {
-                    mgr.start_animation(selector_id, 0);
-                    mgr.get_glyph(glyph_matrix_id, mc, mr);
+                    mgr.stop_animation(selector_id);
+                    mgr.start_animation(selector_id, 1);
+                    //mgr.enqueue_animation(selector_id, 0);
+
+                    mgr.get_glyph(glyph_matrix_id, mc + 1, mr + 1);
                     let result = mgr.read_result();
                     if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
                         mgr.set_glyph(workspace_id, glyph, c, r);
-                        if c < matrix_cols + 1 {
+                        if c < matrix_cols {
                             c += 1;
-                        } else if r < matrix_rows + 1 {
-                            c = 2;
+                        } else if r < matrix_rows {
+                            c = 1;
                             r += 1;
                         } else {
-                            c = 2;
-                            r = 2;
+                            c = 1;
+                            r = 1;
                         }
                         mgr.get_glyph(workspace_id, c, r);
                         let result = mgr.read_result();
@@ -620,16 +630,16 @@ fn main() {
                 }
 
                 // workspace window
-                Key::Ctrl_Left => {
+                Key::Left => {
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                    if c > 2 {
+                    if c > 1 {
                         c -= 1;
                     } else {
-                        c = matrix_cols + 1;
+                        c = matrix_cols;
                         if r > 2 {
                             r -= 1;
                         } else {
-                            r = matrix_rows + 1;
+                            r = matrix_rows;
                         }
                     }
                     mgr.get_glyph(workspace_id, c, r);
@@ -641,16 +651,16 @@ fn main() {
                 }
 
                 // workspace window
-                Key::Ctrl_Right => {
+                Key::Right => {
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                    if c < matrix_cols + 1 {
+                    if c < matrix_cols {
                         c += 1;
                     } else {
-                        c = 2;
-                        if r < matrix_rows + 1 {
+                        c = 1;
+                        if r < matrix_rows {
                             r += 1;
                         } else {
-                            r = 2;
+                            r = 1;
                         }
                     }
                     mgr.get_glyph(workspace_id, c, r);
@@ -662,13 +672,39 @@ fn main() {
                 }
 
                 //workspace window
-                Key::Ctrl_Up => {
+                Key::C => {
+                    colors_window.select_color(glyph_under_cursor.color, false);
+                }
+                Key::B => {
+                    backgrounds_window.select_color(glyph_under_cursor.background, true);
+                }
+                Key::G => {
+                    'break_point: for c in 1..17 {
+                        for r in 0..10 {
+                            mgr.get_glyph(glyph_matrix_id, c, r);
+                            let result = mgr.read_result();
+                            if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                                if glyph.character == glyph_under_cursor.character {
+                                    let dc: isize = c as isize - mc as isize - 1;
+                                    let dr: isize = r as isize - mr as isize - 1;
+                                    mc = c - 1;
+                                    mr = r - 1;
+                                    mgr.move_graphic(selector_id, 2, (dc, dr));
+                                    break 'break_point;
+                                };
+                            }
+                        }
+                    }
+                }
+
+                //workspace window
+                Key::Up => {
                     // workspace_window.move_cursor_up();
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                    if r > 2 {
+                    if r > 1 {
                         r -= 1;
                     } else {
-                        r = matrix_rows + 1;
+                        r = matrix_rows;
                     }
                     mgr.get_glyph(workspace_id, c, r);
                     let result = mgr.read_result();
@@ -679,13 +715,13 @@ fn main() {
                 }
 
                 // workspace window
-                Key::Ctrl_Down => {
+                Key::Down => {
                     // workspace_window.move_cursor_down(glyph_under_cursor);
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                    if r < matrix_rows + 1 {
+                    if r < matrix_rows {
                         r += 1;
                     } else {
-                        r = 2;
+                        r = 1;
                     }
                     mgr.get_glyph(workspace_id, c, r);
                     let result = mgr.read_result();
@@ -699,42 +735,53 @@ fn main() {
                 Key::Backspace | Key::Delete => {
                     // workspace_window.erase_glyph();
                     mgr.set_glyph(workspace_id, Glyph::default(), c, r);
-                    if c > 2 {
+                    if c > 1 {
                         c -= 1
                     } else {
-                        r -= 1;
-                        c = 5;
+                        if r > 1 {
+                            r -= 1;
+                        } else {
+                            r = matrix_rows;
+                        }
+                        c = matrix_cols;
                     }
                     mgr.set_glyph(workspace_id, g, c, r);
                 }
+                Key::AltCtrlShiftUp => {
+                    println!("move up!");
+                }
+                Key::AltCtrlShiftDown => {}
+                Key::AltCtrlShiftLeft => {}
+                Key::AltCtrlShiftRight => {}
 
                 // style window
-                Key::Alt_Shift_Down => {
+                Key::AltShiftDown => {
                     style_window.move_selector_down();
                 }
-                Key::Alt_Ctrl_Shift_Down => {
-                    style_window.move_selector_bottom();
-                }
-                Key::Alt_Shift_Up => {
+                // Key::AltCtrlShiftDown => {
+                //    style_window.move_selector_bottom();
+                // }
+                Key::AltShiftUp => {
                     style_window.move_selector_up();
                 }
-                Key::Alt_Ctrl_Shift_Up => {
-                    style_window.move_selector_top();
-                }
-                Key::Alt_Shift_Left => {
+                // Key::AltCtrlShiftUp => {
+                //     style_window.move_selector_top();
+                // }
+                Key::AltShiftLeft => {
                     style_window.disable_selected_style();
                 }
-                Key::Alt_Shift_Right => {
+                Key::AltShiftRight => {
                     style_window.enable_selected_style();
                 }
 
-                Key::Alt_p => {
+                Key::AltP => {
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                    mgr.print_screen_section(
-                        (workspace_offset.0 + 1, workspace_offset.1 + 1),
-                        matrix_cols,
-                        matrix_rows,
-                    );
+                    // mgr.print_screen_section(
+                    //     (workspace_offset.0 + 1, workspace_offset.1 + 1),
+                    //     matrix_cols,
+                    //     matrix_rows,
+                    // );
+                    mgr.print_graphic(workspace_id, true);
                     mgr.set_glyph(workspace_id, g, c, r);
                     let result = mgr.read_result();
                     if let Ok(AnimOk::PrintScreen(print_screen_text)) = result {
@@ -761,7 +808,7 @@ fn main() {
                         //     f.write_all(fmted.as_bytes()).expect("Unable to write data");
                     }
                 }
-                Key::Ctrl_p => {
+                Key::CtrlP => {
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
                     mgr.print_screen();
                     mgr.set_glyph(workspace_id, g, c, r);
@@ -791,15 +838,15 @@ fn main() {
                     }
                 }
                 // exit program
-                Key::Escape | Key::Q | Key::Ctrl_q => {
-                    keep_running = false;
+                Key::Escape | Key::ShiftQ | Key::CtrlQ => {
                     if let Some(output_file) = args.output_file {
                         mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                        mgr.print_screen_section(
-                            (workspace_offset.0 + 1, workspace_offset.1 + 1),
-                            matrix_cols,
-                            matrix_rows,
-                        );
+                        // mgr.print_screen_section(
+                        //     (workspace_offset.0 + 1, workspace_offset.1 + 1),
+                        //     matrix_cols,
+                        //     matrix_rows,
+                        // );
+                        mgr.print_graphic(workspace_id, true);
                         mgr.set_glyph(workspace_id, g, c, r);
                         let result = mgr.read_result();
                         if let Ok(AnimOk::PrintScreen(print_screen_text)) = result {

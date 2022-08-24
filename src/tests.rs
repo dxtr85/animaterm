@@ -59,7 +59,8 @@ fn glyph_cake() {
     gc.update(g2, 10);
     //println!("Update1: {:?}", gc.glyphs);
     assert_eq!(gc.get_glyph().character, '2');
-    gc.update(Glyph::plain(), 10);
+    println!("Update2before: {:?}", gc.glyphs);
+    gc.update(Glyph::transparent(), 10);
     println!("Update2: {:?}", gc.glyphs);
     assert_eq!(gc.glyphs.len(), 3);
     assert_eq!(gc.get_glyph().character, '1');
@@ -77,4 +78,17 @@ fn update_glyph_twice_from_str() {
     g.update_from_str("\x1b[38;2;90;62;42m▀");
     assert_eq!(g.background, crate::Color::Truecolor(91, 63, 43));
     assert_eq!(g.color, crate::Color::Truecolor(90, 62, 42));
+}
+#[test]
+fn glyph_cake2() {
+    let mut insert_glyph = Glyph::default();
+    let mut gc = GlyphCake::new(0, 0, Some(insert_glyph), 0);
+    insert_glyph.set_background(crate::Color::blue());
+    gc.update(insert_glyph, 1);
+    let g = gc.get_glyph();
+    assert_eq!(g.background, crate::Color::blue());
+    gc.update(Glyph::transparent(), 1);
+    let g = gc.get_glyph();
+    assert_eq!(g.background, crate::Color::black());
+    assert_eq!(g.color, crate::Color::white());
 }

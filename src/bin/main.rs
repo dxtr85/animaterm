@@ -15,10 +15,13 @@ fn main() {
     let cols = args.cols;
     let rows = args.rows;
     verify_cols_and_rows(cols, rows);
-    let mut mgr = Manager::new(true, cols, rows, None, None);
+    let mut g = Glyph::default();
+    g.set_background(Color::green());
+    g.set_char(char::from_u32(9626).unwrap());
+    let mut mgr = Manager::new(true, cols, rows, Some(g), None);
     let (cols, rows) = mgr.screen_size();
 
-    let gl = Glyph::default();
+    //let gl = Glyph::default();
     let (gr, pid) = build_graphic(130, 10);
     let gid = mgr.add_graphic(gr, 0, (3, 15));
     mgr.set_graphic(gid, pid, true);
@@ -28,96 +31,95 @@ fn main() {
     mgr.start_animation(pbid, 0);
     let mut mbox_created = false;
 
-    let mut keep_running = true;
     let c_pgup = vec![27, 91, 53, 59, 53, 126];
     let c_pgdn = vec![27, 91, 54, 59, 53, 126];
     let a_pgup = vec![27, 91, 53, 59, 51, 126];
     let a_pgdn = vec![27, 91, 54, 59, 51, 126];
-    while keep_running {
+    loop {
         let mut c: usize = 1;
         let mut r: usize = 1;
         if let Some(key) = mgr.read_key() {
             match key {
-                Key::PgUp | Key::u => {
+                Key::PgUp | Key::U => {
                     mgr.move_graphic(0, 3, (0, 0));
                 }
-                Key::PgDn | Key::d => {
+                Key::PgDn | Key::D => {
                     mgr.move_graphic(0, 0, (0, 0));
                 }
-                Key::Alt_Unicode(c_pgup) => {
+                Key::AltUnicode(c_pgup) => {
                     mgr.move_graphic(1, 4, (0, 0));
                 }
-                Key::Ctrl_u => {
+                Key::CtrlU => {
                     mgr.move_graphic(1, 4, (0, 0));
                 }
-                Key::Alt_Unicode(c_pgdn) => {
+                Key::AltUnicode(c_pgdn) => {
                     mgr.move_graphic(1, 1, (0, 0));
                 }
-                Key::Ctrl_d => {
+                Key::CtrlD => {
                     mgr.move_graphic(1, 1, (0, 0));
                 }
-                Key::Alt_Unicode(a_pgup) => {
+                Key::AltUnicode(a_pgup) => {
                     mgr.move_graphic(2, 5, (0, 0));
                 }
-                Key::Alt_u => {
+                Key::AltU => {
                     mgr.move_graphic(2, 5, (0, 0));
                 }
-                Key::Alt_Unicode(a_pgdn) => {
+                Key::AltUnicode(a_pgdn) => {
                     mgr.move_graphic(2, 2, (0, 0));
                 }
-                Key::Alt_d => {
+                Key::AltD => {
                     mgr.move_graphic(2, 2, (0, 0));
                 }
-                Key::Alt_Up | Key::Alt_k => {
+                Key::AltUp | Key::AltK => {
                     mgr.move_graphic(2, 2, (0, -1));
                 }
-                Key::Ctrl_Up | Key::Ctrl_k => {
+                Key::CtrlUp | Key::CtrlK => {
                     mgr.move_graphic(1, 1, (0, -1));
                 }
-                Key::Up | Key::k => {
+                Key::Up | Key::K => {
                     mgr.stop_animation(gid);
                     mgr.move_graphic(gid, 0, (0, -1));
                     mgr.set_graphic(gid, 0, true);
                     //mgr.set_graphic(pbid, 0, true);
                     c += 1;
                 }
-                Key::Alt_Down | Key::Alt_j => {
+                Key::AltDown | Key::AltJ => {
                     mgr.move_graphic(2, 2, (0, 1));
                 }
-                Key::Ctrl_Down | Key::Enter => {
+                Key::CtrlDown | Key::Enter => {
                     mgr.move_graphic(1, 1, (0, 1));
                 }
-                Key::Down | Key::j => {
+                Key::Down | Key::J => {
                     mgr.pause_animation_on_frame(pbid, 100);
                     mgr.move_graphic(gid, 0, (0, 1));
                     mgr.set_graphic(gid, pid, true);
                     //mgr.set_graphic(pbid, 1, true);
                     r += 1;
                 }
-                Key::Alt_Left | Key::Alt_h => {
+                Key::AltLeft | Key::AltH => {
                     mgr.move_graphic(2, 2, (-1, 0));
                 }
-                Key::Ctrl_Left | Key::Backspace => {
+                Key::CtrlLeft | Key::Backspace => {
                     mgr.move_graphic(1, 1, (-1, 0));
                 }
-                Key::Left | Key::h => {
+                Key::Left | Key::H => {
                     mgr.move_graphic(gid, 0, (-1, 0));
                     mgr.start_animation(gid, 0);
                     mgr.start_animation(pbid, 0);
                     //mgr.set_graphic(pbid, 2, true);
-                    c.saturating_sub(1);
+                    let _r = c.saturating_sub(1);
                 }
-                Key::Alt_Right | Key::Alt_l => {
+                Key::AltRight | Key::AltL => {
                     mgr.move_graphic(2, 2, (1, 0));
                 }
-                Key::Ctrl_Right | Key::Ctrl_l => {
+                Key::CtrlRight | Key::CtrlL => {
                     mgr.move_graphic(1, 1, (1, 0));
                 }
-                Key::Right | Key::l => {
+                Key::Right | Key::L => {
                     mgr.move_graphic(gid, 0, (1, 0));
                     //mgr.start_animation(anim_id);
                     //mgr.set_graphic(pbid, 3, true);
-                    r.saturating_sub(1);
+                    let _r = r.saturating_sub(1);
                 }
                 Key::Tab => {
                     if !mbox_created {
@@ -133,20 +135,19 @@ fn main() {
 * license: https://www.gnu.org/copyleft/fdl.html
 * license: https://www.gnu.org/copyleft/gpl.html".to_string()                        ),
                         2,
-                        (20, 10),
+                        (0, 0),
                     );
                         mgr.set_graphic(mbid, 0, true);
                         mbox_created = true;
                     }
                 }
-                Key::Escape | Key::Q | Key::Ctrl_q => {
-                    keep_running = false;
+                Key::Escape | Key::Q | Key::CtrlQ => {
                     break;
                 }
-                Key::Ctrl_a => {
+                Key::CtrlA => {
                     mgr.start_animation(gid, 0);
                 }
-                Key::Ctrl_b => {
+                Key::CtrlB => {
                     mgr.stop_animation(gid);
                 }
                 Key::Insert => {
@@ -369,7 +370,7 @@ fn build_progress_bar(length: usize) -> Graphic {
     );
     progress_bar(
         length,
-        Glyph::plain(),
+        Glyph::transparent(),
         glf,
         Some(vec![
             Glyph::new(
@@ -450,19 +451,19 @@ fn build_progress_bar(length: usize) -> Graphic {
                 false,
                 false,
             ),
-            Glyph::new(
-                '\u{2589}',
-                animaterm::Color::new_truecolor(128, 0, 0),
-                animaterm::Color::cyan(),
-                false,
-                true,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-            ),
+            // Glyph::new(
+            //     '\u{2589}',
+            //     animaterm::Color::new_truecolor(128, 0, 0),
+            //     animaterm::Color::cyan(),
+            //     false,
+            //     true,
+            //     false,
+            //     false,
+            //     false,
+            //     false,
+            //     false,
+            //     false,
+            // ),
         ]),
     )
 }

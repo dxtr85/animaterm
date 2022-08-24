@@ -1,5 +1,4 @@
 use std::env;
-use std::path::Path;
 use std::process::exit;
 
 static ROWS_MIN: usize = 4;
@@ -226,9 +225,9 @@ pub fn parse_arguments() -> Arguments {
                 } else {
                     let cols = usize::from_str_radix(splited[0], 10);
                     let rows = usize::from_str_radix(splited[1], 10);
-                    let mut result = None;
+                    //let mut result = None;
                     if cols.is_ok() && rows.is_ok() {
-                        result = Some((cols.unwrap(), rows.unwrap()));
+                        let result = Some((cols.unwrap(), rows.unwrap()));
                         match &name {
                             Some(ArgType::ColorsOffset) => arguments.colors_offset = result,
                             Some(ArgType::BackgroundsOffset) => {

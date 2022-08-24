@@ -36,7 +36,7 @@ pub fn progress_bar(
             ordering.push((j % (total_states * width), Timestamp::new(0, 100)));
         }
     }
-    let mut anim = Animation::new(true, true, ordering, Timestamp::now());
+    let anim = Animation::new(true, true, ordering, Timestamp::now());
     let mut anims = HashMap::new();
     anims.insert(0, anim);
     Graphic::new(width, 1, 0, library, Some(anims))

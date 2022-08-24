@@ -19,6 +19,7 @@ pub struct Graphic {
     pub current_frame: usize,
     pub invisible: bool,
     pub running_anim: Option<usize>,
+    pub awaiting_anim: Option<usize>,
     next_lib_id: usize,
     next_anim_id: usize,
     library: HashMap<usize, Vec<Glyph>>,
@@ -49,6 +50,7 @@ impl Graphic {
             current_frame: start_frame,
             invisible: false,
             running_anim: None,
+            awaiting_anim: None,
             next_lib_id,
             next_anim_id,
             library,
@@ -109,11 +111,6 @@ impl Graphic {
                         }
                     }
                 }
-                // result = Some(Graphic::from_text(
-                //     10,
-                //     "dupadupadupadupadupadupadupadupadupadupa",
-                //     Glyph::default(),
-                // ));
                 cs = cs / rs;
                 if frame.len() > 0 {
                     let mut lib = HashMap::with_capacity(1);
@@ -140,6 +137,7 @@ impl Graphic {
             current_frame: 0,
             invisible: false,
             running_anim: None,
+            awaiting_anim: None,
             next_lib_id: 1,
             next_anim_id: 0,
             library: library,
@@ -158,6 +156,7 @@ impl Graphic {
             current_frame: 0,
             invisible: false,
             running_anim: None,
+            awaiting_anim: None,
             next_lib_id: 1,
             next_anim_id: 0,
             library: library,
@@ -174,8 +173,33 @@ impl Graphic {
         result
     }
 
-    pub fn set_invisible(&mut self, invisible: bool) {
+    pub fn set_invisible(&mut self, invisible: bool, offset: (usize, usize)) -> Vec<Pixel> {
+        if invisible == self.invisible {
+            return Vec::new();
+        }
+        let mut changed = Vec::with_capacity(self.rows * self.rows);
         self.invisible = invisible;
+        if self.invisible {
+            let transparent = Glyph::transparent();
+            for c in offset.0..offset.0 + self.cols {
+                for r in offset.1..offset.1 + self.rows {
+                    changed.push(Pixel::new(c, r, transparent));
+                }
+            }
+        } else {
+            changed = self.get(offset);
+        }
+        // if changed.len() != self.rows * self.cols {
+        //     println!(
+        //         "{} coś tu nie gra {} a powinno być {}( {}x{})",
+        //         invisible,
+        //         changed.len(),
+        //         self.cols * self.rows,
+        //         self.cols,
+        //         self.rows
+        //     );
+        // }
+        changed
     }
 
     pub fn empty_frame(&mut self) -> Option<usize> {
@@ -191,15 +215,15 @@ impl Graphic {
     }
 
     pub fn add_animation(&mut self, anim: Animation) -> Option<usize> {
-        let mut result = None;
         self.animations.insert(self.next_anim_id, anim);
-        result = Some(self.next_anim_id);
+        let result = Some(self.next_anim_id);
         self.next_anim_id += 1;
         result
     }
 
     pub fn start_animation(&mut self, anim_id: usize, when: Timestamp) {
         if let Some(animation) = self.animations.get_mut(&anim_id) {
+            //print!("in start {}\t ", anim_id);
             animation.start(when);
             self.running_anim = Some(anim_id);
         }
@@ -234,6 +258,25 @@ impl Graphic {
         }
     }
 
+    pub fn enqueue_animation(&mut self, anim_id: usize, when: Timestamp) {
+        //print!("in enqueue running: {:?}\t ", self.running_anim);
+        if self.animations.contains_key(&anim_id) {
+            if let Some(running) = self.running_anim {
+                if anim_id != running {
+                    self.awaiting_anim = Some(anim_id);
+                    print!("enqueueing {anim_id} after {running} finishes");
+                }
+            } else {
+                //print!("starting right away!");
+                self.start_animation(anim_id, when);
+            }
+        }
+        if let Some(animation) = self.animations.get_mut(&anim_id) {
+            animation.start(when);
+            self.running_anim = Some(anim_id);
+        }
+    }
+
     pub fn get(&self, offset: (usize, usize)) -> Vec<Pixel> {
         let mut result = Vec::with_capacity(self.rows * self.cols);
         for (i, glyph) in self
@@ -245,9 +288,8 @@ impl Graphic {
             .enumerate()
         {
             result.push(Pixel::new(
-                1 + offset.0 + (i % self.cols),
-                1 + offset.1 + (i / self.cols),
-                true,
+                offset.0 + (i % self.cols),
+                offset.1 + (i / self.cols),
                 glyph,
             ));
         }
@@ -274,17 +316,26 @@ impl Graphic {
         }
     }
 
-    pub fn set_glyph(&mut self, glyph: Glyph, col: usize, row: usize) {
-        let index = self.cols * (row - 1) + col - 1;
+    pub fn set_glyph(
+        &mut self,
+        glyph: Glyph,
+        col: usize,
+        row: usize,
+        offset: (usize, usize),
+    ) -> Vec<Pixel> {
+        let mut changed = Vec::with_capacity(1);
+        let index = self.cols * (row) + col;
         if index < self.rows * self.cols {
             let mut frame = self.library.remove(&self.current_frame).unwrap();
             let _r = replace(&mut frame[index], glyph);
             self.library.insert(self.current_frame, frame);
+            changed.push(Pixel::new(col + offset.0, row + offset.1, glyph));
         }
+        changed
     }
 
     pub fn get_glyph(&self, col: usize, row: usize) -> Option<Glyph> {
-        let index = self.cols * (row - 1) + col - 1;
+        let index = self.cols * (row) + col;
         if index < self.rows * self.cols {
             let frame = self.current_frame();
             return frame.get(index).cloned();
@@ -332,9 +383,8 @@ impl Graphic {
             {
                 if force || new_glyph != *old_glyph {
                     changed.push(Pixel::new(
-                        1 + offset.0 + (i % self.cols),
-                        1 + offset.1 + (i / self.cols),
-                        true,
+                        offset.0 + (i % self.cols),
+                        offset.1 + (i / self.cols),
                         new_glyph.clone(),
                     ));
                 }

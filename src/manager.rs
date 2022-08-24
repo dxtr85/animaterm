@@ -7,9 +7,9 @@ use super::helpers::map_bytes_to_key;
 use super::key::Key;
 use super::response::AnimOk::{self, *};
 use super::screen::Screen;
-use std::fs::File;
+use super::Timestamp;
 use std::io;
-use std::io::{BufReader, Read};
+use std::io::Read;
 use std::mem::replace;
 use std::path::Path;
 use std::sync::mpsc;
@@ -22,11 +22,12 @@ pub enum Message {
     CloneFrame(usize, Option<usize>),
     AddAnimation(usize, Animation),
     StartAnimation(usize, usize),
+    EnqueueAnimation(usize, usize),
     PauseAnimation(usize),
     PauseAnimationOnFrame(usize, usize),
     StopAnimation(usize),
-    RestartAnimation(usize),
-    AddGraphic(usize, Graphic, usize, (usize, usize)),
+    RestartAnimation(usize, usize, Timestamp),
+    AddGraphic(Graphic, usize, (usize, usize)),
     SetGlyph(usize, Glyph, usize, usize),
     GetGlyph(usize, usize, usize),
     SetGraphic(usize, usize, bool),
@@ -38,6 +39,7 @@ pub enum Message {
     DeleteGraphic(usize),
     NewDisplay(usize, bool),
     RestoreDisplay(usize, bool),
+    PrintGraphic(usize, bool),
     PrintScreen,
     PrintScreenSection((usize, usize), usize, usize),
 }
@@ -76,7 +78,6 @@ impl Manager {
         }
         let join_handle = thread::spawn(move || {
             let mut finish = false;
-            let mut i = 0;
             while !finish {
                 if let Ok(value) = receiver.recv_timeout(refresh_timeout) {
                     match value {
@@ -86,16 +87,24 @@ impl Manager {
                         Message::AddAnimation(gid, anim) => {
                             let add_result = screen.add_animation(gid, anim);
                             if let Some(id) = add_result {
-                                result_sender.send(Result::Ok(AnimationAdded(id)))
+                                if result_sender.send(Result::Ok(AnimationAdded(id))).is_err() {
+                                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send AnimationAdded message.")
+                                }
                             } else {
-                                result_sender.send(Result::Err(AnimError::FailAddingAnimation(gid)))
+                                if result_sender
+                                    .send(Result::Err(AnimError::FailAddingAnimation(gid)))
+                                    .is_err()
+                                {
+                                    eprintln!(
+                        "\x1b[97;41;5mERR\x1b[m Unable to send FailAddingAnimation message.")
+                                }
                             };
                         }
                         Message::StartAnimation(gid, aid) => {
                             screen.start_animation(&gid, aid);
                         }
                         Message::PauseAnimation(gid) => {
-                            screen.pause_animation(&gid);
+                            screen.pause_animation(gid);
                         }
                         Message::PauseAnimationOnFrame(gid, fid) => {
                             screen.pause_animation_on_frame(&gid, fid);
@@ -103,10 +112,13 @@ impl Manager {
                         Message::StopAnimation(gid) => {
                             screen.stop_animation(&gid);
                         }
-                        Message::RestartAnimation(aid) => {
-                            screen.restart_animation(&aid);
+                        Message::RestartAnimation(gid, aid, when) => {
+                            screen.restart_animation(gid, aid, when);
                         }
-                        Message::AddGraphic(gid, gr, layer, offset) => {
+                        Message::EnqueueAnimation(gid, aid) => {
+                            screen.enqueue_animation(&gid, aid);
+                        }
+                        Message::AddGraphic(gr, layer, offset) => {
                             screen.add_graphic(gr, layer, offset);
                         }
                         Message::MoveGraphic(gid, layer, offset) => {
@@ -118,9 +130,19 @@ impl Manager {
                         Message::GetGlyph(gid, col, row) => {
                             let result = screen.get_glyph(gid, col, row);
                             if let Some(glyph) = result {
-                                result_sender.send(Result::Ok(GlyphRetrieved(gid, glyph)))
+                                if result_sender
+                                    .send(Result::Ok(GlyphRetrieved(gid, glyph)))
+                                    .is_err()
+                                {
+                                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send GlyphRetrieved message")
+                                }
                             } else {
-                                result_sender.send(Result::Err(AnimError::FailGettingGlyph(gid)))
+                                if result_sender
+                                    .send(Result::Err(AnimError::FailGettingGlyph(gid)))
+                                    .is_err()
+                                {
+                                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send FailGettingGlyph message")
+                                }
                             };
                         }
                         Message::SetGraphic(gid, fid, force) => {
@@ -142,31 +164,66 @@ impl Manager {
                             screen.delete_graphic(&gid);
                         }
                         Message::PrintScreen => {
-                            let mut text = screen.print_screen();
-                            result_sender.send(Result::Ok(PrintScreen(text)));
+                            let text = screen.print_screen();
+                            if result_sender.send(Result::Ok(PrintScreen(text))).is_err() {
+                                eprintln!(
+                                    "\x1b[97;41;5mERR\x1b[m Unable to send PrintScreen message"
+                                )
+                            };
                         }
                         Message::PrintScreenSection(offset, cols, rows) => {
-                            let mut text = screen.print_screen_section(offset, cols, rows);
-                            result_sender.send(Result::Ok(PrintScreen(text)));
+                            let text = screen.print_screen_section(offset, cols, rows);
+                            if result_sender.send(Result::Ok(PrintScreen(text))).is_err() {
+                                eprintln!(
+                                    "\x1b[97;41;5mERR\x1b[m Unable to send PrintScreen message for section"
+                                )
+                            };
+                        }
+                        Message::PrintGraphic(gid, skip_border) => {
+                            let text = screen.print_graphic(gid, skip_border);
+                            if result_sender.send(Result::Ok(PrintScreen(text))).is_err() {
+                                eprintln!(
+                                    "\x1b[97;41;5mERR\x1b[m Unable to send PrintScreen message for Graphic"
+                                )
+                            };
                         }
                         Message::EmptyFrame(gid) => {
                             let result = screen.empty_frame(gid);
                             if let Some(id) = result {
-                                result_sender.send(Result::Ok(FrameAdded(gid, id)))
+                                if result_sender.send(Result::Ok(FrameAdded(gid, id))).is_err() {
+                                    eprintln!(
+                                        "\x1b[97;41;5mERR\x1b[m Unable to send FrameAdded message"
+                                    )
+                                }
                             } else {
-                                result_sender.send(Result::Err(AnimError::FailAddingFrame(gid)))
+                                if result_sender
+                                    .send(Result::Err(AnimError::FailAddingFrame(gid)))
+                                    .is_err()
+                                {
+                                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send FailAddingFrame message")
+                                }
                             };
                         }
                         Message::CloneFrame(gid, fid) => {
                             let result = screen.clone_frame(gid, fid);
                             if let Some(id) = result {
-                                result_sender.send(Result::Ok(FrameAdded(gid, id)))
+                                if result_sender.send(Result::Ok(FrameAdded(gid, id))).is_err() {
+                                    eprintln!(
+                                        "\x1b[97;41;5mERR\x1b[m Unable to send FrameAdded message"
+                                    )
+                                }
                             } else {
-                                result_sender.send(Result::Err(AnimError::FailAddingFrame(gid)))
+                                if result_sender
+                                    .send(Result::Err(AnimError::FailAddingFrame(gid)))
+                                    .is_err()
+                                {
+                                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send FailAddingFrame message")
+                                }
                             };
                         }
                         Message::NewDisplay(display_id, keep_existing) => {
-                            let display_id = screen.new_display(display_id, keep_existing);
+                            // TODO deal with display_id - should it be provided by the user?
+                            let _display_id = screen.new_display(display_id, keep_existing);
                             //result_sender.send(Result::Ok(DisplayCreated(display_id)));
                         }
                         Message::RestoreDisplay(display_id, keep_existing) => {
@@ -191,10 +248,12 @@ impl Manager {
                                      // print!("Hit a key! ");
                                      //let mut keys_read = HashSet::with_capacity(32);
                                      //let mut i = 0;
-            let kb_join_handle = thread::spawn(move || {
+            let _kb_join_handle = thread::spawn(move || {
                 let mut finish = false;
                 while !finish {
-                    reader.read_exact(&mut buffer);
+                    if reader.read_exact(&mut buffer).is_err() {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to read to buffer")
+                    }
                     if buffer[0] > 0 {
                         if key_sender.send(buffer[0]).is_err() {
                             finish = true;
@@ -285,36 +344,96 @@ impl Manager {
     }
 
     pub fn add_animation(&mut self, graphic_id: usize, anim: Animation) {
-        self.sender.send(Message::AddAnimation(graphic_id, anim));
+        if self
+            .sender
+            .send(Message::AddAnimation(graphic_id, anim))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send AddAnimation message")
+        };
     }
     pub fn start_animation(&self, graph_id: usize, anim_id: usize) {
-        self.sender.send(Message::StartAnimation(graph_id, anim_id));
+        if self
+            .sender
+            .send(Message::StartAnimation(graph_id, anim_id))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send StartAnimation message")
+        };
+    }
+    pub fn enqueue_animation(&self, graph_id: usize, anim_id: usize) {
+        if self
+            .sender
+            .send(Message::EnqueueAnimation(graph_id, anim_id))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send EnqueueAnimation message")
+        };
     }
     pub fn pause_animation(&self, graphic_id: usize) {
-        self.sender.send(Message::PauseAnimation(graphic_id));
+        if self
+            .sender
+            .send(Message::PauseAnimation(graphic_id))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send Pauseanimation message")
+        };
     }
     pub fn pause_animation_on_frame(&self, graphic_id: usize, frame_id: usize) {
-        self.sender
-            .send(Message::PauseAnimationOnFrame(graphic_id, frame_id));
+        if self
+            .sender
+            .send(Message::PauseAnimationOnFrame(graphic_id, frame_id))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send PauseAnimationOnFrame message")
+        };
     }
     pub fn stop_animation(&self, graph_id: usize) {
-        self.sender.send(Message::StopAnimation(graph_id));
+        if self.sender.send(Message::StopAnimation(graph_id)).is_err() {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send StopAnimation message")
+        };
     }
-    pub fn restart_animation(&self, anim_id: usize) {
-        self.sender.send(Message::RestartAnimation(anim_id));
+    pub fn restart_animation(&self, graphic_id: usize, anim_id: usize, when: Timestamp) {
+        if self
+            .sender
+            .send(Message::RestartAnimation(graphic_id, anim_id, when))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send RestartAnimation message")
+        };
     }
 
     pub fn move_graphic(&self, gid: usize, layer: usize, offset: (isize, isize)) {
-        self.sender.send(Message::MoveGraphic(gid, layer, offset));
+        if self
+            .sender
+            .send(Message::MoveGraphic(gid, layer, offset))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send MoveGraphic message")
+        };
     }
     pub fn set_invisible(&self, gid: usize, invisible: bool) {
-        self.sender.send(Message::SetInvisible(gid, invisible));
+        if self
+            .sender
+            .send(Message::SetInvisible(gid, invisible))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+        };
     }
     pub fn set_glyph(&self, gid: usize, glyph: Glyph, col: usize, row: usize) {
-        self.sender.send(Message::SetGlyph(gid, glyph, col, row));
+        if self
+            .sender
+            .send(Message::SetGlyph(gid, glyph, col, row))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGlyph message")
+        };
     }
     pub fn get_glyph(&self, gid: usize, col: usize, row: usize) {
-        self.sender.send(Message::GetGlyph(gid, col, row));
+        if self.sender.send(Message::GetGlyph(gid, col, row)).is_err() {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send GetGlyph message")
+        };
     }
 
     pub fn load_graphic_from_file<P>(&self, filename: P) -> Result<AnimOk, AnimError>
@@ -329,57 +448,123 @@ impl Manager {
     }
 
     pub fn empty_frame(&self, gid: usize) {
-        self.sender.send(Message::EmptyFrame(gid));
+        if self.sender.send(Message::EmptyFrame(gid)).is_err() {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send EmptyFrame message")
+        };
     }
-    fn update_animations() {}
+    //fn update_animations() {}
 
     pub fn cls() {}
     pub fn cla() {}
     pub fn new_display(&mut self, keep_existing: bool) -> usize {
         let new_id = self.next_screen_id;
         self.next_screen_id += 1;
-        self.sender.send(Message::NewDisplay(new_id, keep_existing));
+        if self
+            .sender
+            .send(Message::NewDisplay(new_id, keep_existing))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send NewDisplay message")
+        };
         new_id
     }
     pub fn restore_display(&mut self, display_id: usize, keep_existing: bool) {
-        self.sender
-            .send(Message::RestoreDisplay(display_id, keep_existing));
+        if self
+            .sender
+            .send(Message::RestoreDisplay(display_id, keep_existing))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send RestoreDisplay message")
+        };
     }
 
     pub fn add_graphic(&mut self, gr: Graphic, layer: usize, offset: (usize, usize)) -> usize {
         let gid = self.next_id;
         self.next_id += 1;
-        self.sender
-            .send(Message::AddGraphic(gid, gr, layer, offset));
+        if self
+            .sender
+            .send(Message::AddGraphic(gr, layer, offset))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send AddGraphic message")
+        };
+        //TODO gid should be returned by Screen
         gid
     }
     pub fn set_graphic(&self, gid: usize, fid: usize, force: bool) {
-        self.sender.send(Message::SetGraphic(gid, fid, force));
+        if self
+            .sender
+            .send(Message::SetGraphic(gid, fid, force))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+        };
     }
     pub fn set_graphic_color(&self, gid: usize, color: Color) {
-        self.sender.send(Message::SetGraphicColor(gid, color));
+        if self
+            .sender
+            .send(Message::SetGraphicColor(gid, color))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
+        };
     }
     pub fn set_graphic_background(&self, gid: usize, color: Color) {
-        self.sender.send(Message::SetGraphicBackground(gid, color));
+        if self
+            .sender
+            .send(Message::SetGraphicBackground(gid, color))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message")
+        };
     }
     pub fn set_graphic_style(&self, gid: usize, glyph: Glyph) {
-        self.sender.send(Message::SetGraphicStyle(gid, glyph));
+        if self
+            .sender
+            .send(Message::SetGraphicStyle(gid, glyph))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicStyle message")
+        };
     }
     pub fn delete_graphic(&self, gid: usize) {
-        self.sender.send(Message::DeleteGraphic(gid));
+        if self.sender.send(Message::DeleteGraphic(gid)).is_err() {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send DeleteGraphic message")
+        };
+    }
+
+    pub fn print_graphic(&self, gid: usize, skip_border: bool) {
+        if self
+            .sender
+            .send(Message::PrintGraphic(gid, skip_border))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send PrintGraphic message")
+        };
     }
 
     pub fn print_screen(&self) {
-        self.sender.send(Message::PrintScreen);
+        if self.sender.send(Message::PrintScreen).is_err() {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send PrintScreen message")
+        };
     }
 
     pub fn print_screen_section(&self, offset: (usize, usize), cols: usize, rows: usize) {
-        self.sender
-            .send(Message::PrintScreenSection(offset, cols, rows));
+        if self
+            .sender
+            .send(Message::PrintScreenSection(offset, cols, rows))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send PrintScreenSection message")
+        };
     }
 
     pub fn terminate(self) {
-        self.sender.send(Message::Finish);
-        self.join_handle.join();
+        if self.sender.send(Message::Finish).is_err() {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send Finish message")
+        };
+        if self.join_handle.join().is_err() {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Failed to join thread")
+        };
     }
 }

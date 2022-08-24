@@ -43,6 +43,18 @@ impl Color {
         Color::Basic(ColorName::Red)
     }
 
+    pub fn orange() -> Color {
+        Color::new_8bit(5, 2, 0)
+    }
+
+    pub fn indigo() -> Color {
+        Color::new_8bit(2, 1, 5)
+    }
+
+    pub fn violet() -> Color {
+        Color::new_8bit(4, 0, 4)
+    }
+
     pub fn green() -> Color {
         Color::Basic(ColorName::Green)
     }

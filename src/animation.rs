@@ -15,13 +15,17 @@ pub struct Animation {
 
 impl Animation {
     pub fn new(
-        //frames: HashMap<usize, Vec<Pixel>>,
         running: bool,
         looping: bool,
         ordering: Vec<(usize, Timestamp)>,
         start_time: Timestamp,
     ) -> Animation {
         let ord_max = ordering.len() - 1;
+        // let mut stop_frame = None;
+        // if !looping {
+        //     let last_frame = ordering.last().unwrap().0;
+        //     stop_frame = Some(last_frame);
+        // }
         Animation {
             current_frame: 0,
             stop_frame: None,
@@ -36,10 +40,11 @@ impl Animation {
     }
 
     pub fn start(&mut self, t: Timestamp) {
-        if !self.running {
-            self.trigger_time = t;
-            self.running = true;
-        }
+        //if !self.running {
+        self.trigger_time = t;
+        self.running = true;
+        //print!("starting animation\t");
+        //}
     }
 
     pub fn restart(&mut self, t: Timestamp) {
@@ -76,6 +81,7 @@ impl Animation {
                 if stop_frame == self.current_frame {
                     self.running = false;
                     self.stop_frame = None;
+                    frame = Some(self.current_frame);
                 }
             }
             if dtime >= self.trigger_time {

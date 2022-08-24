@@ -1,5 +1,4 @@
 use animaterm::Color;
-use animaterm::Glyph;
 use animaterm::Message;
 use std::sync::mpsc;
 
@@ -57,8 +56,8 @@ impl ColorsWindow {
         ColorsWindow {
             sender,
             basic_colors,
-            selected_tab: 0,
-            selected_vertical_cursor: 0,
+            selected_tab,
+            selected_vertical_cursor,
             basic_selected_color: 0,
             grayscale_selected_brightness: 0,
             eight_bit_selected_red: 0,
@@ -80,6 +79,369 @@ impl ColorsWindow {
         }
     }
 
+    pub fn select_color(&mut self, color: Color, background: bool) {
+        self.selected_vertical_cursor = 0;
+        match color {
+            Color::Basic(c) => {
+                self.selected_tab = 0;
+                self.basic_selected_color = c as usize;
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.basic_colors_id,
+                        self.basic_selected_color,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_1_title_id, true))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_1_id, true))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_2_title_id, true))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_3_title_id, true))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_2_id, true))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_3_id, true))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.basic_colors_id, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+            }
+            Color::Grayscale(c) => {
+                self.grayscale_selected_brightness = c;
+                self.selected_tab = 1;
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.progress_bar_1_title_id, 1, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_1_id,
+                        self.grayscale_selected_brightness as usize * 10,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.basic_colors_id, true))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_1_title_id, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_1_id, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_2_title_id, true))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_3_title_id, true))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_2_id, true))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_3_id, true))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+            }
+            Color::EightBit(c) => {
+                // 16 + 36r + 6g + b, where r, b, g are in range <0, 5>.
+                let mut eightbit = c - 16;
+                self.eight_bit_selected_red = eightbit / 36;
+                eightbit -= self.eight_bit_selected_red * 36;
+                self.eight_bit_selected_green = eightbit / 6;
+                eightbit -= self.eight_bit_selected_green * 6;
+                self.eight_bit_selected_blue = eightbit;
+                self.selected_tab = 2;
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.progress_bar_1_title_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_1_id,
+                        self.eight_bit_selected_red as usize * 51,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_2_id,
+                        self.eight_bit_selected_green as usize * 51,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_3_id,
+                        self.eight_bit_selected_blue as usize * 51,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.basic_colors_id, true))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_1_title_id, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_1_id, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_2_title_id, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_3_title_id, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_2_id, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_3_id, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+            }
+            Color::Truecolor(r, g, b) => {
+                self.selected_tab = 3;
+                self.truecolor_bit_selected_red = r;
+                self.truecolor_bit_selected_green = g;
+                self.truecolor_bit_selected_blue = b;
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.progress_bar_1_title_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_1_id,
+                        self.truecolor_bit_selected_red as usize,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_2_id,
+                        self.truecolor_bit_selected_green as usize,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_3_id,
+                        self.truecolor_bit_selected_blue as usize,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.basic_colors_id, true))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_1_title_id, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_1_id, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_2_title_id, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_3_title_id, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_2_id, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetInvisible(self.progress_bar_3_id, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                };
+            }
+        }
+        if background {
+            if self
+                .sender
+                .send(Message::SetGraphicBackground(self.glyph_matrix_id, color))
+                .is_err()
+            {
+                eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message")
+            };
+        } else {
+            if self
+                .sender
+                .send(Message::SetGraphicColor(self.glyph_matrix_id, color))
+                .is_err()
+            {
+                eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphiccolor message")
+            };
+        }
+        if self
+            .sender
+            .send(Message::SetGraphic(
+                self.color_window_id,
+                self.selected_tab,
+                false,
+            ))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+        };
+    }
+
     pub fn move_left(&mut self, background: bool) {
         if self.selected_vertical_cursor == 0 {
             if self.selected_tab == 0 {
@@ -87,102 +449,260 @@ impl ColorsWindow {
             } else {
                 self.selected_tab -= 1;
             }
-            self.sender.send(Message::SetGraphic(
-                self.color_window_id,
-                self.selected_tab,
-                true,
-            ));
+            if self
+                .sender
+                .send(Message::SetGraphic(
+                    self.color_window_id,
+                    self.selected_tab,
+                    false,
+                ))
+                .is_err()
+            {
+                eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+            };
             match self.selected_tab {
                 0 => {
-                    self.sender
-                        .send(Message::SetInvisible(self.basic_colors_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_1_title_id, true));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_2_title_id, true));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_3_title_id, true));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_1_id, true));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_2_id, true));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_3_id, true));
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_1_title_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_2_title_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_3_title_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_1_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_2_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_3_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.basic_colors_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
                 } //TODO basic color select visible
                 1 => {
                     //Grayscale
-                    self.sender
-                        .send(Message::SetGraphic(self.progress_bar_1_title_id, 1, true));
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_1_id,
-                        self.grayscale_selected_brightness as usize * 10,
-                        true,
-                    ));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_1_title_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_1_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_2_title_id, true));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_3_title_id, true));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_2_id, true));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_3_id, true));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(self.progress_bar_1_title_id, 1, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_1_id,
+                            self.grayscale_selected_brightness as usize * 10,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_1_title_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_1_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_2_title_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_3_title_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_2_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_3_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
                 } //TODO basic color invisible
                 2 => {
                     //8-bit
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_1_id,
-                        self.eight_bit_selected_red as usize * 51,
-                        true,
-                    ));
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_2_id,
-                        self.eight_bit_selected_green as usize * 51,
-                        true,
-                    ));
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_3_id,
-                        self.eight_bit_selected_blue as usize * 51,
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_1_id,
+                            self.eight_bit_selected_red as usize * 51,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_2_id,
+                            self.eight_bit_selected_green as usize * 51,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_3_id,
+                            self.eight_bit_selected_blue as usize * 51,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                     //mgr.set_graphic(pb1t_id, 0, true);
                 }
                 3 => {
                     //Truecolor
-                    self.sender
-                        .send(Message::SetInvisible(self.basic_colors_id, true));
-                    self.sender
-                        .send(Message::SetGraphic(self.progress_bar_1_title_id, 0, true));
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_1_id,
-                        self.truecolor_bit_selected_red as usize,
-                        true,
-                    ));
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_2_id,
-                        self.truecolor_bit_selected_green as usize,
-                        true,
-                    ));
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_3_id,
-                        self.truecolor_bit_selected_blue as usize,
-                        true,
-                    ));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_1_title_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_2_title_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_3_title_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_1_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_2_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_3_id, false));
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.basic_colors_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(self.progress_bar_1_title_id, 0, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_1_id,
+                            self.truecolor_bit_selected_red as usize,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_2_id,
+                            self.truecolor_bit_selected_green as usize,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_3_id,
+                            self.truecolor_bit_selected_blue as usize,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_1_title_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_2_title_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_3_title_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_1_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_2_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_3_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
                 }
                 _ => {}
             }
@@ -195,21 +715,41 @@ impl ColorsWindow {
                     } else {
                         self.basic_selected_color -= 1;
                     }
-                    self.sender.send(Message::SetGraphic(
-                        self.basic_colors_id,
-                        self.basic_selected_color,
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.basic_colors_id,
+                            self.basic_selected_color,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                     if background {
-                        self.sender.send(Message::SetGraphicBackground(
-                            self.glyph_matrix_id,
-                            self.basic_colors[self.basic_selected_color],
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicBackground(
+                                self.glyph_matrix_id,
+                                self.basic_colors[self.basic_selected_color],
+                            ))
+                            .is_err()
+                        {
+                            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message")
+                        };
                     } else {
-                        self.sender.send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            self.basic_colors[self.basic_selected_color],
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicColor(
+                                self.glyph_matrix_id,
+                                self.basic_colors[self.basic_selected_color],
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                            )
+                        };
                     }
                 }
                 (1, 1) => {
@@ -219,21 +759,41 @@ impl ColorsWindow {
                     } else {
                         self.grayscale_selected_brightness -= 1;
                     }
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_1_id,
-                        self.grayscale_selected_brightness as usize * 10,
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_1_id,
+                            self.grayscale_selected_brightness as usize * 10,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                     if background {
-                        self.sender.send(Message::SetGraphicBackground(
-                            self.glyph_matrix_id,
-                            Color::new_gray(self.grayscale_selected_brightness),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicBackground(
+                                self.glyph_matrix_id,
+                                Color::new_gray(self.grayscale_selected_brightness),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message")
+                        };
                     } else {
-                        self.sender.send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_gray(self.grayscale_selected_brightness),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicColor(
+                                self.glyph_matrix_id,
+                                Color::new_gray(self.grayscale_selected_brightness),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                            )
+                        };
                     }
                 }
                 (1, 2) => {
@@ -243,29 +803,49 @@ impl ColorsWindow {
                     } else {
                         self.eight_bit_selected_red -= 1;
                     }
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_1_id,
-                        self.eight_bit_selected_red as usize * 51,
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_1_id,
+                            self.eight_bit_selected_red as usize * 51,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                     if background {
-                        self.sender.send(Message::SetGraphicBackground(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicBackground(
+                                self.glyph_matrix_id,
+                                Color::new_8bit(
+                                    self.eight_bit_selected_red,
+                                    self.eight_bit_selected_green,
+                                    self.eight_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message")
+                        };
                     } else {
-                        self.sender.send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicColor(
+                                self.glyph_matrix_id,
+                                Color::new_8bit(
+                                    self.eight_bit_selected_red,
+                                    self.eight_bit_selected_green,
+                                    self.eight_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphiccolor message"
+                            )
+                        };
                     }
                 }
                 (2, 2) => {
@@ -275,29 +855,49 @@ impl ColorsWindow {
                     } else {
                         self.eight_bit_selected_green -= 1;
                     }
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_2_id,
-                        self.eight_bit_selected_green as usize * 51,
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_2_id,
+                            self.eight_bit_selected_green as usize * 51,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                     if background {
-                        self.sender.send(Message::SetGraphicBackground(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicBackground(
+                                self.glyph_matrix_id,
+                                Color::new_8bit(
+                                    self.eight_bit_selected_red,
+                                    self.eight_bit_selected_green,
+                                    self.eight_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message")
+                        };
                     } else {
-                        self.sender.send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicColor(
+                                self.glyph_matrix_id,
+                                Color::new_8bit(
+                                    self.eight_bit_selected_red,
+                                    self.eight_bit_selected_green,
+                                    self.eight_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetgraphicColor message"
+                            )
+                        };
                     }
                 }
                 (3, 2) => {
@@ -307,29 +907,49 @@ impl ColorsWindow {
                     } else {
                         self.eight_bit_selected_blue -= 1;
                     }
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_3_id,
-                        self.eight_bit_selected_blue as usize * 51,
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_3_id,
+                            self.eight_bit_selected_blue as usize * 51,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                     if background {
-                        self.sender.send(Message::SetGraphicBackground(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicBackground(
+                                self.glyph_matrix_id,
+                                Color::new_8bit(
+                                    self.eight_bit_selected_red,
+                                    self.eight_bit_selected_green,
+                                    self.eight_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message")
+                        };
                     } else {
-                        self.sender.send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicColor(
+                                self.glyph_matrix_id,
+                                Color::new_8bit(
+                                    self.eight_bit_selected_red,
+                                    self.eight_bit_selected_green,
+                                    self.eight_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                            )
+                        };
                     }
                 }
                 (1, 3) => {
@@ -339,29 +959,49 @@ impl ColorsWindow {
                     } else {
                         self.truecolor_bit_selected_red -= 1;
                     }
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_1_id,
-                        self.truecolor_bit_selected_red as usize,
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_1_id,
+                            self.truecolor_bit_selected_red as usize,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                     if background {
-                        self.sender.send(Message::SetGraphicBackground(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicBackground(
+                                self.glyph_matrix_id,
+                                Color::new_truecolor(
+                                    self.truecolor_bit_selected_red,
+                                    self.truecolor_bit_selected_green,
+                                    self.truecolor_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message")
+                        };
                     } else {
-                        self.sender.send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicColor(
+                                self.glyph_matrix_id,
+                                Color::new_truecolor(
+                                    self.truecolor_bit_selected_red,
+                                    self.truecolor_bit_selected_green,
+                                    self.truecolor_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                            )
+                        };
                     }
                 }
                 (2, 3) => {
@@ -371,29 +1011,51 @@ impl ColorsWindow {
                     } else {
                         self.truecolor_bit_selected_green -= 1;
                     }
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_2_id,
-                        self.truecolor_bit_selected_green as usize,
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_2_id,
+                            self.truecolor_bit_selected_green as usize,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                     if background {
-                        self.sender.send(Message::SetGraphicBackground(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicBackground(
+                                self.glyph_matrix_id,
+                                Color::new_truecolor(
+                                    self.truecolor_bit_selected_red,
+                                    self.truecolor_bit_selected_green,
+                                    self.truecolor_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                            )
+                        };
                     } else {
-                        self.sender.send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicColor(
+                                self.glyph_matrix_id,
+                                Color::new_truecolor(
+                                    self.truecolor_bit_selected_red,
+                                    self.truecolor_bit_selected_green,
+                                    self.truecolor_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                            )
+                        };
                     }
                 }
                 (3, 3) => {
@@ -403,29 +1065,51 @@ impl ColorsWindow {
                     } else {
                         self.truecolor_bit_selected_blue -= 1;
                     }
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_3_id,
-                        self.truecolor_bit_selected_blue as usize,
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_3_id,
+                            self.truecolor_bit_selected_blue as usize,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                     if background {
-                        self.sender.send(Message::SetGraphicBackground(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicBackground(
+                                self.glyph_matrix_id,
+                                Color::new_truecolor(
+                                    self.truecolor_bit_selected_red,
+                                    self.truecolor_bit_selected_green,
+                                    self.truecolor_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                            )
+                        };
                     } else {
-                        self.sender.send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicColor(
+                                self.glyph_matrix_id,
+                                Color::new_truecolor(
+                                    self.truecolor_bit_selected_red,
+                                    self.truecolor_bit_selected_green,
+                                    self.truecolor_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                            )
+                        };
                     }
                 }
                 _ => {}
@@ -439,97 +1123,245 @@ impl ColorsWindow {
             if self.selected_tab > 3 {
                 self.selected_tab = 0;
             }
-            self.sender.send(Message::SetGraphic(
-                self.color_window_id,
-                self.selected_tab,
-                true,
-            ));
+            if self
+                .sender
+                .send(Message::SetGraphic(
+                    self.color_window_id,
+                    self.selected_tab,
+                    false,
+                ))
+                .is_err()
+            {
+                eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+            };
             match self.selected_tab {
                 0 => {
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_1_title_id, true));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_2_title_id, true));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_3_title_id, true));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_1_id, true));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_2_id, true));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_3_id, true));
-                    self.sender
-                        .send(Message::SetInvisible(self.basic_colors_id, false));
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_1_title_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_2_title_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_3_title_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_1_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_2_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_3_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.basic_colors_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
                 }
                 1 => {
                     //Grayscale
-                    self.sender
-                        .send(Message::SetGraphic(self.progress_bar_1_title_id, 1, true));
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_1_id,
-                        self.grayscale_selected_brightness as usize * 10,
-                        true,
-                    ));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_1_title_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_1_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.basic_colors_id, true));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(self.progress_bar_1_title_id, 1, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_1_id,
+                            self.grayscale_selected_brightness as usize * 10,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.basic_colors_id, true))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_1_title_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_1_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
                 }
                 2 => {
                     //8-bit
-                    self.sender
-                        .send(Message::SetGraphic(self.progress_bar_1_title_id, 0, true));
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_1_id,
-                        self.eight_bit_selected_red as usize * 51,
-                        true,
-                    ));
-                    self.sender
-                        .send(Message::SetGraphic(self.progress_bar_2_id, 0, true));
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_2_id,
-                        self.eight_bit_selected_green as usize * 51,
-                        true,
-                    ));
-                    self.sender
-                        .send(Message::SetGraphic(self.progress_bar_3_title_id, 0, true));
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_3_id,
-                        self.eight_bit_selected_blue as usize * 51,
-                        true,
-                    ));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_1_title_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_2_title_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_3_title_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_1_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_2_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_3_id, false));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(self.progress_bar_1_title_id, 0, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_1_id,
+                            self.eight_bit_selected_red as usize * 51,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(self.progress_bar_2_id, 0, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_2_id,
+                            self.eight_bit_selected_green as usize * 51,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(self.progress_bar_3_title_id, 0, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_3_id,
+                            self.eight_bit_selected_blue as usize * 51,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_1_title_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_2_title_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_3_title_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_1_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_2_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_3_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
                 }
                 3 => {
                     //Truecolor
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_1_id,
-                        self.truecolor_bit_selected_red.into(),
-                        true,
-                    ));
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_2_id,
-                        self.truecolor_bit_selected_green.into(),
-                        true,
-                    ));
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_3_id,
-                        self.truecolor_bit_selected_blue.into(),
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_1_id,
+                            self.truecolor_bit_selected_red.into(),
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_2_id,
+                            self.truecolor_bit_selected_green.into(),
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_3_id,
+                            self.truecolor_bit_selected_blue.into(),
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                 }
                 _ => {}
             }
@@ -541,21 +1373,43 @@ impl ColorsWindow {
                     if self.basic_selected_color > 7 {
                         self.basic_selected_color = 0;
                     }
-                    self.sender.send(Message::SetGraphic(
-                        self.basic_colors_id,
-                        self.basic_selected_color,
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.basic_colors_id,
+                            self.basic_selected_color,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                     if background {
-                        self.sender.send(Message::SetGraphicBackground(
-                            self.glyph_matrix_id,
-                            self.basic_colors[self.basic_selected_color],
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicBackground(
+                                self.glyph_matrix_id,
+                                self.basic_colors[self.basic_selected_color],
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                            )
+                        };
                     } else {
-                        self.sender.send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            self.basic_colors[self.basic_selected_color],
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicColor(
+                                self.glyph_matrix_id,
+                                self.basic_colors[self.basic_selected_color],
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                            )
+                        };
                     }
                 }
                 (1, 1) => {
@@ -564,21 +1418,43 @@ impl ColorsWindow {
                     if self.grayscale_selected_brightness > 23 {
                         self.grayscale_selected_brightness = 0;
                     }
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_1_id,
-                        self.grayscale_selected_brightness as usize * 10,
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_1_id,
+                            self.grayscale_selected_brightness as usize * 10,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                     if background {
-                        self.sender.send(Message::SetGraphicBackground(
-                            self.glyph_matrix_id,
-                            Color::new_gray(self.grayscale_selected_brightness),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicBackground(
+                                self.glyph_matrix_id,
+                                Color::new_gray(self.grayscale_selected_brightness),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                            )
+                        };
                     } else {
-                        self.sender.send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_gray(self.grayscale_selected_brightness),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicColor(
+                                self.glyph_matrix_id,
+                                Color::new_gray(self.grayscale_selected_brightness),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                            )
+                        };
                     }
                 }
                 (1, 2) => {
@@ -587,29 +1463,51 @@ impl ColorsWindow {
                     if self.eight_bit_selected_red > 5 {
                         self.eight_bit_selected_red = 0;
                     }
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_1_id,
-                        self.eight_bit_selected_red as usize * 51,
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_1_id,
+                            self.eight_bit_selected_red as usize * 51,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                     if background {
-                        self.sender.send(Message::SetGraphicBackground(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicBackground(
+                                self.glyph_matrix_id,
+                                Color::new_8bit(
+                                    self.eight_bit_selected_red,
+                                    self.eight_bit_selected_green,
+                                    self.eight_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                            )
+                        };
                     } else {
-                        self.sender.send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicColor(
+                                self.glyph_matrix_id,
+                                Color::new_8bit(
+                                    self.eight_bit_selected_red,
+                                    self.eight_bit_selected_green,
+                                    self.eight_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                            )
+                        };
                     }
                 }
                 (2, 2) => {
@@ -618,29 +1516,51 @@ impl ColorsWindow {
                     if self.eight_bit_selected_green > 5 {
                         self.eight_bit_selected_green = 0;
                     }
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_2_id,
-                        self.eight_bit_selected_green as usize * 51,
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_2_id,
+                            self.eight_bit_selected_green as usize * 51,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                     if background {
-                        self.sender.send(Message::SetGraphicBackground(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicBackground(
+                                self.glyph_matrix_id,
+                                Color::new_8bit(
+                                    self.eight_bit_selected_red,
+                                    self.eight_bit_selected_green,
+                                    self.eight_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                            )
+                        };
                     } else {
-                        self.sender.send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicColor(
+                                self.glyph_matrix_id,
+                                Color::new_8bit(
+                                    self.eight_bit_selected_red,
+                                    self.eight_bit_selected_green,
+                                    self.eight_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                            )
+                        };
                     }
                 }
                 (3, 2) => {
@@ -649,29 +1569,51 @@ impl ColorsWindow {
                     if self.eight_bit_selected_blue > 5 {
                         self.eight_bit_selected_blue = 0;
                     }
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_3_id,
-                        self.eight_bit_selected_blue as usize * 51,
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_3_id,
+                            self.eight_bit_selected_blue as usize * 51,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                     if background {
-                        self.sender.send(Message::SetGraphicBackground(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicBackground(
+                                self.glyph_matrix_id,
+                                Color::new_8bit(
+                                    self.eight_bit_selected_red,
+                                    self.eight_bit_selected_green,
+                                    self.eight_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                            )
+                        };
                     } else {
-                        self.sender.send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicColor(
+                                self.glyph_matrix_id,
+                                Color::new_8bit(
+                                    self.eight_bit_selected_red,
+                                    self.eight_bit_selected_green,
+                                    self.eight_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                            )
+                        };
                     }
                 }
                 (1, 3) => {
@@ -681,29 +1623,51 @@ impl ColorsWindow {
                     } else {
                         self.truecolor_bit_selected_red += 1;
                     }
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_1_id,
-                        self.truecolor_bit_selected_red as usize,
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_1_id,
+                            self.truecolor_bit_selected_red as usize,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                     if background {
-                        self.sender.send(Message::SetGraphicBackground(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicBackground(
+                                self.glyph_matrix_id,
+                                Color::new_truecolor(
+                                    self.truecolor_bit_selected_red,
+                                    self.truecolor_bit_selected_green,
+                                    self.truecolor_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                            )
+                        };
                     } else {
-                        self.sender.send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicColor(
+                                self.glyph_matrix_id,
+                                Color::new_truecolor(
+                                    self.truecolor_bit_selected_red,
+                                    self.truecolor_bit_selected_green,
+                                    self.truecolor_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                            )
+                        };
                     }
                 }
                 (2, 3) => {
@@ -714,29 +1678,51 @@ impl ColorsWindow {
                     } else {
                         self.truecolor_bit_selected_green += 1;
                     }
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_2_id,
-                        self.truecolor_bit_selected_green as usize,
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_2_id,
+                            self.truecolor_bit_selected_green as usize,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                     if background {
-                        self.sender.send(Message::SetGraphicBackground(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicBackground(
+                                self.glyph_matrix_id,
+                                Color::new_truecolor(
+                                    self.truecolor_bit_selected_red,
+                                    self.truecolor_bit_selected_green,
+                                    self.truecolor_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                            )
+                        };
                     } else {
-                        self.sender.send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicColor(
+                                self.glyph_matrix_id,
+                                Color::new_truecolor(
+                                    self.truecolor_bit_selected_red,
+                                    self.truecolor_bit_selected_green,
+                                    self.truecolor_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                            )
+                        };
                     }
                 }
                 (3, 3) => {
@@ -746,29 +1732,51 @@ impl ColorsWindow {
                     } else {
                         self.truecolor_bit_selected_blue += 1;
                     }
-                    self.sender.send(Message::SetGraphic(
-                        self.progress_bar_3_id,
-                        self.truecolor_bit_selected_blue as usize,
-                        true,
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphic(
+                            self.progress_bar_3_id,
+                            self.truecolor_bit_selected_blue as usize,
+                            false,
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                    };
                     if background {
-                        self.sender.send(Message::SetGraphicBackground(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicBackground(
+                                self.glyph_matrix_id,
+                                Color::new_truecolor(
+                                    self.truecolor_bit_selected_red,
+                                    self.truecolor_bit_selected_green,
+                                    self.truecolor_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                            )
+                        };
                     } else {
-                        self.sender.send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ));
+                        if self
+                            .sender
+                            .send(Message::SetGraphicColor(
+                                self.glyph_matrix_id,
+                                Color::new_truecolor(
+                                    self.truecolor_bit_selected_red,
+                                    self.truecolor_bit_selected_green,
+                                    self.truecolor_bit_selected_blue,
+                                ),
+                            ))
+                            .is_err()
+                        {
+                            eprintln!(
+                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                            )
+                        };
                     }
                 }
                 _ => {}
@@ -783,104 +1791,184 @@ impl ColorsWindow {
                 if self.grayscale_selected_brightness > 23 {
                     self.grayscale_selected_brightness = 23;
                 }
-                self.sender.send(Message::SetGraphic(
-                    self.progress_bar_1_id,
-                    self.grayscale_selected_brightness as usize * 10,
-                    true,
-                ));
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_1_id,
+                        self.grayscale_selected_brightness as usize * 10,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 if background {
-                    self.sender.send(Message::SetGraphicBackground(
-                        self.glyph_matrix_id,
-                        Color::new_gray(self.grayscale_selected_brightness),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicBackground(
+                            self.glyph_matrix_id,
+                            Color::new_gray(self.grayscale_selected_brightness),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                        )
+                    };
                 } else {
-                    self.sender.send(Message::SetGraphicColor(
-                        self.glyph_matrix_id,
-                        Color::new_gray(self.grayscale_selected_brightness),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_gray(self.grayscale_selected_brightness),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
+                    };
                 }
             }
             (1, 2) => {
                 self.eight_bit_selected_red = 5;
-                self.sender.send(Message::SetGraphic(
-                    self.progress_bar_1_id,
-                    self.eight_bit_selected_red as usize * 51,
-                    true,
-                ));
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_1_id,
+                        self.eight_bit_selected_red as usize * 51,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 if background {
-                    self.sender.send(Message::SetGraphicBackground(
-                        self.glyph_matrix_id,
-                        Color::new_8bit(
-                            self.eight_bit_selected_red,
-                            self.eight_bit_selected_green,
-                            self.eight_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicBackground(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                        )
+                    };
                 } else {
-                    self.sender.send(Message::SetGraphicColor(
-                        self.glyph_matrix_id,
-                        Color::new_8bit(
-                            self.eight_bit_selected_red,
-                            self.eight_bit_selected_green,
-                            self.eight_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
+                    };
                 }
             }
             (2, 2) => {
                 //8-bit green
                 self.eight_bit_selected_green = 5;
-                self.sender.send(Message::SetGraphic(
-                    self.progress_bar_2_id,
-                    self.eight_bit_selected_green as usize * 51,
-                    true,
-                ));
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_2_id,
+                        self.eight_bit_selected_green as usize * 51,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 if background {
-                    self.sender.send(Message::SetGraphicBackground(
-                        self.glyph_matrix_id,
-                        Color::new_8bit(
-                            self.eight_bit_selected_red,
-                            self.eight_bit_selected_green,
-                            self.eight_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicBackground(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                        )
+                    };
                 } else {
-                    self.sender.send(Message::SetGraphicColor(
-                        self.glyph_matrix_id,
-                        Color::new_8bit(
-                            self.eight_bit_selected_red,
-                            self.eight_bit_selected_green,
-                            self.eight_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
+                    };
                 }
             }
             (3, 2) => {
                 //8-bit blue
                 self.eight_bit_selected_blue = 5;
-                self.sender.send(Message::SetGraphic(
-                    self.progress_bar_3_id,
-                    self.eight_bit_selected_blue as usize * 51,
-                    true,
-                ));
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_3_id,
+                        self.eight_bit_selected_blue as usize * 51,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 if background {
-                    self.sender.send(Message::SetGraphicBackground(
-                        self.glyph_matrix_id,
-                        Color::new_8bit(
-                            self.eight_bit_selected_red,
-                            self.eight_bit_selected_green,
-                            self.eight_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicBackground(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                        )
+                    };
                 } else {
-                    self.sender.send(Message::SetGraphicColor(
-                        self.glyph_matrix_id,
-                        Color::new_8bit(
-                            self.eight_bit_selected_red,
-                            self.eight_bit_selected_green,
-                            self.eight_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
+                    };
                 }
             }
             (1, 3) => {
@@ -890,29 +1978,49 @@ impl ColorsWindow {
                 } else {
                     self.truecolor_bit_selected_red += 25;
                 }
-                self.sender.send(Message::SetGraphic(
-                    self.progress_bar_1_id,
-                    self.truecolor_bit_selected_red as usize,
-                    true,
-                ));
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_1_id,
+                        self.truecolor_bit_selected_red as usize,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 if background {
-                    self.sender.send(Message::SetGraphicBackground(
-                        self.glyph_matrix_id,
-                        Color::new_truecolor(
-                            self.truecolor_bit_selected_red,
-                            self.truecolor_bit_selected_green,
-                            self.truecolor_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicBackground(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                        )
+                    };
                 } else {
-                    self.sender.send(Message::SetGraphicColor(
-                        self.glyph_matrix_id,
-                        Color::new_truecolor(
-                            self.truecolor_bit_selected_red,
-                            self.truecolor_bit_selected_green,
-                            self.truecolor_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
+                    };
                 }
             }
             (2, 3) => {
@@ -922,29 +2030,49 @@ impl ColorsWindow {
                 } else {
                     self.truecolor_bit_selected_green += 25;
                 }
-                self.sender.send(Message::SetGraphic(
-                    self.progress_bar_2_id,
-                    self.truecolor_bit_selected_green as usize,
-                    true,
-                ));
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_2_id,
+                        self.truecolor_bit_selected_green as usize,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 if background {
-                    self.sender.send(Message::SetGraphicBackground(
-                        self.glyph_matrix_id,
-                        Color::new_truecolor(
-                            self.truecolor_bit_selected_red,
-                            self.truecolor_bit_selected_green,
-                            self.truecolor_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicBackground(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                        )
+                    };
                 } else {
-                    self.sender.send(Message::SetGraphicColor(
-                        self.glyph_matrix_id,
-                        Color::new_truecolor(
-                            self.truecolor_bit_selected_red,
-                            self.truecolor_bit_selected_green,
-                            self.truecolor_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
+                    };
                 }
             }
             (3, 3) => {
@@ -955,29 +2083,49 @@ impl ColorsWindow {
                 } else {
                     self.truecolor_bit_selected_blue += 25;
                 }
-                self.sender.send(Message::SetGraphic(
-                    self.progress_bar_3_id,
-                    self.truecolor_bit_selected_blue as usize,
-                    true,
-                ));
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_3_id,
+                        self.truecolor_bit_selected_blue as usize,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 if background {
-                    self.sender.send(Message::SetGraphicBackground(
-                        self.glyph_matrix_id,
-                        Color::new_truecolor(
-                            self.truecolor_bit_selected_red,
-                            self.truecolor_bit_selected_green,
-                            self.truecolor_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicBackground(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                        )
+                    };
                 } else {
-                    self.sender.send(Message::SetGraphicColor(
-                        self.glyph_matrix_id,
-                        Color::new_truecolor(
-                            self.truecolor_bit_selected_red,
-                            self.truecolor_bit_selected_green,
-                            self.truecolor_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
+                    };
                 }
             }
             _ => {}
@@ -993,103 +2141,183 @@ impl ColorsWindow {
                 } else {
                     self.grayscale_selected_brightness -= 5;
                 }
-                self.sender.send(Message::SetGraphic(
-                    self.progress_bar_1_id,
-                    self.grayscale_selected_brightness as usize * 10,
-                    true,
-                ));
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_1_id,
+                        self.grayscale_selected_brightness as usize * 10,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 if background {
-                    self.sender.send(Message::SetGraphicBackground(
-                        self.glyph_matrix_id,
-                        Color::new_gray(self.grayscale_selected_brightness),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicBackground(
+                            self.glyph_matrix_id,
+                            Color::new_gray(self.grayscale_selected_brightness),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                        )
+                    };
                 } else {
-                    self.sender.send(Message::SetGraphicColor(
-                        self.glyph_matrix_id,
-                        Color::new_gray(self.grayscale_selected_brightness),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_gray(self.grayscale_selected_brightness),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
+                    };
                 }
             }
             (1, 2) => {
                 self.eight_bit_selected_red = 0;
-                self.sender.send(Message::SetGraphic(
-                    self.progress_bar_1_id,
-                    self.eight_bit_selected_red as usize * 51,
-                    true,
-                ));
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_1_id,
+                        self.eight_bit_selected_red as usize * 51,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 if background {
-                    self.sender.send(Message::SetGraphicBackground(
-                        self.glyph_matrix_id,
-                        Color::new_8bit(
-                            self.eight_bit_selected_red,
-                            self.eight_bit_selected_green,
-                            self.eight_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicBackground(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                        )
+                    };
                 } else {
-                    self.sender.send(Message::SetGraphicColor(
-                        self.glyph_matrix_id,
-                        Color::new_8bit(
-                            self.eight_bit_selected_red,
-                            self.eight_bit_selected_green,
-                            self.eight_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
+                    };
                 }
             }
             (2, 2) => {
                 self.eight_bit_selected_green = 0;
-                self.sender.send(Message::SetGraphic(
-                    self.progress_bar_2_id,
-                    self.eight_bit_selected_green as usize * 51,
-                    true,
-                ));
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_2_id,
+                        self.eight_bit_selected_green as usize * 51,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 if background {
-                    self.sender.send(Message::SetGraphicBackground(
-                        self.glyph_matrix_id,
-                        Color::new_8bit(
-                            self.eight_bit_selected_red,
-                            self.eight_bit_selected_green,
-                            self.eight_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicBackground(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                        )
+                    };
                 } else {
-                    self.sender.send(Message::SetGraphicColor(
-                        self.glyph_matrix_id,
-                        Color::new_8bit(
-                            self.eight_bit_selected_red,
-                            self.eight_bit_selected_green,
-                            self.eight_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
+                    };
                 }
             }
             (3, 2) => {
                 //8-bit blue
                 self.eight_bit_selected_blue = 0;
-                self.sender.send(Message::SetGraphic(
-                    self.progress_bar_3_id,
-                    self.eight_bit_selected_blue as usize * 51,
-                    true,
-                ));
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_3_id,
+                        self.eight_bit_selected_blue as usize * 51,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 if background {
-                    self.sender.send(Message::SetGraphicBackground(
-                        self.glyph_matrix_id,
-                        Color::new_8bit(
-                            self.eight_bit_selected_red,
-                            self.eight_bit_selected_green,
-                            self.eight_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicBackground(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                        )
+                    };
                 } else {
-                    self.sender.send(Message::SetGraphicColor(
-                        self.glyph_matrix_id,
-                        Color::new_8bit(
-                            self.eight_bit_selected_red,
-                            self.eight_bit_selected_green,
-                            self.eight_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
+                    };
                 }
             }
             (1, 3) => {
@@ -1099,29 +2327,49 @@ impl ColorsWindow {
                 } else {
                     self.truecolor_bit_selected_red -= 25;
                 }
-                self.sender.send(Message::SetGraphic(
-                    self.progress_bar_1_id,
-                    self.truecolor_bit_selected_red as usize,
-                    true,
-                ));
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_1_id,
+                        self.truecolor_bit_selected_red as usize,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 if background {
-                    self.sender.send(Message::SetGraphicBackground(
-                        self.glyph_matrix_id,
-                        Color::new_truecolor(
-                            self.truecolor_bit_selected_red,
-                            self.truecolor_bit_selected_green,
-                            self.truecolor_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicBackground(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                        )
+                    };
                 } else {
-                    self.sender.send(Message::SetGraphicColor(
-                        self.glyph_matrix_id,
-                        Color::new_truecolor(
-                            self.truecolor_bit_selected_red,
-                            self.truecolor_bit_selected_green,
-                            self.truecolor_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
+                    };
                 }
             }
             (2, 3) => {
@@ -1131,29 +2379,49 @@ impl ColorsWindow {
                 } else {
                     self.truecolor_bit_selected_green -= 25;
                 }
-                self.sender.send(Message::SetGraphic(
-                    self.progress_bar_2_id,
-                    self.truecolor_bit_selected_green as usize,
-                    true,
-                ));
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_2_id,
+                        self.truecolor_bit_selected_green as usize,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 if background {
-                    self.sender.send(Message::SetGraphicBackground(
-                        self.glyph_matrix_id,
-                        Color::new_truecolor(
-                            self.truecolor_bit_selected_red,
-                            self.truecolor_bit_selected_green,
-                            self.truecolor_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicBackground(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                        )
+                    };
                 } else {
-                    self.sender.send(Message::SetGraphicColor(
-                        self.glyph_matrix_id,
-                        Color::new_truecolor(
-                            self.truecolor_bit_selected_red,
-                            self.truecolor_bit_selected_green,
-                            self.truecolor_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
+                    };
                 }
             }
             (3, 3) => {
@@ -1163,29 +2431,49 @@ impl ColorsWindow {
                 } else {
                     self.truecolor_bit_selected_blue -= 25;
                 }
-                self.sender.send(Message::SetGraphic(
-                    self.progress_bar_3_id,
-                    self.truecolor_bit_selected_blue as usize,
-                    true,
-                ));
+                if self
+                    .sender
+                    .send(Message::SetGraphic(
+                        self.progress_bar_3_id,
+                        self.truecolor_bit_selected_blue as usize,
+                        false,
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 if background {
-                    self.sender.send(Message::SetGraphicBackground(
-                        self.glyph_matrix_id,
-                        Color::new_truecolor(
-                            self.truecolor_bit_selected_red,
-                            self.truecolor_bit_selected_green,
-                            self.truecolor_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicBackground(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
+                        )
+                    };
                 } else {
-                    self.sender.send(Message::SetGraphicColor(
-                        self.glyph_matrix_id,
-                        Color::new_truecolor(
-                            self.truecolor_bit_selected_red,
-                            self.truecolor_bit_selected_green,
-                            self.truecolor_bit_selected_blue,
-                        ),
-                    ));
+                    if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
+                    };
                 }
             }
             _ => {}
@@ -1201,11 +2489,17 @@ impl ColorsWindow {
         } else {
             self.selected_vertical_cursor -= 1;
         }
-        self.sender.send(Message::SetGraphic(
-            self.vertical_cursor_id,
-            self.selected_vertical_cursor,
-            true,
-        ));
+        if self
+            .sender
+            .send(Message::SetGraphic(
+                self.vertical_cursor_id,
+                self.selected_vertical_cursor,
+                false,
+            ))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+        };
     }
 
     pub fn move_down(&mut self) {
@@ -1219,20 +2513,32 @@ impl ColorsWindow {
                 self.selected_vertical_cursor = 0;
             }
         }
-        self.sender.send(Message::SetGraphic(
-            self.vertical_cursor_id,
-            self.selected_vertical_cursor,
-            true,
-        ));
+        if self
+            .sender
+            .send(Message::SetGraphic(
+                self.vertical_cursor_id,
+                self.selected_vertical_cursor,
+                false,
+            ))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+        };
     }
 
     pub fn move_top(&mut self) {
         self.selected_vertical_cursor = 0;
-        self.sender.send(Message::SetGraphic(
-            self.vertical_cursor_id,
-            self.selected_vertical_cursor,
-            true,
-        ));
+        if self
+            .sender
+            .send(Message::SetGraphic(
+                self.vertical_cursor_id,
+                self.selected_vertical_cursor,
+                false,
+            ))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+        };
     }
 
     pub fn move_bottom(&mut self) {
@@ -1244,62 +2550,168 @@ impl ColorsWindow {
                 self.selected_vertical_cursor = 3;
             }
         }
-        self.sender.send(Message::SetGraphic(
-            self.vertical_cursor_id,
-            self.selected_vertical_cursor,
-            true,
-        ));
+        if self
+            .sender
+            .send(Message::SetGraphic(
+                self.vertical_cursor_id,
+                self.selected_vertical_cursor,
+                false,
+            ))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+        };
     }
 
     pub fn set_invisible(&mut self, invisible: bool) {
         if invisible {
-            self.sender
-                .send(Message::SetInvisible(self.color_window_id, true));
-            self.sender
-                .send(Message::SetInvisible(self.vertical_cursor_id, true));
-            self.sender
-                .send(Message::SetInvisible(self.basic_colors_id, true));
-            self.sender
-                .send(Message::SetInvisible(self.progress_bar_1_id, true));
-            self.sender
-                .send(Message::SetInvisible(self.progress_bar_1_title_id, true));
-            self.sender
-                .send(Message::SetInvisible(self.progress_bar_2_id, true));
-            self.sender
-                .send(Message::SetInvisible(self.progress_bar_2_title_id, true));
-            self.sender
-                .send(Message::SetInvisible(self.progress_bar_3_id, true));
-            self.sender
-                .send(Message::SetInvisible(self.progress_bar_3_title_id, true));
+            if self
+                .sender
+                .send(Message::SetInvisible(self.color_window_id, true))
+                .is_err()
+            {
+                eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+            };
+            if self
+                .sender
+                .send(Message::SetInvisible(self.vertical_cursor_id, true))
+                .is_err()
+            {
+                eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+            };
+            if self
+                .sender
+                .send(Message::SetInvisible(self.basic_colors_id, true))
+                .is_err()
+            {
+                eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+            };
+            if self
+                .sender
+                .send(Message::SetInvisible(self.progress_bar_1_id, true))
+                .is_err()
+            {
+                eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+            };
+            if self
+                .sender
+                .send(Message::SetInvisible(self.progress_bar_1_title_id, true))
+                .is_err()
+            {
+                eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+            };
+            if self
+                .sender
+                .send(Message::SetInvisible(self.progress_bar_2_id, true))
+                .is_err()
+            {
+                eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+            };
+            if self
+                .sender
+                .send(Message::SetInvisible(self.progress_bar_2_title_id, true))
+                .is_err()
+            {
+                eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+            };
+            if self
+                .sender
+                .send(Message::SetInvisible(self.progress_bar_3_id, true))
+                .is_err()
+            {
+                eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+            };
+            if self
+                .sender
+                .send(Message::SetInvisible(self.progress_bar_3_title_id, true))
+                .is_err()
+            {
+                eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+            };
         } else {
-            self.sender
-                .send(Message::SetInvisible(self.color_window_id, false));
-            self.sender
-                .send(Message::SetInvisible(self.vertical_cursor_id, false));
+            if self
+                .sender
+                .send(Message::SetInvisible(self.color_window_id, false))
+                .is_err()
+            {
+                eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+            };
+            if self
+                .sender
+                .send(Message::SetInvisible(self.vertical_cursor_id, false))
+                .is_err()
+            {
+                eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+            };
             match self.selected_tab {
                 0 => {
-                    self.sender
-                        .send(Message::SetInvisible(self.basic_colors_id, false));
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.basic_colors_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
                 }
                 1 => {
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_1_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_1_title_id, false));
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_1_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_1_title_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
                 }
                 2 | 3 => {
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_1_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_1_title_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_2_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_2_title_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_3_id, false));
-                    self.sender
-                        .send(Message::SetInvisible(self.progress_bar_3_title_id, false));
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_1_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_1_title_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_2_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_2_title_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_3_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
+                    if self
+                        .sender
+                        .send(Message::SetInvisible(self.progress_bar_3_title_id, false))
+                        .is_err()
+                    {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
+                    };
                 }
                 _ => {}
             }

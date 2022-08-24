@@ -84,6 +84,73 @@ impl Glyph {
             strike: false,
         }
     }
+
+    pub fn black() -> Self {
+        let mut g = Glyph::default();
+        g.set_background(Color::black());
+        g
+    }
+
+    pub fn red() -> Self {
+        let mut g = Glyph::default();
+        g.set_background(Color::red());
+        g
+    }
+
+    pub fn green() -> Self {
+        let mut g = Glyph::default();
+        g.set_background(Color::green());
+        g
+    }
+
+    pub fn yellow() -> Self {
+        let mut g = Glyph::default();
+        g.set_background(Color::yellow());
+        g
+    }
+
+    pub fn blue() -> Self {
+        let mut g = Glyph::default();
+        g.set_background(Color::blue());
+        g
+    }
+
+    pub fn magenta() -> Self {
+        let mut g = Glyph::default();
+        g.set_background(Color::magenta());
+        g
+    }
+
+    pub fn cyan() -> Self {
+        let mut g = Glyph::default();
+        g.set_background(Color::cyan());
+        g
+    }
+
+    pub fn white() -> Self {
+        let mut g = Glyph::default();
+        g.set_background(Color::white());
+        g
+    }
+
+    pub fn orange() -> Self {
+        let mut g = Glyph::default();
+        g.set_background(Color::orange());
+        g
+    }
+
+    pub fn indigo() -> Self {
+        let mut g = Glyph::default();
+        g.set_background(Color::indigo());
+        g
+    }
+
+    pub fn violet() -> Self {
+        let mut g = Glyph::default();
+        g.set_background(Color::violet());
+        g
+    }
+
     pub fn default_with_char(character: char) -> Self {
         let mut g = Glyph::default();
         g.set_char(character);
@@ -94,7 +161,7 @@ impl Glyph {
         if style_definition.len() == 0 {
             panic!("can not update empty style");
         }
-        println!("Got str: {}", style_definition);
+        //println!("Got str: {}", style_definition);
         let mut tokens_started = false;
         let mut tokens = Vec::with_capacity(16);
         let mut current_token = String::with_capacity(3);
@@ -137,13 +204,13 @@ impl Glyph {
         if tokens.len() == 0 {
             panic!("empty token list!")
         }
-        println!("Got tokens: {:?}", tokens);
-        let mut color_8bit: u8 = 0;
+        //println!("Got tokens: {:?}", tokens);
+        let mut color_8bit: u8;
         let mut color_red: u8 = 0;
         let mut color_green: u8 = 0;
-        let mut color_blue: u8 = 0;
+        let mut color_blue: u8;
 
-        let mut next_bg_sophisticated = false;
+        //let mut next_bg_sophisticated = false;
         let mut next_token = ExpectedToken::Any;
         let mut defining_background = false;
         let mut defining_truecolor = false;
@@ -158,54 +225,54 @@ impl Glyph {
                         self.set_bright(true);
                     }
                     "2" => {
-                        println!("Processing 2, no transparent");
+                        //println!("Processing 2, no transparent");
                         self.set_transparent(false);
                     }
                     "23" => {
-                        println!("Processing 23, no italic");
+                        //println!("Processing 23, no italic");
                         self.set_italic(false);
                     }
                     "3" => {
                         self.set_italic(true);
                     }
                     "24" => {
-                        println!("Processing 24, no underline");
+                        //println!("Processing 24, no underline");
                         self.set_underline(false);
                     }
                     "4" => {
                         self.set_underline(true);
                     }
                     "25" => {
-                        println!("Processing 25, no blink");
+                        //println!("Processing 25, no blink");
                         self.set_blink(false);
                     }
                     "5" => {
-                        println!("Processing 5, blink true");
+                        //println!("Processing 5, blink true");
                         self.set_blink(true);
                     }
                     "26" => {
-                        println!("Processing 26, no blinkfast");
+                        //println!("Processing 26, no blinkfast");
                         self.set_blinkfast(false);
                     }
                     "6" => {
                         self.set_blinkfast(true);
                     }
                     "27" => {
-                        println!("Processing 27, no reverse");
+                        //println!("Processing 27, no reverse");
                         self.set_reverse(false);
                     }
                     "7" => {
                         self.set_reverse(true);
                     }
                     "29" => {
-                        println!("Processing 29, no strike");
+                        //println!("Processing 29, no strike");
                         self.set_strike(false);
                     }
                     "9" => {
                         self.set_strike(true);
                     }
                     "30" => {
-                        println!("Processing 30, color black");
+                        //println!("Processing 30, color black");
                         self.set_color(Color::black());
                     }
                     "31" => {
@@ -257,7 +324,7 @@ impl Glyph {
                         self.set_background(Color::white());
                     }
                     "48" => {
-                        println!("Processing 48, stage for bg color set");
+                        //println!("Processing 48, stage for bg color set");
                         next_token = ExpectedToken::ColorSpecifier;
                         defining_background = true;
                     }
@@ -331,25 +398,25 @@ impl Glyph {
                 },
                 ExpectedToken::ColorSpecifier => match &token[..] {
                     "2" => {
-                        println!("Processing 2, three bytes for color expected ");
+                        //println!("Processing 2, three bytes for color expected ");
                         next_token = ExpectedToken::ColorByte;
                         color_bytes_left_to_read = 3;
                         defining_truecolor = true;
                     }
                     "5" => {
-                        println!("Processing 5, single byte color next");
+                        //println!("Processing 5, single byte color next");
                         next_token = ExpectedToken::ColorByte;
                         color_bytes_left_to_read = 1;
                     }
                     _ => panic!("Was expecting 2 or 5, got {}", token),
                 },
                 ExpectedToken::ColorByte => {
-                    println!(
-                        "reading byte color {}, left to read: {}",
-                        token, color_bytes_left_to_read
-                    );
+                    // println!(
+                    //     "reading byte color {}, left to read: {}",
+                    //     token, color_bytes_left_to_read
+                    // );
                     if defining_truecolor {
-                        println!("defining truecolor");
+                        //println!("defining truecolor");
                         match color_bytes_left_to_read {
                             3 => {
                                 color_red = u8::from_str_radix(token, 10).unwrap_or_default();
@@ -359,7 +426,7 @@ impl Glyph {
                             }
                             1 => {
                                 color_blue = u8::from_str_radix(token, 10).unwrap_or_default();
-                                println!("setting truecolor");
+                                //println!("setting truecolor");
                                 next_token = ExpectedToken::Any;
                                 if defining_background {
                                     self.set_background(Color::new_truecolor(
@@ -378,14 +445,14 @@ impl Glyph {
                             _ => continue,
                         }
                     } else {
-                        println!(
-                            "defining 8-bit color, bytes left: {}",
-                            color_bytes_left_to_read
-                        );
+                        // println!(
+                        //     "defining 8-bit color, bytes left: {}",
+                        //     color_bytes_left_to_read
+                        // );
                         match color_bytes_left_to_read {
                             1 => {
                                 color_8bit = u8::from_str_radix(token, 10).unwrap_or_default();
-                                println!("setting 8-bit color");
+                                //println!("setting 8-bit color");
                                 next_token = ExpectedToken::Any;
                                 if defining_background {
                                     if color_8bit > 231 {
