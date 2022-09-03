@@ -23,7 +23,7 @@ impl GlyphCake {
     }
 
     pub fn update(&mut self, glyph: Glyph, layer: usize) {
-        let what_to_insert = if glyph.plain { None } else { Some(glyph) };
+        let what_to_insert = if glyph.transparent { None } else { Some(glyph) };
         if layer >= self.top_layer {
             for i in self.top_layer + 1..layer + 1 {
                 self.glyphs.insert(i, None);
@@ -72,8 +72,8 @@ impl GlyphCake {
         self.modified = false;
         let glyph = self.glyphs.get(self.top_layer);
         if glyph.is_none() || glyph.unwrap().is_none() {
-            //println!("none");
-            return Glyph::plain();
+            eprintln!("Cake has no glyphs!");
+            return Glyph::default();
         };
         // println!("some: {:?}", glyph);
         glyph.expect("WHat?").expect("DaF..").clone()

@@ -18,112 +18,131 @@ fn main() {
     let mut g = Glyph::default();
     g.set_background(Color::green());
     g.set_char(char::from_u32(9626).unwrap());
+    g.set_bright(true);
+
     let mut mgr = Manager::new(true, cols, rows, Some(g), None);
     let (cols, rows) = mgr.screen_size();
 
     //let gl = Glyph::default();
     let (gr, pid) = build_graphic(130, 10);
-    let gid = mgr.add_graphic(gr, 0, (3, 15));
+    let gid;
+    let result = mgr.add_graphic(gr, 1, (3, 15));
+    if let Some(id) = result {
+        gid = id;
+    } else {
+        eprintln!("Did not receive first graphic id");
+        exit(2);
+    }
     mgr.set_graphic(gid, pid, true);
 
-    let pbid = mgr.add_graphic(build_progress_bar(cols - 4), 1, (2, rows - 2));
+    let pbid;
+    let mut pb_layer = 3;
+    let result = mgr.add_graphic(build_progress_bar(cols - 4), pb_layer, (2, rows - 2));
+    if let Some(id) = result {
+        pbid = id;
+    } else {
+        eprintln!("Did not receive progress bar graphic id");
+        exit(2);
+    }
     mgr.set_graphic(pbid, 0, true);
     mgr.start_animation(pbid, 0);
     let mut mbox_created = false;
+    let mut mbox_id = 100;
+    let mut mbox_layer = 3;
+    if let Some(id) = mgr.add_graphic(Graphic::from_file("index.txg").unwrap(), mbox_layer, (1, 0))
+    {
+        mgr.move_graphic(id, 2, (-1, 0));
+        mbox_id = id;
+    }
 
-    let c_pgup = vec![27, 91, 53, 59, 53, 126];
-    let c_pgdn = vec![27, 91, 54, 59, 53, 126];
-    let a_pgup = vec![27, 91, 53, 59, 51, 126];
-    let a_pgdn = vec![27, 91, 54, 59, 51, 126];
     loop {
-        let mut c: usize = 1;
-        let mut r: usize = 1;
         if let Some(key) = mgr.read_key() {
             match key {
+                Key::AltUnicode(uni) => match (uni[2], uni[4]) {
+                    (53, 53) => {
+                        //CtrlPgUp
+                        mgr.move_graphic(1, 4, (0, 0));
+                    }
+                    (54, 53) => {
+                        //CtrlPgDn
+                        mgr.move_graphic(1, 1, (0, 0));
+                    }
+                    (53, 51) => {
+                        //AltPgUp
+                        mgr.move_graphic(2, 5, (0, 0));
+                    }
+                    (54, 51) => {
+                        //AltPgDn
+                        mgr.move_graphic(2, 2, (0, 0));
+                    }
+                    _ => {}
+                },
                 Key::PgUp | Key::U => {
                     mgr.move_graphic(0, 3, (0, 0));
                 }
                 Key::PgDn | Key::D => {
                     mgr.move_graphic(0, 0, (0, 0));
                 }
-                Key::AltUnicode(c_pgup) => {
-                    mgr.move_graphic(1, 4, (0, 0));
-                }
                 Key::CtrlU => {
-                    mgr.move_graphic(1, 4, (0, 0));
-                }
-                Key::AltUnicode(c_pgdn) => {
-                    mgr.move_graphic(1, 1, (0, 0));
+                    pb_layer = 4;
+                    mgr.move_graphic(pbid, pb_layer, (0, 0));
                 }
                 Key::CtrlD => {
-                    mgr.move_graphic(1, 1, (0, 0));
-                }
-                Key::AltUnicode(a_pgup) => {
-                    mgr.move_graphic(2, 5, (0, 0));
+                    mgr.move_graphic(pbid, pb_layer, (0, 0));
                 }
                 Key::AltU => {
-                    mgr.move_graphic(2, 5, (0, 0));
-                }
-                Key::AltUnicode(a_pgdn) => {
-                    mgr.move_graphic(2, 2, (0, 0));
+                    mbox_layer = 5;
+                    mgr.move_graphic(mbox_id, mbox_layer, (0, 0));
                 }
                 Key::AltD => {
-                    mgr.move_graphic(2, 2, (0, 0));
+                    mbox_layer = 2;
+                    mgr.move_graphic(mbox_id, mbox_layer, (0, 0));
                 }
                 Key::AltUp | Key::AltK => {
-                    mgr.move_graphic(2, 2, (0, -1));
+                    mgr.move_graphic(mbox_id, mbox_layer, (0, -1));
                 }
                 Key::CtrlUp | Key::CtrlK => {
-                    mgr.move_graphic(1, 1, (0, -1));
+                    mgr.move_graphic(pbid, pb_layer, (0, -1));
                 }
                 Key::Up | Key::K => {
                     mgr.stop_animation(gid);
-                    mgr.move_graphic(gid, 0, (0, -1));
-                    mgr.set_graphic(gid, 0, true);
-                    //mgr.set_graphic(pbid, 0, true);
-                    c += 1;
+                    mgr.move_graphic(gid, 1, (0, -1));
+                    mgr.set_graphic(gid, 1, true);
                 }
                 Key::AltDown | Key::AltJ => {
-                    mgr.move_graphic(2, 2, (0, 1));
+                    mgr.move_graphic(mbox_id, mbox_layer, (0, 1));
                 }
-                Key::CtrlDown | Key::Enter => {
-                    mgr.move_graphic(1, 1, (0, 1));
+                Key::CtrlDown => {
+                    mgr.move_graphic(pbid, pb_layer, (0, 1));
                 }
                 Key::Down | Key::J => {
                     mgr.pause_animation_on_frame(pbid, 100);
-                    mgr.move_graphic(gid, 0, (0, 1));
+                    mgr.move_graphic(gid, 1, (0, 1));
                     mgr.set_graphic(gid, pid, true);
-                    //mgr.set_graphic(pbid, 1, true);
-                    r += 1;
                 }
                 Key::AltLeft | Key::AltH => {
-                    mgr.move_graphic(2, 2, (-1, 0));
+                    mgr.move_graphic(mbox_id, mbox_layer, (-1, 0));
                 }
                 Key::CtrlLeft | Key::Backspace => {
-                    mgr.move_graphic(1, 1, (-1, 0));
+                    mgr.move_graphic(pbid, pb_layer, (-1, 0));
                 }
                 Key::Left | Key::H => {
-                    mgr.move_graphic(gid, 0, (-1, 0));
+                    mgr.move_graphic(gid, 1, (-1, 0));
                     mgr.start_animation(gid, 0);
                     mgr.start_animation(pbid, 0);
-                    //mgr.set_graphic(pbid, 2, true);
-                    let _r = c.saturating_sub(1);
                 }
                 Key::AltRight | Key::AltL => {
-                    mgr.move_graphic(2, 2, (1, 0));
+                    mgr.move_graphic(mbox_id, mbox_layer, (1, 0));
                 }
                 Key::CtrlRight | Key::CtrlL => {
-                    mgr.move_graphic(1, 1, (1, 0));
+                    mgr.move_graphic(pbid, pb_layer, (1, 0));
                 }
                 Key::Right | Key::L => {
-                    mgr.move_graphic(gid, 0, (1, 0));
-                    //mgr.start_animation(anim_id);
-                    //mgr.set_graphic(pbid, 3, true);
-                    let _r = r.saturating_sub(1);
+                    mgr.move_graphic(gid, 1, (1, 0));
                 }
                 Key::Tab => {
                     if !mbox_created {
-                        let mbid = mgr.add_graphic(
+                        if let  Some(mbid) = mgr.add_graphic(
                             build_mbox(60, 20, "La ku ka ra cza ga wi ga ba ga da da da ja nie".to_string(),
                             "lastBuildDate: Tue, 12 Apr 2022 07:52:44 GMT
 * generator: Oddmuse
@@ -134,15 +153,14 @@ fn main() {
 * license: https://creativecommons.org/licenses/sa/1.0/
 * license: https://www.gnu.org/copyleft/fdl.html
 * license: https://www.gnu.org/copyleft/gpl.html".to_string()                        ),
-                        2,
+                        mbox_layer,
                         (0, 0),
-                    );
+                    ){
                         mgr.set_graphic(mbid, 0, true);
-                        mbox_created = true;
+                            mbox_created = true;
+                            mbox_id = mbid;
+                        }
                     }
-                }
-                Key::Escape | Key::Q | Key::CtrlQ => {
-                    break;
                 }
                 Key::CtrlA => {
                     mgr.start_animation(gid, 0);
@@ -151,19 +169,64 @@ fn main() {
                     mgr.stop_animation(gid);
                 }
                 Key::Insert => {
-                    // mgr.pause_animation(anim_id);
                     mgr.set_graphic(gid, 2, false);
                 }
-                Key::Delete => {
-                    // mgr.stop_animation(anim_id);
-                    c = 1;
-                    r = 1;
-                }
+                Key::Delete => {}
                 Key::Home => {
-                    //mgr.restart_animation(anim_id);
-                    mgr.set_glyph(gid, Glyph::default(), c, r);
-                    mgr.move_graphic(gid, 0, (0, 0));
+                    mgr.set_glyph(gid, Glyph::default(), 1, 1);
+                    mgr.move_graphic(gid, 1, (0, 0));
                     mgr.empty_frame(gid);
+                }
+                Key::Escape | Key::Q | Key::CtrlQ => {
+                    break;
+                }
+                Key::Enter => {
+                    if !mbox_created {
+                        let line = mgr.read_line();
+                        if let Some(mbid) = mgr.add_graphic(
+                            build_mbox(60, 20, line, String::new()),
+                            mbox_layer,
+                            (0, 0),
+                        ) {
+                            mbox_id = mbid;
+                            mgr.set_graphic(mbid, 0, true);
+                            mbox_created = true;
+                        }
+                    } else {
+                        let mut x = 1;
+                        let mut y = 1;
+                        mbox_created = false;
+                        loop {
+                            if let Some(c) = mgr.read_char() {
+                                if c == '\t' {
+                                    break;
+                                }
+                                if c as u8 == 8 {
+                                    x -= 1;
+                                    if x == 0 {
+                                        if y > 1 {
+                                            y -= 1;
+                                            x = 58;
+                                        } else {
+                                            x = 1;
+                                        }
+                                    }
+                                    mgr.set_glyph(mbox_id, Glyph::default(), x, y);
+                                    continue;
+                                }
+                                if c == '\n' {
+                                    break;
+                                }
+
+                                mgr.set_glyph(mbox_id, Glyph::default_with_char(c), x, y);
+                                x += 1;
+                                if x > 58 {
+                                    x = 1;
+                                    y += 1;
+                                }
+                            }
+                        }
+                    }
                 }
                 _ => {
                     println!("You pressed: {:?}", key);
@@ -295,6 +358,8 @@ fn build_graphic(cols: usize, rows: usize) -> (Graphic, usize) {
                 false,
                 false,
                 false,
+                false,
+                false,
             );
             rows * cols
         ],
@@ -325,6 +390,8 @@ fn build_graphic(cols: usize, rows: usize) -> (Graphic, usize) {
                 false,
                 false,
                 false,
+                false,
+                false,
             );
             rows * cols
         ])
@@ -338,15 +405,17 @@ fn build_mbox(cols: usize, rows: usize, title: String, content: String) -> Graph
         content,
         Glyph::new(
             ' ',
-            animaterm::Color::new_gray(22),
             animaterm::Color::new_gray(0),
+            animaterm::Color::new_gray(22),
             false,
             false,
             false,
             false,
             false,
             false,
-            true,
+            false,
+            false,
+            false,
             false,
         ),
         cols,
@@ -361,6 +430,8 @@ fn build_progress_bar(length: usize) -> Graphic {
         animaterm::Color::new(ColorName::White),
         false,
         true,
+        false,
+        false,
         false,
         false,
         false,
@@ -385,6 +456,8 @@ fn build_progress_bar(length: usize) -> Graphic {
                 false,
                 false,
                 false,
+                false,
+                false,
             ),
             Glyph::new(
                 '\u{258E}',
@@ -392,6 +465,8 @@ fn build_progress_bar(length: usize) -> Graphic {
                 animaterm::Color::cyan(),
                 false,
                 true,
+                false,
+                false,
                 false,
                 false,
                 false,
@@ -411,6 +486,8 @@ fn build_progress_bar(length: usize) -> Graphic {
                 false,
                 false,
                 false,
+                false,
+                false,
             ),
             Glyph::new(
                 '\u{258C}',
@@ -418,6 +495,8 @@ fn build_progress_bar(length: usize) -> Graphic {
                 animaterm::Color::cyan(),
                 false,
                 true,
+                false,
+                false,
                 false,
                 false,
                 false,
@@ -437,6 +516,8 @@ fn build_progress_bar(length: usize) -> Graphic {
                 false,
                 false,
                 false,
+                false,
+                false,
             ),
             Glyph::new(
                 '\u{258A}',
@@ -450,6 +531,8 @@ fn build_progress_bar(length: usize) -> Graphic {
                 false,
                 false,
                 false,
+                false,
+                false,
             ),
             // Glyph::new(
             //     '\u{2589}',
@@ -457,6 +540,8 @@ fn build_progress_bar(length: usize) -> Graphic {
             //     animaterm::Color::cyan(),
             //     false,
             //     true,
+            //     false,
+            //     false,
             //     false,
             //     false,
             //     false,

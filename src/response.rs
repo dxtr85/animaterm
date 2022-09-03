@@ -8,6 +8,7 @@ pub enum AnimOk {
     DisplayCreated(usize),
     DisplayRestored(usize),
     GlyphRetrieved(usize, Glyph),
+    GraphicAdded(usize),
     GraphicCreated(Graphic),
     PrintScreen(Vec<String>),
 }

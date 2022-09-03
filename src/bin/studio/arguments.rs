@@ -1,8 +1,8 @@
 use std::env;
 use std::process::exit;
 
-static ROWS_MIN: usize = 4;
-static COLS_MIN: usize = 5;
+static ROWS_MIN: usize = 29;
+static COLS_MIN: usize = 84;
 
 pub struct Arguments {
     pub rows: Option<usize>,
@@ -100,7 +100,7 @@ pub fn parse_arguments() -> Arguments {
             println!(" --input_file <file_name> - Read a frame into workspace from file");
             println!(" --output_file <file_name> - Write a workspace frame into file");
             println!(
-                " --glyphs <filename> - index file containing filenames with glyph definitions, each in separate line");
+                " --glyphs <filename> - index file containing filenames with glyph definitions, each filename in separate line");
             exit(0)
         }
         match what_to_parse {

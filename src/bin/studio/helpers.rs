@@ -21,29 +21,35 @@ pub fn build_style_graphics(selected: Glyph, deselected: Glyph) -> Vec<Graphic> 
     let selection = Graphic::from_texts(
         1,
         vec![
-            ("\u{25C6}       ", glyph),
-            (" \u{25C6}      ", glyph),
-            ("  \u{25C6}     ", glyph),
-            ("   \u{25C6}    ", glyph),
-            ("    \u{25C6}   ", glyph),
-            ("     \u{25C6}  ", glyph),
-            ("      \u{25C6} ", glyph),
-            ("       \u{25C6}", glyph),
+            ("\u{25C6}         ", glyph),
+            (" \u{25C6}        ", glyph),
+            ("  \u{25C6}       ", glyph),
+            ("   \u{25C6}      ", glyph),
+            ("    \u{25C6}     ", glyph),
+            ("     \u{25C6}    ", glyph),
+            ("      \u{25C6}   ", glyph),
+            ("       \u{25C6}  ", glyph),
+            ("        \u{25C6} ", glyph),
+            ("         \u{25C6}", glyph),
         ],
     );
     library.insert(
         0,
-        wrap_border_around(vec![Glyph::default(); 16 * 8], 16, border, Some("Style")),
+        wrap_border_around(vec![Glyph::default(); 16 * 10], 16, border, Some("Style")),
     );
-    let style_window = Graphic::new(18, 10, 0, library, None);
+    let style_window = Graphic::new(18, 12, 0, library, None);
 
-    let transparent = Graphic::from_texts(
+    let plain = Graphic::from_texts(
         11,
-        vec![("Transparent", deselected), ("Transparent", selected)],
+        vec![("Plain      ", deselected), ("Plain      ", selected)],
     );
     let bright = Graphic::from_texts(
         11,
         vec![("Bright     ", deselected), ("Bright     ", selected)],
+    );
+    let dim = Graphic::from_texts(
+        11,
+        vec![("Dim        ", deselected), ("Dim        ", selected)],
     );
     let italic = Graphic::from_texts(
         11,
@@ -65,6 +71,10 @@ pub fn build_style_graphics(selected: Glyph, deselected: Glyph) -> Vec<Graphic> 
         11,
         vec![("Reverse    ", deselected), ("Reverse    ", selected)],
     );
+    let transparent = Graphic::from_texts(
+        11,
+        vec![("Transparent", deselected), ("Transparent", selected)],
+    );
     let strike = Graphic::from_texts(
         11,
         vec![("Strike     ", deselected), ("Strike     ", selected)],
@@ -72,13 +82,15 @@ pub fn build_style_graphics(selected: Glyph, deselected: Glyph) -> Vec<Graphic> 
     let mut result = Vec::with_capacity(10);
     result.push(style_window);
     result.push(selection);
-    result.push(transparent);
+    result.push(plain);
     result.push(bright);
+    result.push(dim);
     result.push(italic);
     result.push(underline);
     result.push(blink);
     result.push(blinkfast);
     result.push(reverse);
+    result.push(transparent);
     result.push(strike);
     result
 }
@@ -328,12 +340,13 @@ pub fn build_glyph_matrix(index_file: Option<String>) -> Graphic {
         Glyph::default_with_char('\u{2500}'),
         Glyph::default_with_char('\u{256F}'),
     ];
+    let comma = ',';
+    let plus = '+';
     let mut library = HashMap::new();
     let cols = 16;
-    let rows = 10; //start_points.len();
-    let mut g = Glyph::default();
+    let rows = 10;
+    let mut g = Glyph::cyan();
     g.set_color(Color::black());
-    g.set_background(Color::cyan());
     let mut avail_index = 0;
     for file in glyph_files {
         if let Ok(file_name) = file {
@@ -343,25 +356,109 @@ pub fn build_glyph_matrix(index_file: Option<String>) -> Graphic {
             if let Ok(file) = File::open(&file_name) {
                 g.set_char(' ');
                 let mut frame = vec![g; cols * rows];
-                let mut start_points = vec![];
+                let mut glyph_codes_lines = vec![];
                 for line in io::BufReader::new(file).lines() {
                     if let Ok(line) = line {
                         if line.trim().starts_with('#') {
                             continue;
                         }
-                        if let Ok(number) = line.parse::<u32>() {
-                            start_points.push(number);
+                        let mut glyph_codes = vec![];
+                        // a_number -- takes given number and following numbers up to cols
+                        // a_number,b_number -- takes only explicit numbers
+                        // a_number+followers -- takes given numbers plus up to followers count
+                        if line.contains(comma) {
+                            for number_text in line.split(comma) {
+                                if number_text.contains(plus) {
+                                    let num_count: Vec<&str> = number_text.split(plus).collect();
+                                    if num_count.len() != 2 {
+                                        eprint!(
+                                            "Unable to parse Glyph line entry {} from {}",
+                                            number_text, file_name
+                                        );
+                                        continue;
+                                    }
+                                    if let Ok(number) = num_count[0].parse::<u32>() {
+                                        if let Ok(count) = num_count[1].parse::<u32>() {
+                                            for n in number..number + count {
+                                                glyph_codes.push(n);
+                                            }
+                                        } else {
+                                            eprint!(
+                                                "Unable to parse Glyph line entry {} from {}",
+                                                number_text, file_name
+                                            );
+                                        }
+                                    } else {
+                                        eprint!(
+                                            "Unable to parse Glyph line entry {} from {}",
+                                            number_text, file_name
+                                        );
+                                    }
+                                } else {
+                                    // no plus
+                                    if let Ok(number) = number_text.parse::<u32>() {
+                                        glyph_codes.push(number);
+                                    } else {
+                                        eprint!(
+                                            "Unable to parse Glyph line entry {} from {}",
+                                            number_text, file_name
+                                        );
+                                    }
+                                }
+                            }
+                        } else if line.contains(plus) {
+                            let num_count: Vec<&str> = line.split(plus).collect();
+                            if num_count.len() != 2 {
+                                eprint!(
+                                    "Unable to parse Glyph line entry {} from {}",
+                                    line, file_name
+                                );
+                                continue;
+                            }
+                            if let Ok(number) = num_count[0].parse::<u32>() {
+                                if let Ok(count) = num_count[1].parse::<u32>() {
+                                    for n in number..number + count {
+                                        glyph_codes.push(n);
+                                    }
+                                } else {
+                                    eprint!(
+                                        "Unable to parse Glyph line entry {} from {}",
+                                        line, file_name
+                                    );
+                                }
+                            } else {
+                                eprint!(
+                                    "Unable to parse Glyph line entry {} from {}",
+                                    line, file_name
+                                );
+                            }
+                        } else if let Ok(number) = line.parse::<u32>() {
+                            // no comma
+                            for n in number..number + cols as u32 {
+                                glyph_codes.push(n);
+                            }
+                        } else {
+                            eprint!(
+                                "Unable to parse Glyph line entry {} from {}",
+                                line, file_name
+                            );
+                        }
+                        if glyph_codes.len() > 0 {
+                            glyph_codes_lines.push(glyph_codes);
                         }
                     }
                 }
                 let mut next_to_replace = 0;
-                for sp in start_points {
-                    for i in 0..cols {
-                        g.set_char(char::from_u32(sp + i as u32).unwrap());
+                for code_line in glyph_codes_lines.into_iter().take(rows) {
+                    let mut added = 0;
+                    for code in code_line.into_iter().take(cols) {
+                        g.set_char(char::from_u32(code as u32).unwrap());
                         //(sp + i as u32) as char
                         let _old = replace(&mut frame[next_to_replace], g.clone());
                         next_to_replace += 1;
+                        added += 1;
                     }
+                    next_to_replace += cols - added;
                 }
                 let mut name = file_name;
                 if name.contains('/') {
@@ -381,8 +478,6 @@ pub fn build_glyph_matrix(index_file: Option<String>) -> Graphic {
     for sp in start_points {
         for i in 0..cols {
             g.set_char(char::from_u32(sp + i as u32).unwrap());
-            //(sp + i as u32) as char
-            //replace(&mut frame[next_to_replace], g.clone());
             frame.push(g);
         }
     }
@@ -401,12 +496,15 @@ pub fn build_selector() -> Graphic {
     let gt = Glyph::transparent();
     let mut h = Glyph::new(
         '\u{2500}', color, background, false, true, false, false, false, false, false, false,
+        false, false,
     );
     let mut v = Glyph::new(
         '\u{2502}', color, background, false, true, false, false, false, false, false, false,
+        false, false,
     );
     let mut cr = Glyph::new(
         '\u{253C}', color, background, false, true, false, false, false, false, false, false,
+        false, false,
     );
     for i in 0..24 {
         let c = Color::new_gray(i);
@@ -423,21 +521,25 @@ pub fn build_selector() -> Graphic {
     v.set_color(background);
     let lu = Glyph::new(
         '\u{2518}', color, background, false, true, false, false, false, false, false, false,
+        false, false,
     );
     let ru = Glyph::new(
         '\u{2514}', color, background, false, true, false, false, false, false, false, false,
+        false, false,
     );
     let ld = Glyph::new(
         '\u{2510}', color, background, false, true, false, false, false, false, false, false,
+        false, false,
     );
     let rd = Glyph::new(
         '\u{250C}', color, background, false, true, false, false, false, false, false, false,
+        false, false,
     );
     library.insert(24, vec![rd, h, ld, v, gt, v, ru, h, lu]);
-    let frame_time = Timestamp::new(0, 10);
+    let frame_time = Timestamp::new(0, 40);
     let anim_default = Animation::new(
         true,
-        false,
+        true,
         vec![
             (0, frame_time),
             (1, frame_time),
@@ -496,15 +598,15 @@ pub fn build_selector() -> Graphic {
         Timestamp::now(),
     );
     let mut anims = HashMap::new();
-    anims.insert(0, anim_select);
-    anims.insert(1, anim_default);
+    anims.insert(0, anim_default);
+    anims.insert(1, anim_select);
     Graphic::new(3, 3, 0, library, Some(anims))
 }
 
 pub fn build_glyph_selector() -> Graphic {
     let mut library: HashMap<usize, Vec<Glyph>> = HashMap::with_capacity(10);
-    let color = Color::white();
-    let mut background = Color::black();
+    //let color = Color::white();
+    //let mut background = Color::black();
     let gt = Glyph::transparent();
     let r = Glyph::red();
     let o = Glyph::orange();
@@ -545,7 +647,7 @@ pub fn build_glyph_selector() -> Graphic {
         ],
         Timestamp::now(),
     );
-    frame_time = Timestamp::new(1, 0);
+    frame_time = Timestamp::new(0, 50);
     let anim_select = Animation::new(
         false,
         false,

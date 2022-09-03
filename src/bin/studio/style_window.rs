@@ -8,13 +8,15 @@ pub struct StyleWindow {
     glyph_matrix_id: usize,
     style_window_id: usize,
     style_selector_id: usize,
-    style_transparent_id: usize,
+    style_plain_id: usize,
     style_bright_id: usize,
+    style_dim_id: usize,
     style_italic_id: usize,
     style_underline_id: usize,
     style_blink_id: usize,
     style_blinkfast_id: usize,
     style_reverse_id: usize,
+    style_transparent_id: usize,
     style_strike_id: usize,
     style_selector_value: usize,
 }
@@ -25,13 +27,15 @@ impl StyleWindow {
         glyph_matrix_id: usize,
         style_window_id: usize,
         style_selector_id: usize,
-        style_transparent_id: usize,
+        style_plain_id: usize,
         style_bright_id: usize,
+        style_dim_id: usize,
         style_italic_id: usize,
         style_underline_id: usize,
         style_blink_id: usize,
         style_blinkfast_id: usize,
         style_reverse_id: usize,
+        style_transparent_id: usize,
         style_strike_id: usize,
     ) -> Self {
         StyleWindow {
@@ -40,13 +44,15 @@ impl StyleWindow {
             glyph_matrix_id,
             style_window_id,
             style_selector_id,
-            style_transparent_id,
+            style_plain_id,
             style_bright_id,
+            style_dim_id,
             style_italic_id,
             style_underline_id,
             style_blink_id,
             style_blinkfast_id,
             style_reverse_id,
+            style_transparent_id,
             style_strike_id,
             style_selector_value: 0,
         }
@@ -54,7 +60,7 @@ impl StyleWindow {
 
     pub fn move_selector_up(&mut self) {
         if self.style_selector_value == 0 {
-            self.style_selector_value = 7;
+            self.style_selector_value = 9;
         } else {
             self.style_selector_value -= 1;
         }
@@ -72,7 +78,7 @@ impl StyleWindow {
     }
 
     pub fn move_selector_down(&mut self) {
-        if self.style_selector_value == 7 {
+        if self.style_selector_value == 9 {
             self.style_selector_value = 0;
         } else {
             self.style_selector_value += 1;
@@ -126,12 +132,12 @@ impl StyleWindow {
             0 => {
                 if self
                     .sender
-                    .send(Message::SetGraphic(self.style_transparent_id, 0, false))
+                    .send(Message::SetGraphic(self.style_plain_id, 0, false))
                     .is_err()
                 {
                     eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
                 };
-                self.style_glyph.set_transparent(false);
+                self.style_glyph.set_plain(false);
             }
             1 => {
                 if self
@@ -146,6 +152,16 @@ impl StyleWindow {
             2 => {
                 if self
                     .sender
+                    .send(Message::SetGraphic(self.style_dim_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                self.style_glyph.set_dim(false);
+            }
+            3 => {
+                if self
+                    .sender
                     .send(Message::SetGraphic(self.style_italic_id, 0, false))
                     .is_err()
                 {
@@ -153,7 +169,7 @@ impl StyleWindow {
                 };
                 self.style_glyph.set_italic(false);
             }
-            3 => {
+            4 => {
                 if self
                     .sender
                     .send(Message::SetGraphic(self.style_underline_id, 0, false))
@@ -163,7 +179,7 @@ impl StyleWindow {
                 };
                 self.style_glyph.set_underline(false);
             }
-            4 => {
+            5 => {
                 if self
                     .sender
                     .send(Message::SetGraphic(self.style_blink_id, 0, false))
@@ -173,7 +189,7 @@ impl StyleWindow {
                 };
                 self.style_glyph.set_blink(false);
             }
-            5 => {
+            6 => {
                 if self
                     .sender
                     .send(Message::SetGraphic(self.style_blinkfast_id, 0, false))
@@ -183,7 +199,7 @@ impl StyleWindow {
                 };
                 self.style_glyph.set_blinkfast(false);
             }
-            6 => {
+            7 => {
                 if self
                     .sender
                     .send(Message::SetGraphic(self.style_reverse_id, 0, false))
@@ -193,7 +209,17 @@ impl StyleWindow {
                 };
                 self.style_glyph.set_reverse(false);
             }
-            7 => {
+            8 => {
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_transparent_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                self.style_glyph.set_transparent(false);
+            }
+            9 => {
                 if self
                     .sender
                     .send(Message::SetGraphic(self.style_strike_id, 0, false))
@@ -222,12 +248,75 @@ impl StyleWindow {
             0 => {
                 if self
                     .sender
-                    .send(Message::SetGraphic(self.style_transparent_id, 1, false))
+                    .send(Message::SetGraphic(self.style_plain_id, 1, false))
                     .is_err()
                 {
                     eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
                 };
-                self.style_glyph.set_transparent(true);
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_bright_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_dim_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_italic_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_underline_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_blink_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_blinkfast_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_reverse_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_transparent_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_strike_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                self.style_glyph.set_plain(true);
             }
             1 => {
                 if self
@@ -237,9 +326,47 @@ impl StyleWindow {
                 {
                     eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
                 };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_plain_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_dim_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 self.style_glyph.set_bright(true);
             }
             2 => {
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_dim_id, 1, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_plain_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_bright_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                self.style_glyph.set_dim(true);
+            }
+            3 => {
                 if self
                     .sender
                     .send(Message::SetGraphic(self.style_italic_id, 1, false))
@@ -247,9 +374,16 @@ impl StyleWindow {
                 {
                     eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
                 };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_plain_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 self.style_glyph.set_italic(true);
             }
-            3 => {
+            4 => {
                 if self
                     .sender
                     .send(Message::SetGraphic(self.style_underline_id, 1, false))
@@ -257,9 +391,16 @@ impl StyleWindow {
                 {
                     eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
                 };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_plain_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 self.style_glyph.set_underline(true);
             }
-            4 => {
+            5 => {
                 if self
                     .sender
                     .send(Message::SetGraphic(self.style_blink_id, 1, false))
@@ -267,9 +408,23 @@ impl StyleWindow {
                 {
                     eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
                 };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_plain_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_blinkfast_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 self.style_glyph.set_blink(true);
             }
-            5 => {
+            6 => {
                 if self
                     .sender
                     .send(Message::SetGraphic(self.style_blinkfast_id, 1, false))
@@ -277,9 +432,23 @@ impl StyleWindow {
                 {
                     eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
                 };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_plain_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_blink_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 self.style_glyph.set_blinkfast(true);
             }
-            6 => {
+            7 => {
                 if self
                     .sender
                     .send(Message::SetGraphic(self.style_reverse_id, 1, false))
@@ -287,12 +456,43 @@ impl StyleWindow {
                 {
                     eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
                 };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_plain_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
                 self.style_glyph.set_reverse(true);
             }
-            7 => {
+            8 => {
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_transparent_id, 1, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_plain_id, 0, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                self.style_glyph.set_transparent(true);
+            }
+            9 => {
                 if self
                     .sender
                     .send(Message::SetGraphic(self.style_strike_id, 1, false))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
+                };
+                if self
+                    .sender
+                    .send(Message::SetGraphic(self.style_plain_id, 0, false))
                     .is_err()
                 {
                     eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")

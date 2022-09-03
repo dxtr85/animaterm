@@ -251,12 +251,15 @@ mod key;
 mod tests;
 pub mod utilities;
 pub use display::Display;
+mod frame;
+pub use frame::from_file;
 
 pub mod prelude {
     pub use crate::animation::Animation;
     pub use crate::color::Color;
     pub use crate::color::ColorName;
     pub use crate::error::AnimError;
+    pub use crate::from_file as frame_from_file;
     pub use crate::glyph::Glyph;
     pub use crate::graphic::Graphic;
     pub use crate::key::Key;

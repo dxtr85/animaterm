@@ -147,7 +147,7 @@ impl ColorsWindow {
                 };
             }
             Color::Grayscale(c) => {
-                self.grayscale_selected_brightness = c;
+                self.grayscale_selected_brightness = c - 232;
                 self.selected_tab = 1;
                 if self
                     .sender

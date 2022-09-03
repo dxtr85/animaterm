@@ -12,12 +12,13 @@ pub struct Glyph {
     pub background: Color,
     pub plain: bool,
     pub bright: bool,
-    // pub dim: bool,
+    pub dim: bool,
     pub italic: bool,
     pub underline: bool,
     pub blink: bool,
     pub blink_fast: bool,
     pub reverse: bool,
+    pub transparent: bool,
     pub strike: bool,
 }
 
@@ -28,12 +29,13 @@ impl Glyph {
         background: Color,
         plain: bool,
         bright: bool,
-        // dim: bool,
+        dim: bool,
         italic: bool,
         underline: bool,
         blink: bool,
         blink_fast: bool,
         reverse: bool,
+        transparent: bool,
         strike: bool,
     ) -> Self {
         Glyph {
@@ -42,12 +44,13 @@ impl Glyph {
             background,
             plain,
             bright,
-            // dim,
+            dim,
             italic,
             underline,
             blink,
             blink_fast,
             reverse,
+            transparent,
             strike,
         }
     }
@@ -58,12 +61,13 @@ impl Glyph {
             background: Color::Basic(ColorName::Black),
             plain: true,
             bright: false,
-            // dim: false,
+            dim: false,
             italic: false,
             underline: false,
             blink: false,
             blink_fast: false,
             reverse: false,
+            transparent: false,
             strike: false,
         }
     }
@@ -73,14 +77,15 @@ impl Glyph {
             character: ' ',
             color: Color::Basic(ColorName::White),
             background: Color::Basic(ColorName::Black),
-            plain: true,
+            plain: false,
             bright: false,
-            // dim: false,
+            dim: false,
             italic: false,
             underline: false,
             blink: false,
             blink_fast: false,
             reverse: false,
+            transparent: true,
             strike: false,
         }
     }
@@ -201,10 +206,10 @@ impl Glyph {
                 }
             }
         }
-        if tokens.len() == 0 {
-            panic!("empty token list!")
-        }
-        //println!("Got tokens: {:?}", tokens);
+        // if tokens.len() == 0 {
+        //     eprintln!("empty token list")
+        // }
+        // //println!("Got tokens: {:?}", tokens);
         let mut color_8bit: u8;
         let mut color_red: u8 = 0;
         let mut color_green: u8 = 0;
@@ -219,14 +224,31 @@ impl Glyph {
             match next_token {
                 ExpectedToken::Any => match &token[..] {
                     "0" => {
-                        self.set_transparent(true);
+                        self.set_bright(false);
+                        //self.set_dim(false);
+                        self.set_transparent(false);
+                        self.set_italic(false);
+                        self.set_underline(false);
+                        self.set_blink(false);
+                        self.set_blinkfast(false);
+                        self.set_reverse(false);
+                        self.set_strike(false);
+                    }
+                    "21" => {
+                        self.set_bright(false);
                     }
                     "1" => {
                         self.set_bright(true);
                     }
                     "2" => {
                         //println!("Processing 2, no transparent");
-                        self.set_transparent(false);
+                        self.set_bright(false);
+                        self.set_dim(true);
+                    }
+                    "22" => {
+                        //println!("Processing 2, no transparent");
+                        self.set_dim(false);
+                        self.set_bright(false);
                     }
                     "23" => {
                         //println!("Processing 23, no italic");
@@ -245,15 +267,16 @@ impl Glyph {
                     "25" => {
                         //println!("Processing 25, no blink");
                         self.set_blink(false);
+                        self.set_blinkfast(false);
                     }
                     "5" => {
                         //println!("Processing 5, blink true");
                         self.set_blink(true);
                     }
-                    "26" => {
-                        //println!("Processing 26, no blinkfast");
-                        self.set_blinkfast(false);
-                    }
+                    // "26" => {
+                    //     //println!("Processing 26, no blinkfast");
+                    //     self.set_blinkfast(false);
+                    // }
                     "6" => {
                         self.set_blinkfast(true);
                     }
@@ -263,6 +286,12 @@ impl Glyph {
                     }
                     "7" => {
                         self.set_reverse(true);
+                    }
+                    "8" => {
+                        self.set_transparent(true);
+                    }
+                    "28" => {
+                        self.set_transparent(false);
                     }
                     "29" => {
                         //println!("Processing 29, no strike");
@@ -488,10 +517,35 @@ impl Glyph {
         self.background = background;
     }
     pub fn set_transparent(&mut self, transparent: bool) {
-        self.plain = transparent;
+        self.transparent = transparent;
     }
     pub fn set_bright(&mut self, bright: bool) {
         self.bright = bright;
+        if self.bright {
+            self.dim = false;
+        }
+    }
+    pub fn set_dim(&mut self, dim: bool) {
+        self.dim = dim;
+        if self.dim {
+            self.bright = false;
+        }
+    }
+    pub fn set_plain(&mut self, plain: bool) {
+        self.plain = plain;
+        if self.plain {
+            self.bright = false;
+            self.dim = false;
+            self.italic = false;
+            self.underline = false;
+            self.blink = false;
+            self.blink_fast = false;
+            self.reverse = false;
+            self.transparent = false;
+            self.strike = false;
+            self.color = Color::white();
+            self.background = Color::black();
+        }
     }
     pub fn set_italic(&mut self, italic: bool) {
         self.italic = italic;
@@ -501,9 +555,15 @@ impl Glyph {
     }
     pub fn set_blink(&mut self, blink: bool) {
         self.blink = blink;
+        if self.blink {
+            self.blink_fast = false;
+        }
     }
     pub fn set_blinkfast(&mut self, blink: bool) {
         self.blink_fast = blink;
+        if self.blink_fast {
+            self.blink = false;
+        }
     }
     pub fn set_reverse(&mut self, reverse: bool) {
         self.reverse = reverse;
@@ -520,12 +580,13 @@ impl Default for Glyph {
             background: Color::Basic(ColorName::Black),
             plain: false,
             bright: false,
-            // dim: false,
+            dim: false,
             italic: false,
             underline: false,
             blink: false,
             blink_fast: false,
             reverse: false,
+            transparent: false,
             strike: false,
         }
     }

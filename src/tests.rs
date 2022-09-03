@@ -40,11 +40,15 @@ fn glyph_cake() {
         false,
         false,
         false,
+        false,
+        false,
     );
     let g2 = Glyph::new(
         '2',
         crate::Color::blue(),
         crate::Color::yellow(),
+        false,
+        false,
         false,
         false,
         false,

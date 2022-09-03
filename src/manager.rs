@@ -22,7 +22,7 @@ pub enum Message {
     CloneFrame(usize, Option<usize>),
     AddAnimation(usize, Animation),
     StartAnimation(usize, usize),
-    EnqueueAnimation(usize, usize),
+    EnqueueAnimation(usize, usize, Timestamp),
     PauseAnimation(usize),
     PauseAnimationOnFrame(usize, usize),
     StopAnimation(usize),
@@ -47,7 +47,7 @@ pub enum Message {
 pub struct Manager {
     scrn_size: (usize, usize),
     join_handle: thread::JoinHandle<()>,
-    next_id: usize,
+    //    next_id: usize,
     next_screen_id: usize,
     sender: mpsc::Sender<Message>,
     key_receiver: Option<mpsc::Receiver<u8>>,
@@ -115,11 +115,19 @@ impl Manager {
                         Message::RestartAnimation(gid, aid, when) => {
                             screen.restart_animation(gid, aid, when);
                         }
-                        Message::EnqueueAnimation(gid, aid) => {
-                            screen.enqueue_animation(&gid, aid);
+                        Message::EnqueueAnimation(gid, aid, when) => {
+                            screen.enqueue_animation(&gid, aid, when);
                         }
                         Message::AddGraphic(gr, layer, offset) => {
-                            screen.add_graphic(gr, layer, offset);
+                            let graphic_id = screen.add_graphic(gr, layer, offset);
+                            if result_sender
+                                .send(Result::Ok(GraphicAdded(graphic_id)))
+                                .is_err()
+                            {
+                                eprintln!(
+                                    "\x1b[97;41;5mERR\x1b[m Failed to send GraphicAdded message"
+                                );
+                            }
                         }
                         Message::MoveGraphic(gid, layer, offset) => {
                             screen.move_graphic(gid, layer, offset);
@@ -266,7 +274,7 @@ impl Manager {
         Manager {
             scrn_size: (cols, rows),
             join_handle,
-            next_id: 0,
+            //next_id: 0,
             next_screen_id: 1,
             sender,
             key_receiver,
@@ -287,10 +295,9 @@ impl Manager {
         self.sender.clone()
     }
 
-    pub fn read_key(&mut self) -> Option<Key> {
-        let k_rcvr = replace(&mut self.key_receiver, None);
-        if let Some(key_rcvr) = k_rcvr {
-            let mut keys_read: Vec<u8> = Vec::with_capacity(10);
+    fn read_bytes(&self, receiver: &Option<mpsc::Receiver<u8>>) -> Vec<u8> {
+        let mut keys_read: Vec<u8> = Vec::with_capacity(10);
+        if let Some(key_rcvr) = receiver {
             let mut all_bytes_read = false;
             if let Ok(first_byte) = key_rcvr.recv() {
                 keys_read.push(first_byte);
@@ -306,11 +313,51 @@ impl Manager {
                     }
                 }
             }
-            let _replaced = replace(&mut self.key_receiver, Some(key_rcvr));
-            return map_bytes_to_key(keys_read);
         } else {
-            panic!("mgr has no key receiver!")
+            eprintln!("mgr has no key receiver!")
         }
+        keys_read
+    }
+    pub fn read_key(&mut self) -> Option<Key> {
+        let k_rcvr = replace(&mut self.key_receiver, None);
+        //if let Some(key_rcvr) = k_rcvr {
+        let keys_read = self.read_bytes(&k_rcvr);
+        let _replaced = replace(&mut self.key_receiver, k_rcvr);
+        return map_bytes_to_key(keys_read);
+        // } else {
+        //     eprintln!("mgr has no key receiver!");
+        // }
+    }
+
+    pub fn read_line(&mut self) -> String {
+        let k_rcvr = replace(&mut self.key_receiver, None);
+        let mut all_bytes: Vec<u8> = Vec::with_capacity(128);
+        let mut keys_read;
+        let mut enter_pressed = false;
+        while !enter_pressed {
+            keys_read = self.read_bytes(&k_rcvr);
+            if keys_read.len() == 1 && keys_read[0] == 10 {
+                enter_pressed = true;
+            } else if keys_read.len() > 0 {
+                all_bytes.append(&mut keys_read);
+            }
+        }
+        let _replaced = replace(&mut self.key_receiver, k_rcvr);
+        String::from_utf8_lossy(&all_bytes).into_owned()
+    }
+
+    pub fn read_char(&mut self) -> Option<char> {
+        let k_rcvr = replace(&mut self.key_receiver, None);
+        let mut keys_read = Vec::new();
+        let mut something_read = false;
+        while !something_read {
+            keys_read = self.read_bytes(&k_rcvr);
+            if keys_read.len() > 0 {
+                something_read = true;
+            }
+        }
+        let _replaced = replace(&mut self.key_receiver, k_rcvr);
+        String::from_utf8_lossy(&keys_read).chars().next()
     }
 
     pub fn set_key_iter(&mut self, receiver: mpsc::Receiver<u8>) -> Option<mpsc::Receiver<u8>> {
@@ -361,10 +408,10 @@ impl Manager {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send StartAnimation message")
         };
     }
-    pub fn enqueue_animation(&self, graph_id: usize, anim_id: usize) {
+    pub fn enqueue_animation(&self, graph_id: usize, anim_id: usize, when: Timestamp) {
         if self
             .sender
-            .send(Message::EnqueueAnimation(graph_id, anim_id))
+            .send(Message::EnqueueAnimation(graph_id, anim_id, when))
             .is_err()
         {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send EnqueueAnimation message")
@@ -438,7 +485,7 @@ impl Manager {
 
     pub fn load_graphic_from_file<P>(&self, filename: P) -> Result<AnimOk, AnimError>
     where
-        P: AsRef<Path>,
+        P: AsRef<Path> + std::fmt::Debug,
     {
         if let Some(graphic) = Graphic::from_file(filename) {
             return Ok(AnimOk::GraphicCreated(graphic));
@@ -478,9 +525,14 @@ impl Manager {
         };
     }
 
-    pub fn add_graphic(&mut self, gr: Graphic, layer: usize, offset: (usize, usize)) -> usize {
-        let gid = self.next_id;
-        self.next_id += 1;
+    pub fn add_graphic(
+        &mut self,
+        gr: Graphic,
+        layer: usize,
+        offset: (usize, usize),
+    ) -> Option<usize> {
+        // let gid = self.next_id;
+        // self.next_id += 1;
         if self
             .sender
             .send(Message::AddGraphic(gr, layer, offset))
@@ -489,8 +541,15 @@ impl Manager {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send AddGraphic message")
         };
         //TODO gid should be returned by Screen
-        gid
+        let result = self.read_result();
+        if let Ok(AnimOk::GraphicAdded(gid)) = result {
+            return Some(gid);
+        } else {
+            eprintln!("Unable to read GraphicAdded message");
+        }
+        None
     }
+
     pub fn set_graphic(&self, gid: usize, fid: usize, force: bool) {
         if self
             .sender

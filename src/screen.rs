@@ -45,12 +45,13 @@ pub struct Screen {
     c_y: usize,
     c_plain: bool,
     c_bright: bool,
-    // c_dim: bool,
+    c_dim: bool,
     c_italic: bool,
     c_underline: bool,
     c_blink: bool,
     c_blink_fast: bool,
     c_reverse: bool,
+    c_transparent: bool,
     c_strike: bool,
 }
 
@@ -99,12 +100,13 @@ impl Screen {
             c_y,
             c_plain: dglyph.plain,
             c_bright: dglyph.bright,
-            // c_dim: dglyph.dim,
+            c_dim: dglyph.dim,
             c_italic: dglyph.italic,
             c_blink: dglyph.blink,
             c_blink_fast: dglyph.blink_fast,
             c_underline: dglyph.underline,
             c_reverse: dglyph.reverse,
+            c_transparent: dglyph.transparent,
             c_strike: dglyph.strike,
         }
     }
@@ -154,7 +156,6 @@ impl Screen {
         let mut new_offset = None;
         let mut frame_id = None;
         if let Some(current_state) = self.graphics.get_mut(&gid) {
-            //let mut pixels = Vec::new();
             frame_id = Some(current_state.0.current_frame);
             let delta_zero = if offset.0 < 0 {
                 (current_state.2 .0).saturating_sub((offset.0).unsigned_abs() as usize)
@@ -233,17 +234,10 @@ impl Screen {
         let mut clear_info = None;
         if let Some((graphic, layer, offset)) = self.graphics.get_mut(id) {
             clear_info = Some((*layer, offset.0, offset.1, graphic.cols, graphic.rows));
-            //graphic.set_graphic(&0, *offset, false);
-            //            results.push((graphic.set_graphic(&0, *offset, true), *layer));
         }
         if let Some(c) = clear_info {
             self.cla(c.0, c.1, c.2, c.3, c.4);
         }
-        // let skipped = self.update(results);
-        // self.cls();
-        // println!("Skipped: {}", skipped);
-        // let to_print = self.refresh(false);
-        // self.print_all(to_print);
     }
 
     pub fn set_graphic(&mut self, ids: (&usize, &usize), force: bool) {
@@ -418,9 +412,9 @@ impl Screen {
         }
     }
 
-    pub fn enqueue_animation(&mut self, gid: &usize, aid: usize) {
+    pub fn enqueue_animation(&mut self, gid: &usize, aid: usize, when: Timestamp) {
         if let Some((graphic, _layer, _offset)) = self.graphics.get_mut(gid) {
-            graphic.enqueue_animation(aid, self.time.tick());
+            graphic.enqueue_animation(aid, self.time.tick() + when);
         }
     }
 
@@ -458,6 +452,14 @@ impl Screen {
         let mut pixels = vec![];
         for (_id, (graphic, layer, offset)) in &mut self.graphics {
             let mut keep_running = false;
+            if graphic.running_anim.is_none() {
+                if let Some((anim_id, when)) = graphic.awaiting_anim {
+                    if self.time.tick() >= when {
+                        graphic.start_animation(anim_id, self.time.tick());
+                        graphic.awaiting_anim = None;
+                    }
+                }
+            }
             if let Some(anim_id) = graphic.running_anim {
                 keep_running = true;
                 if let Some(anim) = graphic.animations.get_mut(&anim_id) {
@@ -466,18 +468,6 @@ impl Screen {
                         keep_running = running;
                     }
                 }
-                println!(
-                    "Now run: {:?}, keep: {}",
-                    graphic.running_anim, keep_running
-                );
-            } else if let Some(anim_id) = graphic.awaiting_anim {
-                print!(
-                    "Changing anim from {:?} to {}",
-                    graphic.running_anim, anim_id
-                );
-                graphic.start_animation(graphic.awaiting_anim.unwrap(), self.time.tick());
-                graphic.awaiting_anim = None;
-                keep_running = true;
             }
 
             if !keep_running {
@@ -512,7 +502,7 @@ impl Screen {
         height: usize,
     ) {
         let mut to_clear = Vec::with_capacity(width * height);
-        let gplain = Glyph::plain();
+        let gplain = Glyph::transparent();
         for x in start_x..start_x + width + 1 {
             for y in start_y..start_y + height + 1 {
                 to_clear.push(Pixel::new(x, y, gplain));
@@ -557,9 +547,12 @@ impl Screen {
         self.c_color = Color::white();
         self.c_background = Color::black();
         self.c_blink = false;
+        self.c_blink_fast = false;
         self.c_bright = false;
+        self.c_dim = false;
         self.c_italic = false;
         self.c_strike = false;
+        self.c_transparent = false;
         self.c_reverse = false;
         self.c_underline = false;
     }
@@ -581,14 +574,13 @@ impl Screen {
                 line_text.push_str(&format!("\x1b[{}m{}", modifier, glyph.character));
                 // line_text.push_str(&modifier);
                 // line_text.push('m');
+            } else {
+                line_text.push(glyph.character);
             }
         }
         if result.len() > 0 {
             let mut last = result.pop().unwrap();
-            last.push('\x1b');
-            last.push('[');
-            last.push('0');
-            last.push('m');
+            last.push_str("\x1b[0m");
             result.push(last);
         }
         result
@@ -636,24 +628,37 @@ impl Screen {
         if self.c_plain && !glyph.plain {
             self.c_plain = false;
         } else if !self.c_plain && glyph.plain {
-            self.c_plain = true;
+            //self.c_plain = true;
+            self.c_bright = false;
+            self.c_dim = false;
+            self.c_italic = false;
+            self.c_underline = false;
+            self.c_blink = false;
+            self.c_blink_fast = false;
+            self.c_reverse = false;
+            self.c_transparent = false;
+            self.c_strike = false;
+            self.c_color = Color::white();
+            self.c_background = Color::black();
             modifier.push_str("0;");
         }
         if self.c_bright && !glyph.bright {
             self.c_bright = false;
-            modifier.push_str("2;");
+            modifier.push_str("21;");
             // modifier.push_str("01;");
         } else if !self.c_bright && glyph.bright {
             self.c_bright = true;
-            modifier.push_str("22;");
+            modifier.push_str("1;");
         }
-        // if self.c_dim && !glyph.dim {
-        //     self.c_dim = false;
-        //     modifier.push_str("22;");
-        // } else if !self.c_dim && glyph.dim {
-        //     self.c_dim = true;
-        //     modifier.push_str("2;");
-        // }
+        if self.c_dim && !glyph.dim {
+            self.c_dim = false;
+            self.c_bright = false;
+            modifier.push_str("22;");
+        } else if !self.c_dim && glyph.dim {
+            self.c_dim = true;
+            self.c_bright = false;
+            modifier.push_str("2;");
+        }
         if self.c_italic && !glyph.italic {
             self.c_italic = false;
             modifier.push_str("23;");
@@ -670,17 +675,18 @@ impl Screen {
         }
         if self.c_blink && !glyph.blink {
             self.c_blink = false;
-            modifier.push_str("25;");
         } else if !self.c_blink && glyph.blink {
             self.c_blink = true;
             modifier.push_str("5;");
         }
         if self.c_blink_fast && !glyph.blink_fast {
             self.c_blink_fast = false;
-            modifier.push_str("26;");
         } else if !self.c_blink_fast && glyph.blink_fast {
             self.c_blink_fast = true;
             modifier.push_str("6;");
+        }
+        if !self.c_blink && !self.c_blink_fast {
+            modifier.push_str("25;");
         }
         if self.c_reverse && !glyph.reverse {
             self.c_reverse = false;
@@ -688,6 +694,13 @@ impl Screen {
         } else if !self.c_reverse && glyph.reverse {
             self.c_reverse = true;
             modifier.push_str("7;");
+        }
+        if self.c_transparent && !glyph.transparent {
+            self.c_transparent = false;
+            modifier.push_str("28;");
+        } else if !self.c_transparent && glyph.transparent {
+            self.c_transparent = true;
+            modifier.push_str("8;");
         }
         if self.c_strike && !glyph.strike {
             self.c_strike = false;
@@ -707,19 +720,19 @@ impl Screen {
             }
             self.c_color = glyph.color;
         };
-        //if self.c_background != glyph.background {
-        //modifier.push_str(&format!("4{}", glyph.background as u8));
-        match glyph.background {
-            Color::Basic(color) => modifier.push_str(&format!("4{}", color as u8)),
-            Color::EightBit(color) => modifier.push_str(&format!("48;5;{}", color)),
-            Color::Grayscale(brightness) => modifier.push_str(&format!("48;5;{}", brightness)),
-            Color::Truecolor(red, green, blue) => {
-                modifier.push_str(&format!("48;2;{};{};{}", red, green, blue))
+        if self.c_background != glyph.background {
+            //modifier.push_str(&format!("4{}", glyph.background as u8));
+            match glyph.background {
+                Color::Basic(color) => modifier.push_str(&format!("4{}", color as u8)),
+                Color::EightBit(color) => modifier.push_str(&format!("48;5;{}", color)),
+                Color::Grayscale(brightness) => modifier.push_str(&format!("48;5;{}", brightness)),
+                Color::Truecolor(red, green, blue) => {
+                    modifier.push_str(&format!("48;2;{};{};{}", red, green, blue))
+                }
             }
-        }
 
-        self.c_background = glyph.background;
-        //};
+            self.c_background = glyph.background;
+        };
         modifier
     }
 
@@ -736,14 +749,30 @@ impl Screen {
         if !glyph.bright {
             if self.c_bright {
                 self.c_bright = false;
+            }
+            // modifier.push_str("01;");
+        } else {
+            //if !self.c_bright {
+            self.c_bright = true;
+            self.c_dim = false;
+            modifier.push_str("1;");
+            //}
+        }
+        if !glyph.dim {
+            if self.c_dim {
+                self.c_dim = false;
                 //modifier.push_str("2;");
             }
             // modifier.push_str("01;");
         } else {
-            if !self.c_bright {
-                self.c_bright = true;
-                modifier.push_str("0;1;");
-            }
+            //if !self.c_dim {
+            self.c_dim = true;
+            self.c_bright = false;
+            modifier.push_str("2;");
+            //}
+        }
+        if !self.c_dim && !self.c_bright {
+            modifier.push_str("22;");
         }
         if !glyph.italic {
             // self.c_italic = false;
@@ -760,18 +789,23 @@ impl Screen {
             modifier.push_str("4;");
         }
         if !glyph.blink {
-            // self.c_blink = false;
-            modifier.push_str("25;");
+            self.c_blink = false;
         } else {
-            //self.c_blink = true;
+            //if !self.c_blink {
             modifier.push_str("5;");
+            self.c_blink = true;
+            //}
         }
         if !glyph.blink_fast {
-            // self.c_blink_fast = false;
-            modifier.push_str("26;");
+            self.c_blink_fast = false;
         } else {
-            //self.c_blink_fast = true;
+            //if !self.c_blink_fast {
+            self.c_blink_fast = true;
             modifier.push_str("6;");
+            //            }
+        }
+        if !self.c_blink && !self.c_blink_fast {
+            modifier.push_str("25;");
         }
         if !glyph.reverse {
             // self.c_reverse = false;

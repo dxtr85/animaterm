@@ -21,14 +21,14 @@ impl Animation {
         start_time: Timestamp,
     ) -> Animation {
         let ord_max = ordering.len() - 1;
-        // let mut stop_frame = None;
-        // if !looping {
-        //     let last_frame = ordering.last().unwrap().0;
-        //     stop_frame = Some(last_frame);
-        // }
+        let mut stop_frame = None;
+        if !looping {
+            let last_frame = ordering.last().unwrap().0;
+            stop_frame = Some(last_frame);
+        }
         Animation {
             current_frame: 0,
-            stop_frame: None,
+            stop_frame,
             next_frame: 0,
             running,
             looping,
@@ -40,11 +40,10 @@ impl Animation {
     }
 
     pub fn start(&mut self, t: Timestamp) {
-        //if !self.running {
-        self.trigger_time = t;
-        self.running = true;
-        //print!("starting animation\t");
-        //}
+        if !self.running {
+            self.trigger_time = t;
+            self.running = true;
+        }
     }
 
     pub fn restart(&mut self, t: Timestamp) {

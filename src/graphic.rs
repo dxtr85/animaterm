@@ -1,12 +1,13 @@
 use super::animation::Animation;
 use super::color::Color;
 use super::error::AnimError;
+use super::frame::from_file as frame_from_file;
 use super::pixel::Pixel;
 use super::time::Timestamp;
 use super::utilities::text_to_frame;
 use super::Glyph;
 use std::fs::File;
-use std::io::{BufReader, Read};
+use std::io::{self, BufRead};
 use std::path::Path;
 
 use std::collections::HashMap;
@@ -19,7 +20,7 @@ pub struct Graphic {
     pub current_frame: usize,
     pub invisible: bool,
     pub running_anim: Option<usize>,
-    pub awaiting_anim: Option<usize>,
+    pub awaiting_anim: Option<(usize, Timestamp)>,
     next_lib_id: usize,
     next_anim_id: usize,
     library: HashMap<usize, Vec<Glyph>>,
@@ -60,70 +61,178 @@ impl Graphic {
 
     pub fn from_file<P>(filename: P) -> Option<Self>
     where
-        P: AsRef<Path>,
+        P: AsRef<Path> + std::fmt::Debug,
     {
-        let mut result = None;
-        if let Ok(file) = File::open(filename) {
-            let mut read_string = String::with_capacity(1024);
-            let mut br = BufReader::new(file);
-            if br.read_to_string(&mut read_string).is_ok() {
-                let mut cs = 0;
-                let mut rs = 0;
-                let mut glyph = Glyph::default();
-                let mut frame = Vec::new();
-                for line in read_string.lines() {
-                    rs += 1;
-                    let mut style_started = false;
-                    let mut style_definition = String::new();
-                    for char in line.chars() {
-                        match char {
-                            '\x1b' => {
-                                if style_definition.len() > 0 {
-                                    glyph.update_from_str(&style_definition);
-                                    style_definition.clear();
-                                }
-                                style_started = true;
-                                style_definition.push(char);
-                            }
-                            'm' => {
-                                style_definition.push(char);
-                                if style_started {
-                                    style_started = false;
-                                } else {
-                                    glyph.update_from_str(&style_definition);
-                                    frame.push(glyph);
-                                    style_definition.clear();
-                                    cs += 1;
-                                }
-                            }
-                            '\n' => {
-                                continue;
-                            }
-                            _ => {
-                                style_definition.push(char);
-                                if !style_started {
-                                    glyph.update_from_str(&style_definition);
-                                    frame.push(glyph);
-                                    style_definition.clear();
-                                    cs += 1;
-                                }
-                            }
-                        }
-                    }
-                }
-                cs = cs / rs;
-                if frame.len() > 0 {
-                    let mut lib = HashMap::with_capacity(1);
-                    lib.insert(0, frame);
-                    result = Some(Graphic::new(cs, rs, 0, lib, None));
-                } else {
-                    panic!("Frame empty!")
-                }
-            } else {
-                panic!("Unable to read file!")
+        let mut create_graphic = false;
+        let mut running_anim = None;
+        let mut invisible = false;
+        let mut current_frame = 0;
+        let mut rows = 0;
+        let mut cols = 0;
+        let hash = '#';
+        let colon = ':';
+        let mut library: HashMap<usize, Vec<Glyph>> = HashMap::new();
+        let mut next_lib_id = 0;
+        let mut next_anim_id = 0;
+
+        let mut animations: HashMap<usize, Animation> = HashMap::new();
+        let mut names_mapping: HashMap<String, usize> = HashMap::new();
+
+        let mut read_lines = vec![];
+        let base_path = Path::new(filename.as_ref().parent().to_owned().unwrap());
+
+        if let Ok(file) = File::open(&filename) {
+            for line in io::BufReader::new(file).lines() {
+                read_lines.push(line);
             }
         }
-        result
+        for line in read_lines {
+            if let Ok(line) = line {
+                if line.trim().starts_with(hash) {
+                    eprintln!("hashowa");
+                    continue;
+                }
+                if line.is_empty() {
+                    eprintln!("pusta");
+                    continue;
+                }
+                let tokens: Vec<&str> = line.split_whitespace().collect();
+                match tokens[0] {
+                    "invisible" => {
+                        invisible = true;
+                    }
+                    "frame" => {
+                        if tokens.len() > 2 {
+                            let frame_name = tokens[1];
+                            let frame_file = Path::new(tokens[2]);
+                            let frame_result = if frame_file.is_absolute() {
+                                frame_from_file(&frame_file)
+                            } else {
+                                frame_from_file(&base_path.join(frame_file))
+                            };
+                            if let Some((cs, frame)) = frame_result {
+                                if cols > 0 {
+                                    if cols != cs {
+                                        eprintln!("Unable to add frame that has cols: {}, when expected is {}", cs,cols);
+                                        continue;
+                                    }
+                                } else {
+                                    cols = cs;
+                                    rows = frame.len() / cols;
+                                }
+
+                                names_mapping.insert(frame_name.to_owned(), next_lib_id);
+                                library.insert(next_lib_id, frame);
+                                create_graphic = true;
+                                next_lib_id += 1;
+                            }
+                        } else {
+                            eprintln!("Incorrect line(should be 'frame name filepath #maybe comment'): {} while building Graphic from file", line);
+                        }
+                    }
+                    "animation" => {
+                        let mut looping = false;
+                        let mut running = false;
+                        let start_time = Timestamp::now();
+                        let mut ordering: Vec<(usize, Timestamp)> = Vec::new();
+                        if tokens.len() > 2 {
+                            for t in &tokens[1..] {
+                                match t {
+                                    &"loop" => {
+                                        looping = true;
+                                    }
+                                    &"run" => {
+                                        if running_anim.is_none() {
+                                            running = true;
+                                        }
+                                    }
+                                    _ => {
+                                        if t.contains(hash) {
+                                            break;
+                                        }
+                                        if t.contains(colon) {
+                                            let frame_time: Vec<&str> = t.split(colon).collect();
+                                            if frame_time.len() != 2 {
+                                                eprint!("Unable to read animation definition from file, {} should be frame_id:time_ms  ",t);
+                                            } else {
+                                                if let Some(frame_id) =
+                                                    names_mapping.get(frame_time[0])
+                                                {
+                                                    if let Ok(msec) =
+                                                        u32::from_str_radix(frame_time[1], 10)
+                                                    {
+                                                        ordering.push((
+                                                            *frame_id,
+                                                            Timestamp::new(0, msec),
+                                                        ))
+                                                    } else {
+                                                        eprint!(
+                                                        "Unable to read integer from {} (in {}) ",
+                                                        frame_time[1], t
+                                                    );
+                                                    }
+                                                } else {
+                                                    eprint!(
+                                                        "Unable to find frame with id {} ",
+                                                        frame_time[0]
+                                                    );
+                                                }
+                                            }
+                                        } else {
+                                            eprint!("Unable to read animation definition from file, {} is missing ':' ",t);
+                                        }
+                                    }
+                                }
+                            }
+                            if running {
+                                current_frame = ordering.last().unwrap().0;
+                                running_anim = Some(next_anim_id);
+                            }
+                            let a = Animation::new(running, looping, ordering, start_time);
+                            animations.insert(next_anim_id, a);
+                            next_anim_id += 1;
+                        } else {
+                            eprintln!("Incorrect line(should be 'animation [loop] [run] {{frame_name:duration=}}+ #maybe comment'): {} while building Graphic from file", line);
+                        }
+                    }
+                    &_ => {}
+                }
+            }
+        }
+        if create_graphic {
+            return Some(Graphic {
+                rows,
+                cols,
+                current_frame,
+                invisible,
+                running_anim,
+                awaiting_anim: None,
+                next_lib_id,
+                next_anim_id,
+                library,
+                animations,
+            });
+        }
+        None
+    }
+
+    pub fn from_frame(cols: usize, frame: Vec<Glyph>) -> Self {
+        let mut library = HashMap::with_capacity(1);
+        let rows = frame.len() / cols;
+        library.insert(0, frame);
+
+        Graphic {
+            rows,
+            cols,
+            current_frame: 0,
+            invisible: false,
+            running_anim: None,
+            awaiting_anim: None,
+            next_lib_id: 1,
+            next_anim_id: 0,
+            library,
+            animations: HashMap::new(),
+        }
     }
 
     pub fn from_text(cols: usize, text: &str, glyph: Glyph) -> Self {
@@ -222,8 +331,11 @@ impl Graphic {
     }
 
     pub fn start_animation(&mut self, anim_id: usize, when: Timestamp) {
+        if let Some(anim_id) = self.running_anim {
+            let old_animation = self.animations.get_mut(&anim_id).unwrap();
+            old_animation.stop();
+        }
         if let Some(animation) = self.animations.get_mut(&anim_id) {
-            //print!("in start {}\t ", anim_id);
             animation.start(when);
             self.running_anim = Some(anim_id);
         }
@@ -259,34 +371,20 @@ impl Graphic {
     }
 
     pub fn enqueue_animation(&mut self, anim_id: usize, when: Timestamp) {
-        //print!("in enqueue running: {:?}\t ", self.running_anim);
         if self.animations.contains_key(&anim_id) {
             if let Some(running) = self.running_anim {
                 if anim_id != running {
-                    self.awaiting_anim = Some(anim_id);
-                    print!("enqueueing {anim_id} after {running} finishes");
+                    self.awaiting_anim = Some((anim_id, when));
                 }
             } else {
-                //print!("starting right away!");
                 self.start_animation(anim_id, when);
             }
-        }
-        if let Some(animation) = self.animations.get_mut(&anim_id) {
-            animation.start(when);
-            self.running_anim = Some(anim_id);
         }
     }
 
     pub fn get(&self, offset: (usize, usize)) -> Vec<Pixel> {
         let mut result = Vec::with_capacity(self.rows * self.cols);
-        for (i, glyph) in self
-            .library
-            .get(&self.current_frame)
-            .unwrap()
-            .iter()
-            .cloned()
-            .enumerate()
-        {
+        for (i, glyph) in self.current_frame().iter().cloned().enumerate() {
             result.push(Pixel::new(
                 offset.0 + (i % self.cols),
                 offset.1 + (i / self.cols),
@@ -300,7 +398,18 @@ impl Graphic {
         if self.invisible {
             vec![Glyph::transparent(); self.cols * self.rows]
         } else {
-            self.library.get(&self.current_frame).unwrap().clone()
+            let wframe = self.library.get(&self.current_frame);
+            if let Some(frame) = wframe {
+                return frame.clone();
+            } else {
+                panic!(
+                    "Unable to retrieve frame {}, available: {:?} (c: {}, r: {})",
+                    self.current_frame,
+                    self.library.keys().len(),
+                    self.cols,
+                    self.rows
+                );
+            }
         }
     }
 
