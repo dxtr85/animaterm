@@ -35,11 +35,17 @@ impl Graphic {
         library: HashMap<usize, Vec<Glyph>>,
         animations: Option<HashMap<usize, Animation>>,
     ) -> Self {
-        let next_lib_id = library.keys().max().unwrap() + 1;
+        let next_lib_id = if library.len() > 0 {
+            library.keys().max().unwrap() + 1
+        } else {
+            0
+        };
         let mut next_anim_id = 0;
         let a = if animations.is_some() {
             let anim = animations.unwrap();
-            next_anim_id = anim.keys().max().unwrap() + 1;
+            if anim.len() > 0 {
+                next_anim_id = anim.keys().max().unwrap() + 1
+            };
             anim
         } else {
             HashMap::new()
@@ -79,7 +85,12 @@ impl Graphic {
         let mut names_mapping: HashMap<String, usize> = HashMap::new();
 
         let mut read_lines = vec![];
-        let base_path = Path::new(filename.as_ref().parent().to_owned().unwrap());
+        let par = filename.as_ref().parent();
+        let base_path = if par.is_some() {
+            Path::new(par.to_owned().unwrap())
+        } else {
+            Path::new(".")
+        };
 
         if let Ok(file) = File::open(&filename) {
             for line in io::BufReader::new(file).lines() {
@@ -179,13 +190,16 @@ impl Graphic {
                                                 }
                                             }
                                         } else {
-                                            eprint!("Unable to read animation definition from file, {} is missing ':' ",t);
+                                            eprint!("Unable to read animation definition from file, {} is missing ':' ", t);
                                         }
                                     }
                                 }
                             }
                             if running {
-                                current_frame = ordering.last().unwrap().0;
+                                current_frame = ordering
+                                    .last()
+                                    .expect("Running animation with no frame ordering defined")
+                                    .0;
                                 running_anim = Some(next_anim_id);
                             }
                             let a = Animation::new(running, looping, ordering, start_time);
@@ -332,7 +346,10 @@ impl Graphic {
 
     pub fn start_animation(&mut self, anim_id: usize, when: Timestamp) {
         if let Some(anim_id) = self.running_anim {
-            let old_animation = self.animations.get_mut(&anim_id).unwrap();
+            let old_animation = self
+                .animations
+                .get_mut(&anim_id)
+                .expect("Running animation id does not exist within animations set");
             old_animation.stop();
         }
         if let Some(animation) = self.animations.get_mut(&anim_id) {
@@ -343,7 +360,10 @@ impl Graphic {
 
     pub fn stop_animation(&mut self) {
         if let Some(anim_id) = self.running_anim {
-            let animation = self.animations.get_mut(&anim_id).unwrap();
+            let animation = self
+                .animations
+                .get_mut(&anim_id)
+                .expect("Running animation id does not exist within animations set");
             animation.stop();
             self.running_anim = None;
         }
@@ -435,7 +455,10 @@ impl Graphic {
         let mut changed = Vec::with_capacity(1);
         let index = self.cols * (row) + col;
         if index < self.rows * self.cols {
-            let mut frame = self.library.remove(&self.current_frame).unwrap();
+            let mut frame = self
+                .library
+                .remove(&self.current_frame)
+                .expect("Current frame not defined in frame library.");
             let _r = replace(&mut frame[index], glyph);
             self.library.insert(self.current_frame, frame);
             changed.push(Pixel::new(col + offset.0, row + offset.1, glyph));
@@ -453,7 +476,10 @@ impl Graphic {
     }
 
     pub fn set_current_frame_color(&mut self, color: Color) {
-        let mut frame = self.library.remove(&self.current_frame).unwrap();
+        let mut frame = self
+            .library
+            .remove(&self.current_frame)
+            .expect("Current frame not defined in frame library.");
         for g in frame.iter_mut() {
             g.set_color(color);
         }
@@ -461,7 +487,10 @@ impl Graphic {
     }
 
     pub fn set_current_frame_background(&mut self, color: Color) {
-        let mut frame = self.library.remove(&self.current_frame).unwrap();
+        let mut frame = self
+            .library
+            .remove(&self.current_frame)
+            .expect("Current frame not defined in frame library.");
         for g in frame.iter_mut() {
             g.set_background(color);
         }
@@ -470,7 +499,10 @@ impl Graphic {
 
     pub fn set_current_frame_style(&mut self, mut style: Glyph) {
         let mut new_frame = Vec::with_capacity(self.cols * self.rows);
-        let mut frame = self.library.remove(&self.current_frame).unwrap();
+        let mut frame = self
+            .library
+            .remove(&self.current_frame)
+            .expect("Current frame not defined in frame library.");
         for g in frame.iter_mut() {
             style.set_char(g.character);
             style.set_color(g.color);

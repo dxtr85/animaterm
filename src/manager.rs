@@ -16,6 +16,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
+/// Manager uses this messages internally to communicate with Screen that is running in a separate thread.
 pub enum Message {
     Finish,
     EmptyFrame(usize),
@@ -44,6 +45,8 @@ pub enum Message {
     PrintScreenSection((usize, usize), usize, usize),
 }
 
+/// This object is responsible for orchestrating behavior of all screens and graphical elements defined.
+/// It also allows for reading user input as char.
 pub struct Manager {
     scrn_size: (usize, usize),
     join_handle: thread::JoinHandle<()>,
@@ -56,6 +59,8 @@ pub struct Manager {
 }
 
 impl Manager {
+    /// Use this method to create a new instance of Manager.
+    /// One can decide should capturing user input from the keyboard be enabled.
     pub fn new(
         capture_keyboard: bool,
         cols: Option<usize>,
@@ -283,14 +288,26 @@ impl Manager {
         }
     }
 
+    /// In case one has his own logic for serving raw user input from
+    /// the keyboard, both for specific case or for all cases.
     pub fn get_key_receiver(&mut self) -> Option<mpsc::Receiver<u8>> {
         replace(&mut self.key_receiver, None)
     }
 
+    /// Use this method to restore or provide your own key receiver for Manager to take
+    /// responsibility for interpreting raw user input.
+    pub fn set_key_receiver(&mut self, receiver: mpsc::Receiver<u8>) -> Option<mpsc::Receiver<u8>> {
+        replace(&mut self.key_receiver, Some(receiver))
+    }
+
+    /// Modify how long should Manager wait for bytestream coming from keyboard.
+    /// In case timeout is too short it might not get entire bytestream for interpretation and provide corrupted output.
+    /// In case timeout is too long it might feel unresponsive for the user.
     pub fn set_key_receive_timeout(&mut self, t: Duration) {
         self.key_recv_timeout = t;
     }
 
+    /// Use return value from this method to send Messages from your own codebase.
     pub fn get_message_sender(&mut self) -> mpsc::Sender<Message> {
         self.sender.clone()
     }
@@ -318,6 +335,8 @@ impl Manager {
         }
         keys_read
     }
+
+    /// Use this method to get a Key value of what user pressed on his keyboard.
     pub fn read_key(&mut self) -> Option<Key> {
         let k_rcvr = replace(&mut self.key_receiver, None);
         //if let Some(key_rcvr) = k_rcvr {
@@ -329,6 +348,7 @@ impl Manager {
         // }
     }
 
+    /// Use this method to get a String of what user has entered up to Enter key.
     pub fn read_line(&mut self) -> String {
         let k_rcvr = replace(&mut self.key_receiver, None);
         let mut all_bytes: Vec<u8> = Vec::with_capacity(128);
@@ -346,6 +366,7 @@ impl Manager {
         String::from_utf8_lossy(&all_bytes).into_owned()
     }
 
+    /// Use this method to get a char of what user has entered on his keyboard.
     pub fn read_char(&mut self) -> Option<char> {
         let k_rcvr = replace(&mut self.key_receiver, None);
         let mut keys_read = Vec::new();
@@ -360,14 +381,13 @@ impl Manager {
         String::from_utf8_lossy(&keys_read).chars().next()
     }
 
-    pub fn set_key_iter(&mut self, receiver: mpsc::Receiver<u8>) -> Option<mpsc::Receiver<u8>> {
-        replace(&mut self.key_receiver, Some(receiver))
-    }
-
+    /// Use this method in case you want to service results returned from Manager's
+    /// operations in your own codebase.
     pub fn get_result_iter(&mut self) -> Option<mpsc::IntoIter<Result<AnimOk, AnimError>>> {
         replace(&mut self.result_receiver, None)
     }
 
+    /// Use this method in case you want Manager to take back servicing results on his actions.
     pub fn set_result_iter(
         &mut self,
         receiver: mpsc::IntoIter<Result<AnimOk, AnimError>>,
@@ -375,6 +395,7 @@ impl Manager {
         replace(&mut self.result_receiver, Some(receiver))
     }
 
+    /// Use this method to get next available result of Manager's action.
     pub fn read_result(&mut self) -> Result<AnimOk, AnimError> {
         if let Some(receiver) = &mut self.result_receiver {
             if let Some(result) = receiver.next() {
@@ -386,10 +407,13 @@ impl Manager {
         Err(AnimError::ResultReceiverNotSet)
     }
 
+    /// Returns width & height of current screen.
     pub fn screen_size(&self) -> (usize, usize) {
         self.scrn_size
     }
 
+    /// Adds a new Animation for a Graphic. Make sure Graphic has all
+    /// frames required by the Animation defined.
     pub fn add_animation(&mut self, graphic_id: usize, anim: Animation) {
         if self
             .sender
@@ -399,6 +423,8 @@ impl Manager {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send AddAnimation message")
         };
     }
+
+    /// Start an animation for a graphic.
     pub fn start_animation(&self, graph_id: usize, anim_id: usize) {
         if self
             .sender
@@ -408,6 +434,8 @@ impl Manager {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send StartAnimation message")
         };
     }
+
+    /// Start another animation for given graphic after current one ends.
     pub fn enqueue_animation(&self, graph_id: usize, anim_id: usize, when: Timestamp) {
         if self
             .sender
@@ -417,6 +445,8 @@ impl Manager {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send EnqueueAnimation message")
         };
     }
+
+    /// Pause a running animation from given graphic.
     pub fn pause_animation(&self, graphic_id: usize) {
         if self
             .sender
@@ -426,6 +456,8 @@ impl Manager {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send Pauseanimation message")
         };
     }
+
+    /// Pause a running animation from given graphic when given frame is being displayed.    
     pub fn pause_animation_on_frame(&self, graphic_id: usize, frame_id: usize) {
         if self
             .sender
@@ -435,11 +467,15 @@ impl Manager {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send PauseAnimationOnFrame message")
         };
     }
+
+    /// Stop animation for given graphic
     pub fn stop_animation(&self, graph_id: usize) {
         if self.sender.send(Message::StopAnimation(graph_id)).is_err() {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send StopAnimation message")
         };
     }
+
+    /// Restart animation for given graphic when the right time comes.
     pub fn restart_animation(&self, graphic_id: usize, anim_id: usize, when: Timestamp) {
         if self
             .sender
@@ -450,6 +486,7 @@ impl Manager {
         };
     }
 
+    /// Move a graphic left or right on the screen, optionally changing which layer it is placed on.
     pub fn move_graphic(&self, gid: usize, layer: usize, offset: (isize, isize)) {
         if self
             .sender
@@ -459,6 +496,8 @@ impl Manager {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send MoveGraphic message")
         };
     }
+
+    /// Make a graphic invisible.
     pub fn set_invisible(&self, gid: usize, invisible: bool) {
         if self
             .sender
@@ -468,6 +507,8 @@ impl Manager {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetInvisible message")
         };
     }
+
+    /// Set glyph for given graphic in specified location to provided value.
     pub fn set_glyph(&self, gid: usize, glyph: Glyph, col: usize, row: usize) {
         if self
             .sender
@@ -477,12 +518,25 @@ impl Manager {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGlyph message")
         };
     }
+
+    /// Request Manager to produce what Glyph is currently set for given graphic in specified location.
+    /// Use read_result to get that Glyph.
     pub fn get_glyph(&self, gid: usize, col: usize, row: usize) {
         if self.sender.send(Message::GetGlyph(gid, col, row)).is_err() {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send GetGlyph message")
         };
     }
 
+    /// Use this method to load a graphic from plain text file.
+    /// Each line should define a frame or an animation like following:
+    /// frame 0 frame_0.txf
+    /// animation loop run 0:1000 1:1000 2:1000 3:1000 4:1000 5:1000 6:1000 7:1000 8:1000 9:1000
+    /// loop and run in animation definitions are optional.
+    /// What follows are frame ids in order from left to right with their display duration in ms after colon.
+    /// Frames are defined in separate files each. They consist of regular ASCII/UTF-8 characters with optional
+    /// ANSII escape sequences that modify color, background or font style.
+    /// You can preview a frame_file.txf calling from terminal: less -R frame_file.txf .
+    /// You can use accompanying studio terminal application in order to define your own frames.
     pub fn load_graphic_from_file<P>(&self, filename: P) -> Result<AnimOk, AnimError>
     where
         P: AsRef<Path> + std::fmt::Debug,
@@ -494,15 +548,14 @@ impl Manager {
         }
     }
 
+    /// Add an empty frame to a graphic.
     pub fn empty_frame(&self, gid: usize) {
         if self.sender.send(Message::EmptyFrame(gid)).is_err() {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send EmptyFrame message")
         };
     }
-    //fn update_animations() {}
 
-    pub fn cls() {}
-    pub fn cla() {}
+    /// Create a new clean display, optionally keeping current one.
     pub fn new_display(&mut self, keep_existing: bool) -> usize {
         let new_id = self.next_screen_id;
         self.next_screen_id += 1;
@@ -515,6 +568,8 @@ impl Manager {
         };
         new_id
     }
+
+    /// Set display to a different one.
     pub fn restore_display(&mut self, display_id: usize, keep_existing: bool) {
         if self
             .sender
@@ -525,6 +580,7 @@ impl Manager {
         };
     }
 
+    /// Add a graphic to current display.
     pub fn add_graphic(
         &mut self,
         gr: Graphic,
@@ -550,6 +606,7 @@ impl Manager {
         None
     }
 
+    /// Set a graphic to display a particular frame.
     pub fn set_graphic(&self, gid: usize, fid: usize, force: bool) {
         if self
             .sender
@@ -559,6 +616,8 @@ impl Manager {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphic message")
         };
     }
+
+    /// Set color of all glyphs under current graphic's frame to given value.
     pub fn set_graphic_color(&self, gid: usize, color: Color) {
         if self
             .sender
@@ -568,6 +627,8 @@ impl Manager {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
         };
     }
+
+    /// Set background color of all glyphs under current graphic's frame to given value.
     pub fn set_graphic_background(&self, gid: usize, color: Color) {
         if self
             .sender
@@ -577,6 +638,8 @@ impl Manager {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message")
         };
     }
+
+    /// Set style of all glyphs under current graphic's frame to given value.
     pub fn set_graphic_style(&self, gid: usize, glyph: Glyph) {
         if self
             .sender
@@ -586,12 +649,15 @@ impl Manager {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicStyle message")
         };
     }
+
+    /// Delete a graphic from current display.
     pub fn delete_graphic(&self, gid: usize) {
         if self.sender.send(Message::DeleteGraphic(gid)).is_err() {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send DeleteGraphic message")
         };
     }
 
+    /// Request Manager to provide a String of given graphic for manipulation or permanent storage.
     pub fn print_graphic(&self, gid: usize, skip_border: bool) {
         if self
             .sender
@@ -602,12 +668,14 @@ impl Manager {
         };
     }
 
+    /// Request Manager to provide a String of entire screen for manipulation or permanent storage.
     pub fn print_screen(&self) {
         if self.sender.send(Message::PrintScreen).is_err() {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send PrintScreen message")
         };
     }
 
+    /// Request Manager to provide a String of selected screen section for manipulation or permanent storage.
     pub fn print_screen_section(&self, offset: (usize, usize), cols: usize, rows: usize) {
         if self
             .sender
@@ -618,6 +686,7 @@ impl Manager {
         };
     }
 
+    /// Restore terminal to regular buffer when application is about to quit.
     pub fn terminate(self) {
         if self.sender.send(Message::Finish).is_err() {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send Finish message")

@@ -51,17 +51,17 @@
 //! ```
 //! ## Functionality
 //! With `mgr` under your control you can do all kinds of things:
-//! * create a [`Graphic`] containing multiple [`Frame`] with fully adjustable [`Color`] and [`Glyph`] - [see example](#create-a-graphic-containing-multiple-frames);
-//! * add an [`Animation`] to a [`Graphic`] and run it - [see example](#add-an-animation-to-a-graphic);
-//! * take action according to [`Key`] press - [see example](#take-action-according-to-key-press);
-//! * change [`Frame`] or [`Animation`] of displayed [`Graphic`] to a different one - [see example1](#switch-selected-graphic-to-a-different-frame) [or example_2](#switch-selected-graphic-to-a-different-animation);
-//! * pause selected [`Animation`] on selected [`Frame`] - [see example](#pause-selected-animation);
-//! * switch back and forth between multiple [`Screen`] instances - [see example](#switch-between-displays);
-//! * stack [`Graphic`] over or under others on a ['Screen'] with layer change - [see example](#change-graphic-layer);
-//! * move [`Graphic`] up/down/left/right on a [`Screen`] - [see example](#move-graphic);
-//! * update selected [`Glyph`] within existing [`Frame`] of a [`Graphic`] - [see example](#update-selected-glyph);
-//! * make parts of a [`Graphic`] transparent by changing [`Glyph`] property - [see example](#make-parts-of-a-graphic-transparent);
-//! * add cloned or completely new [`Frame`] to [`Graphic`] - [see example_1](#add-cloned-frame) [or example_2](#add-new-frame);
+//! * create a [`graphic.Graphic`] containing multiple Frame with fully adjustable [`Color`] and [`Glyph`] - [see example](#create-a-graphic-containing-multiple-frames);
+//! * add an [`animation.Animation`] to a [`graphic.Graphic`] and run it - [see example](#add-an-animation-to-a-graphic);
+//! * take action according to [`key.Key`] press - [see example](#take-action-according-to-key-press);
+//! * change Frame or [`animation.Animation`] of displayed [`graphic.Graphic`] to a different one - [see example1](#switch-selected-graphic-to-a-different-frame) [or example_2](#switch-selected-graphic-to-a-different-animation);
+//! * pause selected [`animation.Animation`] on selected Frame - [see example](#pause-selected-animation);
+//! * switch back and forth between multiple [`screen.Screen`] instances - [see example](#switch-between-displays);
+//! * stack [`graphic.Graphic`] over or under others on a ['screen.Screen'] with layer change - [see example](#change-graphic-layer);
+//! * move [`graphic.Graphic`] up/down/left/right on a [`screen.Screen`] - [see example](#move-graphic);
+//! * update selected [`glyph.Glyph`] within existing Frame of a [`graphic.Graphic`] - [see example](#update-selected-glyph);
+//! * make parts of a [`graphic.Graphic`] transparent by changing [`glyph.Glyph`] property - [see example](#make-parts-of-a-graphic-transparent);
+//! * add cloned or completely new Frame to [`graphic.Graphic`] - [see example_1](#add-cloned-frame) [or example_2](#add-new-frame);
 //! * and more.
 //!
 //! # Examples

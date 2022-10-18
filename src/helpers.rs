@@ -14,14 +14,19 @@ pub fn ask_os_for_rows_and_cols() -> (usize, usize) {
         .output()
     {
         Ok(data) => {
-            let output = String::from_utf8(data.stdout).unwrap();
-            let number = usize::from_str_radix(output.trim(), 10);
-            match number {
-                Ok(a_number) => a_number,
-                Err(e) => {
-                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to determine lines count from {}, using defaults\n{}", output, e);
-                    35
+            let output = String::from_utf8(data.stdout);
+            if output.is_ok() {
+                let output = output.unwrap();
+                let number = usize::from_str_radix(output.trim(), 10);
+                match number {
+                    Ok(a_number) => a_number,
+                    Err(e) => {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to determine lines count from {}, using defaults\n{}", output, e);
+                        35
+                    }
                 }
+            } else {
+                35
             }
         }
         Err(e) => {
@@ -40,14 +45,19 @@ pub fn ask_os_for_rows_and_cols() -> (usize, usize) {
         .output()
     {
         Ok(data) => {
-            let output = String::from_utf8(data.stdout).unwrap();
-            let number = usize::from_str_radix(output.trim(), 10);
-            match number {
-                Ok(a_number) => a_number,
-                Err(e) => {
-                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to determine cols count from {}, using defaults\n{}", output, e);
-                    80
+            let output = String::from_utf8(data.stdout);
+            if output.is_ok() {
+                let output = output.unwrap();
+                let number = usize::from_str_radix(output.trim(), 10);
+                match number {
+                    Ok(a_number) => a_number,
+                    Err(e) => {
+                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to determine cols count from {}, using defaults\n{}", output, e);
+                        80
+                    }
                 }
+            } else {
+                80
             }
         }
         Err(e) => {

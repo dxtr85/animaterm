@@ -5,6 +5,7 @@ use super::time::Timestamp;
 use std::collections::HashMap;
 use std::mem::replace;
 
+/// Creates a horizontal progress bar from provided Glyphs.
 pub fn progress_bar(
     width: usize,
     empty: Glyph,
@@ -12,7 +13,7 @@ pub fn progress_bar(
     stages: Option<Vec<Glyph>>,
 ) -> Graphic {
     let mut total_states = 1;
-    let mut states = vec![]; //empty.clone()];
+    let mut states = vec![];
     if let Some(stages) = stages {
         total_states += stages.len();
         for s in stages {
@@ -122,6 +123,9 @@ pub fn progress_bar(
 //     mbox
 // }
 
+/// Builds a bordered Graphic based on glyph
+/// with optional title and given contents
+/// wrapped within width x height box.
 pub fn message_box(
     title: Option<String>,
     content: String,
@@ -199,6 +203,12 @@ pub fn message_box(
     Graphic::new(width, height, 0, library, None)
 }
 
+/// Adds horizontal and vertical borders around a frame.
+/// Elements inside border define Glyphs to be used as
+/// building blocks, ordering:
+/// top-left, top, top-right,
+/// left, right,
+/// bottom-left, bottom, bottom-right,
 pub fn wrap_border_around(
     frame: Vec<Glyph>,
     cols: usize,
@@ -237,6 +247,7 @@ pub fn wrap_border_around(
     result
 }
 
+/// Converts text to a Vector of Glyphs based on provided glyph.
 pub fn text_to_frame(text: &str, mut glyph: Glyph) -> Vec<Glyph> {
     let mut frame = Vec::with_capacity(text.len());
     for character in text.chars() {

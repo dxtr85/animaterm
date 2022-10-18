@@ -70,7 +70,7 @@ impl Screen {
         };
         let stdin = 0; // couldn't get std::os::unix::io::FromRawFd to work
                        // on /dev/stdin or /dev/tty
-        let termios = Termios::from_fd(stdin).unwrap();
+        let termios = Termios::from_fd(stdin).expect("Could not get Termios instance from stdin.");
         let new_termios = termios.clone(); // make a mutable copy of termios
                                            // that we will modify
         let c_x = final_cols;
@@ -364,11 +364,12 @@ impl Screen {
         if let Some((mut graphic, layer, offset)) = self.graphics.remove(&gid) {
             let result = graphic.empty_frame();
             self.graphics.insert(gid, (graphic, layer, offset));
-            self.set_graphic((&gid, &result.unwrap()), true);
+            if result.is_some() {
+                self.set_graphic((&gid, &result.unwrap()), true);
+            }
             return result;
-        } else {
-            panic!("no graphic")
         }
+        None
     }
 
     pub fn clone_frame(&mut self, gid: usize, frame_id: Option<usize>) -> Option<usize> {
@@ -379,11 +380,12 @@ impl Screen {
             }
             let result = graphic.clone_frame(fr_id);
             self.graphics.insert(gid, (graphic, layer, offset));
-            self.set_graphic((&gid, &result.unwrap()), true);
+            if result.is_some() {
+                self.set_graphic((&gid, &result.unwrap()), true);
+            }
             return result;
-        } else {
-            panic!("no graphic")
         }
+        None
     }
 
     pub fn update_graphics_layer(&mut self, gid: usize, layer: usize) {
@@ -480,16 +482,8 @@ impl Screen {
     }
 
     pub fn cls(&mut self) {
-        //self.stdout.lock().flush().unwrap();
-        // println!(
-        //     "\x1b[37;40mColor: {} Bg: {}",
-        //     self.c_color as u8, self.c_background as u8
-        // );
         print!("\x1b[0m\x1b[21;22;23;24;25;26;27;29;37;40m\x1b[1;1Hm");
-        //for _i in 1..self.rows + 1 {
         println!("\x1b[H{:<1$}", "", self.cols * self.rows);
-        //}
-        // print!("\x1b[H\x1b[37;40m{:<1$}", "", self.cols * self.rows);
         self.flush_out();
     }
 
@@ -541,7 +535,7 @@ impl Screen {
     }
 
     fn flush_out(&mut self) {
-        self.stdout.lock().flush().unwrap();
+        self.stdout.lock().flush().expect("Flushing stdout failed.");
         self.c_x = self.cols;
         self.c_y = self.rows;
         self.c_color = Color::white();
@@ -848,7 +842,8 @@ impl Screen {
 
     pub fn initialize(&mut self) {
         self.termios.c_lflag &= !(ICANON | ECHO); // no echo and canonical mode
-        tcsetattr(self.stdin, TCSANOW, &mut self.termios).unwrap();
+        tcsetattr(self.stdin, TCSANOW, &mut self.termios)
+            .expect("Failed setting modified Termios buffer during initialization.");
         print!("\x1b[?1049h"); // use separate buffer
         print!("\x1b[2J"); // clear screen
         print!("\x1b[?25l"); // disable cursor
@@ -858,7 +853,8 @@ impl Screen {
         print!("\x1b[?25h"); // enable cursor
         print!("\x1b[2J"); // clear screen
         print!("\x1b[?1049l"); // disable separate buffer
-        tcsetattr(self.stdin, TCSANOW, &self.termios_orig).unwrap(); // reset the stdin to
-                                                                     // original termios data
+        tcsetattr(self.stdin, TCSANOW, &self.termios_orig)
+            .expect("Failed to restore original Termios buffer."); // reset the stdin to
+                                                                   // original termios data
     }
 }
