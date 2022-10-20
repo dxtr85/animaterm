@@ -118,10 +118,10 @@ impl Animation {
             }
             if dtime >= self.trigger_time {
                 let (current_frame, delta_time) = self.ordering[self.next_frame];
-                println!(
-                    "Next frame: {}, current frame: {}",
-                    self.next_frame, current_frame
-                );
+                // println!(
+                //     "Next frame: {}, current frame: {}",
+                //     self.next_frame, current_frame
+                // );
                 self.current_frame = current_frame;
                 frame = Some(self.current_frame);
                 self.trigger_time += delta_time;
