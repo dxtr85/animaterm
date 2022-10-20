@@ -345,12 +345,10 @@ impl Graphic {
     }
 
     pub fn start_animation(&mut self, anim_id: usize, when: Timestamp) {
-        if let Some(anim_id) = self.running_anim {
-            let old_animation = self
-                .animations
-                .get_mut(&anim_id)
-                .expect("Running animation id does not exist within animations set");
-            old_animation.stop();
+        if let Some(running_anim_id) = self.running_anim {
+            if running_anim_id != anim_id {
+                self.stop_animation();
+            }
         }
         if let Some(animation) = self.animations.get_mut(&anim_id) {
             animation.start(when);

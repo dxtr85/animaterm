@@ -41,7 +41,7 @@ impl Animation {
             }
         } else {
             let ord_max = ordering.len() - 1;
-            let next_frame = ordering.first().unwrap().0;
+            let next_frame = 1;
             let mut stop_frame = None;
             if !looping {
                 let last_frame = ordering.last().unwrap().0;
