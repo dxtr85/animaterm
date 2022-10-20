@@ -6,6 +6,7 @@ use super::helpers::ask_os_for_rows_and_cols;
 use super::pixel::Pixel;
 use super::time::Timestamp;
 use super::Glyph;
+use std::cmp::max;
 use std::collections::HashMap;
 use std::io;
 use std::io::Write;
@@ -27,14 +28,14 @@ pub struct Screen {
         (
             Display,
             // HashMap<usize, (Animation, usize, (usize, usize))>,
-            HashMap<usize, (Graphic, usize, (usize, usize))>,
+            HashMap<usize, (Graphic, usize, (isize, isize))>,
         ),
     >,
     shelve_id: usize,
     time: Timestamp,
     next_available_id: usize,
     // animations: HashMap<usize, (Animation, usize, (usize, usize))>,
-    graphics: HashMap<usize, (Graphic, usize, (usize, usize))>,
+    graphics: HashMap<usize, (Graphic, usize, (isize, isize))>,
     stdin: i32,
     stdout: io::Stdout,
     termios_orig: Termios,
@@ -144,7 +145,7 @@ impl Screen {
         return_id
     }
 
-    pub fn add_graphic(&mut self, g: Graphic, layer: usize, offset: (usize, usize)) -> usize {
+    pub fn add_graphic(&mut self, g: Graphic, layer: usize, offset: (isize, isize)) -> usize {
         let graph_id = self.next_available_id;
         self.next_available_id += 1;
         self.graphics.insert(graph_id, (g, layer, offset));
@@ -157,56 +158,62 @@ impl Screen {
         let mut frame_id = None;
         if let Some(current_state) = self.graphics.get_mut(&gid) {
             frame_id = Some(current_state.0.current_frame);
-            let delta_zero = if offset.0 < 0 {
-                (current_state.2 .0).saturating_sub((offset.0).unsigned_abs() as usize)
-            } else {
-                (current_state.2 .0) + (offset.0 as usize)
-            };
-            let delta_one = if offset.1 < 0 {
-                (current_state.2 .1).saturating_sub((offset.1).unsigned_abs() as usize)
-            } else {
-                (current_state.2 .1) + (offset.1 as usize)
-            };
+            let delta_zero = current_state.2 .0 + offset.0;
+            let delta_one = current_state.2 .1 + offset.1;
+            // let delta_zero = if offset.0 < 0 {
+            //     (current_state.2 .0).saturating_sub((offset.0).unsigned_abs() as usize)
+            // } else {
+            //     (current_state.2 .0) + (offset.0 as usize)
+            // };
+            // let delta_one = if offset.1 < 0 {
+            //     (current_state.2 .1).saturating_sub((offset.1).unsigned_abs() as usize)
+            // } else {
+            //     (current_state.2 .1) + (offset.1 as usize)
+            // };
             new_offset = Some((delta_zero, delta_one));
+            // Layer has changed
             if current_state.1 != layer {
                 cl_args.push((
                     current_state.1,
-                    current_state.2 .0,
-                    current_state.2 .1,
+                    max(current_state.2 .0, 0) as usize,
+                    max(current_state.2 .1, 0) as usize,
                     current_state.0.cols,
                     current_state.0.rows,
                 ));
             }
+            // Move left
             if offset.0 < 0 {
                 cl_args.push((
                     layer,
-                    delta_zero + current_state.0.cols,
-                    current_state.2 .1,
-                    (offset.0).abs() as usize,
+                    max(current_state.2 .0 - 1 + current_state.0.cols as isize, 0) as usize,
+                    max(current_state.2 .1, 0) as usize,
+                    (offset.0).abs() as usize - 1,
                     current_state.0.rows,
                 ));
-            } else if offset.0 > 0 {
+                // Move right
+            } else if offset.0 > 0 && current_state.2 .0 + offset.0 > 0 {
                 cl_args.push((
                     layer,
-                    current_state.2 .0,
-                    current_state.2 .1,
-                    offset.0 as usize,
+                    max(current_state.2 .0, 0) as usize,
+                    max(current_state.2 .1, 0) as usize,
+                    offset.0 as usize - 1,
                     current_state.0.rows,
                 ));
             }
+            // Move up
             if offset.1 < 0 {
                 cl_args.push((
                     layer,
-                    current_state.2 .0,
-                    delta_one + current_state.0.rows,
-                    current_state.0.cols,
-                    (offset.1).abs() as usize,
+                    max(current_state.2 .0, 0) as usize,
+                    max(current_state.2 .1 - 1 + current_state.0.rows as isize, 0) as usize,
+                    current_state.0.cols + 1,
+                    (offset.1).abs() as usize - 1,
                 ));
-            } else if offset.1 > 0 {
+            } else if offset.1 > 0 && current_state.2 .1 + offset.1 > 0 {
                 cl_args.push((
                     layer,
-                    current_state.2 .0,
-                    current_state.2 .1,
+                    max(current_state.2 .0, 0) as usize,
+                    max(current_state.2 .1, 0) as usize,
                     current_state.0.cols,
                     offset.1 as usize,
                 ));
@@ -236,7 +243,7 @@ impl Screen {
             clear_info = Some((*layer, offset.0, offset.1, graphic.cols, graphic.rows));
         }
         if let Some(c) = clear_info {
-            self.cla(c.0, c.1, c.2, c.3, c.4);
+            self.cla(c.0, max(c.1, 0) as usize, max(c.2, 0) as usize, c.3, c.4);
         }
     }
 
@@ -393,7 +400,7 @@ impl Screen {
             self.graphics.insert(gid, (graphic, layer, offset));
         }
     }
-    pub fn update_graphics_offset(&mut self, gid: usize, offset: (usize, usize)) {
+    pub fn update_graphics_offset(&mut self, gid: usize, offset: (isize, isize)) {
         if let Some((graphic, layer, _offset)) = self.graphics.remove(&gid) {
             self.graphics.insert(gid, (graphic, layer, offset));
         }

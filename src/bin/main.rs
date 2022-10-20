@@ -37,7 +37,11 @@ fn main() {
 
     let pbid;
     let mut pb_layer = 3;
-    let result = mgr.add_graphic(build_progress_bar(cols - 4), pb_layer, (2, rows - 2));
+    let result = mgr.add_graphic(
+        build_progress_bar(cols - 4),
+        pb_layer,
+        (2, (rows - 2) as isize),
+    );
     if let Some(id) = result {
         pbid = id;
     } else {

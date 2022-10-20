@@ -7,11 +7,11 @@ static COLS_MIN: usize = 84;
 pub struct Arguments {
     pub rows: Option<usize>,
     pub cols: Option<usize>,
-    pub colors_offset: Option<(usize, usize)>,
-    pub backgrounds_offset: Option<(usize, usize)>,
-    pub styles_offset: Option<(usize, usize)>,
-    pub glyphs_offset: Option<(usize, usize)>,
-    pub workspace_offset: Option<(usize, usize)>,
+    pub colors_offset: Option<(isize, isize)>,
+    pub backgrounds_offset: Option<(isize, isize)>,
+    pub styles_offset: Option<(isize, isize)>,
+    pub glyphs_offset: Option<(isize, isize)>,
+    pub workspace_offset: Option<(isize, isize)>,
     pub workspace_size: Option<(usize, usize)>,
     pub input_file: Option<String>,
     pub output_file: Option<String>,
@@ -223,11 +223,11 @@ pub fn parse_arguments() -> Arguments {
                     );
                     exit(1);
                 } else {
-                    let cols = usize::from_str_radix(splited[0], 10);
-                    let rows = usize::from_str_radix(splited[1], 10);
+                    let cols = isize::from_str_radix(splited[0], 10);
+                    let rows = isize::from_str_radix(splited[1], 10);
                     //let mut result = None;
                     if cols.is_ok() && rows.is_ok() {
-                        let result = Some((cols.unwrap(), rows.unwrap()));
+                        let result = Some((cols.clone().unwrap(), rows.clone().unwrap()));
                         match &name {
                             Some(ArgType::ColorsOffset) => arguments.colors_offset = result,
                             Some(ArgType::BackgroundsOffset) => {
@@ -236,7 +236,10 @@ pub fn parse_arguments() -> Arguments {
                             Some(ArgType::StylesOffset) => arguments.styles_offset = result,
                             Some(ArgType::GlyphsOffset) => arguments.glyphs_offset = result,
                             Some(ArgType::WorkspaceOffset) => arguments.workspace_offset = result,
-                            Some(ArgType::WorkspaceSize) => arguments.workspace_size = result,
+                            Some(ArgType::WorkspaceSize) => {
+                                arguments.workspace_size =
+                                    Some((cols.unwrap() as usize, rows.unwrap() as usize))
+                            }
                             Some(ArgType::Rows) | Some(ArgType::Glyphs) => {
                                 eprintln!(
                                 "\x1b[97;41;5mERR\x1b[m Bug in parsing code, should read text now"

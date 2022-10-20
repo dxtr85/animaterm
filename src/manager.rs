@@ -28,7 +28,7 @@ pub enum Message {
     PauseAnimationOnFrame(usize, usize),
     StopAnimation(usize),
     RestartAnimation(usize, usize, Timestamp),
-    AddGraphic(Graphic, usize, (usize, usize)),
+    AddGraphic(Graphic, usize, (isize, isize)),
     SetGlyph(usize, Glyph, usize, usize),
     GetGlyph(usize, usize, usize),
     SetGraphic(usize, usize, bool),
@@ -585,7 +585,7 @@ impl Manager {
         &mut self,
         gr: Graphic,
         layer: usize,
-        offset: (usize, usize),
+        offset: (isize, isize),
     ) -> Option<usize> {
         // let gid = self.next_id;
         // self.next_id += 1;

@@ -296,7 +296,7 @@ impl Graphic {
         result
     }
 
-    pub fn set_invisible(&mut self, invisible: bool, offset: (usize, usize)) -> Vec<Pixel> {
+    pub fn set_invisible(&mut self, invisible: bool, offset: (isize, isize)) -> Vec<Pixel> {
         if invisible == self.invisible {
             return Vec::new();
         }
@@ -304,9 +304,9 @@ impl Graphic {
         self.invisible = invisible;
         if self.invisible {
             let transparent = Glyph::transparent();
-            for c in offset.0..offset.0 + self.cols {
-                for r in offset.1..offset.1 + self.rows {
-                    changed.push(Pixel::new(c, r, transparent));
+            for c in offset.0..offset.0 + self.cols as isize {
+                for r in offset.1..offset.1 + self.rows as isize {
+                    changed.push(Pixel::new(c as usize, r as usize, transparent));
                 }
             }
         } else {
@@ -402,14 +402,14 @@ impl Graphic {
         }
     }
 
-    pub fn get(&self, offset: (usize, usize)) -> Vec<Pixel> {
+    pub fn get(&self, offset: (isize, isize)) -> Vec<Pixel> {
         let mut result = Vec::with_capacity(self.rows * self.cols);
         for (i, glyph) in self.current_frame().iter().cloned().enumerate() {
-            result.push(Pixel::new(
-                offset.0 + (i % self.cols),
-                offset.1 + (i / self.cols),
-                glyph,
-            ));
+            let x = offset.0 + (i % self.cols) as isize;
+            let y = offset.1 + (i / self.cols) as isize;
+            if x >= 0 && y >= 0 {
+                result.push(Pixel::new(x as usize, y as usize, glyph));
+            }
         }
         result
     }
@@ -450,7 +450,7 @@ impl Graphic {
         glyph: Glyph,
         col: usize,
         row: usize,
-        offset: (usize, usize),
+        offset: (isize, isize),
     ) -> Vec<Pixel> {
         let mut changed = Vec::with_capacity(1);
         let index = self.cols * (row) + col;
@@ -461,7 +461,13 @@ impl Graphic {
                 .expect("Current frame not defined in frame library.");
             let _r = replace(&mut frame[index], glyph);
             self.library.insert(self.current_frame, frame);
-            changed.push(Pixel::new(col + offset.0, row + offset.1, glyph));
+            let x = col as isize + offset.0;
+            if x >= 0 {
+                let y = row as isize + offset.1;
+                if y >= 0 {
+                    changed.push(Pixel::new(x as usize, y as usize, glyph));
+                }
+            }
         }
         changed
     }
@@ -512,7 +518,7 @@ impl Graphic {
         self.library.insert(self.current_frame, new_frame);
     }
 
-    pub fn set_frame(&mut self, id: &usize, offset: (usize, usize), force: bool) -> Vec<Pixel> {
+    pub fn set_frame(&mut self, id: &usize, offset: (isize, isize), force: bool) -> Vec<Pixel> {
         let mut changed = Vec::with_capacity(self.cols);
         if let Ok(glyphs) = self.get_frame(*id) {
             //let glyphs = self.get_frame(*id);
@@ -524,8 +530,8 @@ impl Graphic {
             {
                 if force || new_glyph != *old_glyph {
                     changed.push(Pixel::new(
-                        offset.0 + (i % self.cols),
-                        offset.1 + (i / self.cols),
+                        (offset.0 + (i % self.cols) as isize) as usize,
+                        (offset.1 + (i / self.cols) as isize) as usize,
                         new_glyph.clone(),
                     ));
                 }

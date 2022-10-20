@@ -37,7 +37,7 @@ fn main() {
     let (screen_cols, screen_rows) = mgr.screen_size();
     let start_col = screen_cols.saturating_sub(84) / 2;
     let start_row = screen_rows.saturating_sub(29) / 2;
-    let mut glyphs_offset = (start_col, start_row + 7);
+    let mut glyphs_offset = (start_col as isize, (start_row + 7) as isize);
     if let Some(user_offset) = args.glyphs_offset {
         glyphs_offset = user_offset;
     }
@@ -63,8 +63,8 @@ fn main() {
     }
 
     // Color window
-    let mut color_offset_cols = start_col;
-    let mut color_offset_rows = start_row;
+    let mut color_offset_cols = start_col as isize;
+    let mut color_offset_rows = start_row as isize;
     if args.colors_offset.is_some() {
         color_offset_cols = args.colors_offset.unwrap().0;
         color_offset_rows = args.colors_offset.unwrap().1;
@@ -276,8 +276,8 @@ fn main() {
     mgr.set_graphic(color_selector_id, 0, true);
 
     // Background window
-    let mut bg_offset_cols = start_col + 42;
-    let mut bg_offset_rows = start_row;
+    let mut bg_offset_cols = (start_col + 42) as isize;
+    let mut bg_offset_rows = (start_row) as isize;
     if args.backgrounds_offset.is_some() {
         bg_offset_cols = args.backgrounds_offset.unwrap().0;
         bg_offset_rows = args.backgrounds_offset.unwrap().1;
@@ -482,7 +482,7 @@ fn main() {
     );
 
     // Workspace window
-    let mut workspace_offset = (start_col + 18, start_row + 7);
+    let mut workspace_offset = ((start_col + 18) as isize, (start_row + 7) as isize);
     if let Some(w_off) = args.workspace_offset {
         workspace_offset = w_off;
     }
@@ -519,8 +519,8 @@ fn main() {
 
     let mut reversed = Glyph::default();
     reversed.set_reverse(true);
-    let mut styles_offset_cols = start_col;
-    let mut styles_offset_rows = start_row + 19;
+    let mut styles_offset_cols = start_col as isize;
+    let mut styles_offset_rows = (start_row + 19) as isize;
     if let Some((c_off, r_off)) = args.styles_offset {
         styles_offset_cols = c_off;
         styles_offset_rows = r_off;
@@ -899,7 +899,7 @@ fn main() {
                 }
 
                 // workspace window
-                Key::Left | Key::CtrlB => {
+                Key::Left | Key::CtrlB | Key::H => {
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
                     if c > 1 {
                         c -= 1;
@@ -941,7 +941,7 @@ fn main() {
                 }
 
                 // workspace window
-                Key::Right | Key::CtrlF => {
+                Key::Right | Key::CtrlF | Key::L => {
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
                     if c < matrix_cols {
                         c += 1;
@@ -988,7 +988,7 @@ fn main() {
                 }
 
                 //workspace window
-                Key::Up | Key::CtrlP => {
+                Key::Up | Key::CtrlP | Key::K => {
                     // workspace_window.move_cursor_up();
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
                     if r > 1 {
@@ -1005,7 +1005,7 @@ fn main() {
                 }
 
                 // workspace window
-                Key::Down | Key::CtrlN => {
+                Key::Down | Key::CtrlN | Key::J => {
                     // workspace_window.move_cursor_down(glyph_under_cursor);
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
                     if r < matrix_rows {
@@ -1045,22 +1045,22 @@ fn main() {
                 Key::AltCtrlShiftRight => {}
 
                 // style window
-                Key::AltShiftDown => {
+                Key::AltShiftDown | Key::AltShiftJ => {
                     style_window.move_selector_down();
                 }
                 // Key::AltCtrlShiftDown => {
                 //    style_window.move_selector_bottom();
                 // }
-                Key::AltShiftUp => {
+                Key::AltShiftUp | Key::AltShiftK => {
                     style_window.move_selector_up();
                 }
                 // Key::AltCtrlShiftUp => {
                 //     style_window.move_selector_top();
                 // }
-                Key::AltShiftLeft => {
+                Key::AltShiftLeft | Key::AltShiftH => {
                     style_window.disable_selected_style();
                 }
-                Key::AltShiftRight => {
+                Key::AltShiftRight | Key::AltShiftL => {
                     style_window.enable_selected_style();
                 }
 
