@@ -6,7 +6,7 @@ use super::helpers::ask_os_for_rows_and_cols;
 use super::pixel::Pixel;
 use super::time::Timestamp;
 use super::Glyph;
-use std::cmp::max;
+use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::io;
 use std::io::Write;
@@ -54,6 +54,8 @@ pub struct Screen {
     c_reverse: bool,
     c_transparent: bool,
     c_strike: bool,
+    chars_sent: usize,
+    chars_refresh: usize,
 }
 
 impl Screen {
@@ -109,6 +111,8 @@ impl Screen {
             c_reverse: dglyph.reverse,
             c_transparent: dglyph.transparent,
             c_strike: dglyph.strike,
+            chars_sent: 0,
+            chars_refresh: 100,
         }
     }
 
@@ -196,7 +200,7 @@ impl Screen {
                     layer,
                     max(current_state.2 .0, 0) as usize,
                     max(current_state.2 .1, 0) as usize,
-                    offset.0 as usize - 1,
+                    min(current_state.0.cols, offset.0 as usize - 1),
                     current_state.0.rows,
                 ));
             }
@@ -215,7 +219,8 @@ impl Screen {
                     max(current_state.2 .0, 0) as usize,
                     max(current_state.2 .1, 0) as usize,
                     current_state.0.cols,
-                    offset.1 as usize,
+                    min(current_state.0.rows, offset.1 as usize),
+                    // offset.1 as usize,
                 ));
             }
         }
@@ -562,15 +567,17 @@ impl Screen {
         let mut result = Vec::with_capacity(self.rows);
         let mut line_text = String::new();
         let mut last_line = 10;
+        let mut first_glyph = true;
         for (_x, y, glyph) in glyphs {
             if y != last_line {
                 if line_text.len() > 0 {
                     result.push(line_text);
                     line_text = String::new();
+                    first_glyph = true;
                 }
                 last_line = y;
             }
-            let modifier = self.gformat_old(glyph);
+            let modifier = self.gformat_old(glyph, first_glyph);
             if !modifier.is_empty() {
                 line_text.push_str(&format!("\x1b[{}m{}", modifier, glyph.character));
                 // line_text.push_str(&modifier);
@@ -578,6 +585,7 @@ impl Screen {
             } else {
                 line_text.push(glyph.character);
             }
+            first_glyph = false;
         }
         if result.len() > 0 {
             let mut last = result.pop().unwrap();
@@ -622,13 +630,14 @@ impl Screen {
         print!("{}{}", formated, glyph.character);
     }
 
-    fn gformat_old(&mut self, glyph: Glyph) -> String {
+    fn gformat_old(&mut self, glyph: Glyph, first_glyph: bool) -> String {
         let mut modifier = String::new(); //"\x1b[".to_string();
                                           // let mut add_modifier = false;
                                           // Plain = 0,
-        if self.c_plain && !glyph.plain {
-            self.c_plain = false;
-        } else if !self.c_plain && glyph.plain {
+        let mut set_plain_on_exit = false;
+        let mut push_colors = false;
+
+        if first_glyph {
             //self.c_plain = true;
             self.c_bright = false;
             self.c_dim = false;
@@ -645,72 +654,104 @@ impl Screen {
         }
         if self.c_bright && !glyph.bright {
             self.c_bright = false;
-            modifier.push_str("21;");
-            // modifier.push_str("01;");
+            if glyph.dim {
+                if !self.c_dim {
+                    self.c_dim = true;
+                    modifier.push_str("2;");
+                }
+            } else {
+                modifier.push_str("22;");
+            }
+            push_colors = true;
         } else if !self.c_bright && glyph.bright {
             self.c_bright = true;
+            if self.c_dim {
+                self.c_dim = false;
+                // modifier.push_str("22;");
+            }
             modifier.push_str("1;");
+            push_colors = true;
         }
         if self.c_dim && !glyph.dim {
             self.c_dim = false;
-            self.c_bright = false;
-            modifier.push_str("22;");
+            if glyph.bright {
+                modifier.push_str("1;");
+                self.c_bright = true;
+            } else {
+                modifier.push_str("22;");
+            }
+            push_colors = true;
         } else if !self.c_dim && glyph.dim {
             self.c_dim = true;
-            self.c_bright = false;
             modifier.push_str("2;");
+            push_colors = true;
         }
         if self.c_italic && !glyph.italic {
             self.c_italic = false;
             modifier.push_str("23;");
+            push_colors = true;
         } else if !self.c_italic && glyph.italic {
             self.c_italic = true;
+            push_colors = true;
             modifier.push_str("3;");
         }
         if self.c_underline && !glyph.underline {
             self.c_underline = false;
             modifier.push_str("24;");
+            push_colors = true;
         } else if !self.c_underline && glyph.underline {
             self.c_underline = true;
             modifier.push_str("4;");
+            push_colors = true;
         }
         if self.c_blink && !glyph.blink {
             self.c_blink = false;
+            push_colors = true;
         } else if !self.c_blink && glyph.blink {
             self.c_blink = true;
             modifier.push_str("5;");
+            push_colors = true;
         }
         if self.c_blink_fast && !glyph.blink_fast {
             self.c_blink_fast = false;
+            push_colors = true;
         } else if !self.c_blink_fast && glyph.blink_fast {
             self.c_blink_fast = true;
             modifier.push_str("6;");
+            push_colors = true;
         }
-        if !self.c_blink && !self.c_blink_fast {
+        if !glyph.blink && !glyph.blink_fast && (self.c_blink || self.c_blink_fast) {
             modifier.push_str("25;");
+            push_colors = true;
         }
         if self.c_reverse && !glyph.reverse {
             self.c_reverse = false;
             modifier.push_str("27;");
+            push_colors = true;
         } else if !self.c_reverse && glyph.reverse {
             self.c_reverse = true;
             modifier.push_str("7;");
+            push_colors = true;
         }
         if self.c_transparent && !glyph.transparent {
             self.c_transparent = false;
+            push_colors = true;
             modifier.push_str("28;");
         } else if !self.c_transparent && glyph.transparent {
             self.c_transparent = true;
             modifier.push_str("8;");
+            push_colors = true;
         }
         if self.c_strike && !glyph.strike {
             self.c_strike = false;
             modifier.push_str("29;");
+            push_colors = true;
         } else if !self.c_strike && glyph.strike {
             self.c_strike = true;
             modifier.push_str("9;");
+            push_colors = true;
         }
-        if self.c_color != glyph.color {
+        if self.c_color != glyph.color || push_colors {
             match glyph.color {
                 Color::Basic(color) => modifier.push_str(&format!("3{};", color as u8)),
                 Color::EightBit(color) => modifier.push_str(&format!("38;5;{};", color)),
@@ -721,7 +762,7 @@ impl Screen {
             }
             self.c_color = glyph.color;
         };
-        if self.c_background != glyph.background {
+        if self.c_background != glyph.background || push_colors {
             //modifier.push_str(&format!("4{}", glyph.background as u8));
             match glyph.background {
                 Color::Basic(color) => modifier.push_str(&format!("4{}", color as u8)),
@@ -734,6 +775,24 @@ impl Screen {
 
             self.c_background = glyph.background;
         };
+        self.chars_sent += modifier.len();
+        if self.chars_sent >= self.chars_refresh {
+            self.chars_sent = 0;
+            set_plain_on_exit = true;
+        }
+        if set_plain_on_exit {
+            self.c_bright = true;
+            self.c_dim = true;
+            self.c_italic = true;
+            self.c_underline = true;
+            self.c_blink = true;
+            self.c_blink_fast = true;
+            self.c_reverse = true;
+            self.c_transparent = true;
+            self.c_strike = true;
+            self.c_color = Color::white();
+            self.c_background = Color::black();
+        }
         modifier
     }
 
@@ -750,27 +809,31 @@ impl Screen {
         if !glyph.bright {
             if self.c_bright {
                 self.c_bright = false;
+                modifier.push_str("22;");
             }
-            // modifier.push_str("01;");
         } else {
-            //if !self.c_bright {
-            self.c_bright = true;
-            self.c_dim = false;
-            modifier.push_str("1;");
-            //}
+            if self.c_dim {
+                self.c_dim = false;
+            }
+            if !self.c_bright {
+                self.c_bright = true;
+                modifier.push_str("1;");
+            }
         }
         if !glyph.dim {
             if self.c_dim {
                 self.c_dim = false;
-                //modifier.push_str("2;");
+                modifier.push_str("22;");
             }
-            // modifier.push_str("01;");
         } else {
-            //if !self.c_dim {
-            self.c_dim = true;
-            self.c_bright = false;
-            modifier.push_str("2;");
-            //}
+            if self.c_bright {
+                self.c_bright = false;
+            }
+            if !self.c_dim {
+                // println!("<1234");
+                self.c_dim = true;
+                modifier.push_str("2;");
+            }
         }
         if !self.c_dim && !self.c_bright {
             modifier.push_str("22;");
@@ -830,9 +893,6 @@ impl Screen {
                 modifier.push_str(&format!("38;2;{};{};{};", red, green, blue))
             }
         }
-        //self.c_color = glyph.color;
-        //if self.c_background != glyph.background {
-        //modifier.push_str(&format!("4{}", glyph.background as u8));
         match glyph.background {
             Color::Basic(color) => modifier.push_str(&format!("4{}", color as u8)),
             Color::EightBit(color) => modifier.push_str(&format!("48;5;{}", color)),
@@ -842,8 +902,6 @@ impl Screen {
             }
         }
 
-        //self.c_background = glyph.background;
-        //};
         modifier
     }
 

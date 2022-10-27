@@ -8,6 +8,7 @@ use super::key::Key;
 use super::response::AnimOk::{self, *};
 use super::screen::Screen;
 use super::Timestamp;
+use std::cmp::max;
 use std::io;
 use std::io::Read;
 use std::mem::replace;
@@ -20,6 +21,7 @@ use std::time::Duration;
 pub enum Message {
     Finish,
     EmptyFrame(usize),
+    ClearArea(usize, (usize, usize), (usize, usize)),
     CloneFrame(usize, Option<usize>),
     AddAnimation(usize, Animation),
     StartAnimation(usize, usize),
@@ -216,6 +218,11 @@ impl Manager {
                                     eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send FailAddingFrame message")
                                 }
                             };
+                        }
+                        Message::ClearArea(layer, offset, size) => {
+                            let start_x: usize = max(0, offset.0) as usize;
+                            let start_y: usize = max(0, offset.1) as usize;
+                            screen.cla(layer, start_x, start_y, size.0, size.1);
                         }
                         Message::CloneFrame(gid, fid) => {
                             let result = screen.clone_frame(gid, fid);
@@ -497,6 +504,16 @@ impl Manager {
         };
     }
 
+    /// Clear an area on selected layer
+    pub fn clear_area(&self, layer: usize, start: (usize, usize), size: (usize, usize)) {
+        if self
+            .sender
+            .send(Message::ClearArea(layer, start, size))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send ClearArea message")
+        };
+    }
     /// Make a graphic invisible.
     pub fn set_invisible(&self, gid: usize, invisible: bool) {
         if self

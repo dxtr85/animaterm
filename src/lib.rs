@@ -248,6 +248,8 @@ mod display;
 mod glyphcake;
 mod helpers;
 mod key;
+pub use key::str_to_key;
+pub use key::Key;
 mod tests;
 pub mod utilities;
 pub use display::Display;

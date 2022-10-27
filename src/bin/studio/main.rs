@@ -1,24 +1,66 @@
 use animaterm::prelude::*;
 use animaterm::utilities::progress_bar;
+use std::cmp::max;
 use std::default::Default;
 use std::fs::rename;
 use std::path::Path;
 use std::process::exit;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 mod helpers;
 use helpers::{
     build_basic_colors_graphic, build_color_selector, build_glyph_matrix, build_glyph_selector,
     build_selector, build_style_graphics, build_workspace_matrix,
 };
 mod arguments;
-use arguments::{parse_arguments, verify_cols_and_rows};
+use arguments::{parse_arguments, read_config_file, verify_cols_and_rows};
 mod style_window;
 use style_window::StyleWindow;
 mod colors_window;
 use colors_window::ColorsWindow;
 
 fn main() {
-    let args = parse_arguments();
+    let mut args = parse_arguments();
+    if let Some(conf_file) = args.config_file.clone() {
+        let cl_args = args;
+        args = read_config_file(&conf_file);
+        if cl_args.rows.is_some() {
+            args.rows = cl_args.rows;
+        }
+        if cl_args.cols.is_some() {
+            args.cols = cl_args.cols;
+        }
+        if cl_args.colors_offset.is_some() {
+            args.colors_offset = cl_args.colors_offset;
+        }
+        if cl_args.backgrounds_offset.is_some() {
+            args.backgrounds_offset = cl_args.backgrounds_offset;
+        }
+        if cl_args.styles_offset.is_some() {
+            args.styles_offset = cl_args.styles_offset;
+        }
+        if cl_args.styles_offset.is_some() {
+            args.styles_offset = cl_args.styles_offset;
+        }
+        if cl_args.glyphs_offset.is_some() {
+            args.glyphs_offset = cl_args.glyphs_offset;
+        }
+        if cl_args.workspace_offset.is_some() {
+            args.workspace_offset = cl_args.workspace_offset;
+        }
+        if cl_args.workspace_size.is_some() {
+            args.workspace_size = cl_args.workspace_size;
+        }
+        if cl_args.input_file.is_some() {
+            args.input_file = cl_args.input_file;
+        }
+        if cl_args.output_file.is_some() {
+            args.output_file = cl_args.output_file;
+        }
+        if cl_args.glyphs.is_some() {
+            args.glyphs = cl_args.glyphs;
+        }
+    }
+
     let cols = args.cols;
     let rows = args.rows;
     verify_cols_and_rows(cols, rows);
@@ -42,7 +84,8 @@ fn main() {
         glyphs_offset = user_offset;
     }
     let selector_id;
-    let result = mgr.add_graphic(build_selector(), 2, glyphs_offset);
+    let selector_layer = 2;
+    let result = mgr.add_graphic(build_selector(), selector_layer, glyphs_offset);
     if let Some(id) = result {
         selector_id = id;
     } else {
@@ -705,8 +748,8 @@ fn main() {
 
     let mut c = 1; // worskpace column where cursor is placed
     let mut r = 1; // worskpace row where cursor is placed
-    let mut mc = 0; // glyph matrix column where selector is placed
-    let mut mr = 0; // glyph matrix row where selector is placed
+    let mut mc: usize = 0; // glyph matrix column where selector is placed
+    let mut mr: usize = 0; // glyph matrix row where selector is placed
 
     let mut glyph_under_cursor = Glyph::default();
     mgr.get_glyph(workspace_id, c, r);
@@ -735,71 +778,71 @@ fn main() {
         if let Some(key) = mgr.read_key() {
             match key {
                 // Colors window
-                Key::ShiftLeft => {
+                k if args.bindings.colors_left.contains(&k) => {
                     colors_window.move_left(false);
                 }
-                Key::ShiftRight => {
+                k if args.bindings.colors_right.contains(&k) => {
                     colors_window.move_right(false);
                 }
-                Key::CtrlShiftRight => {
+                k if args.bindings.colors_far_right.contains(&k) => {
                     colors_window.move_far_right(false);
                 }
-                Key::CtrlShiftLeft => {
+                k if args.bindings.colors_far_left.contains(&k) => {
                     colors_window.move_far_left(false);
                 }
-                Key::ShiftUp => {
+                k if args.bindings.colors_up.contains(&k) => {
                     colors_window.move_up();
                 }
-                Key::CtrlShiftUp => {
+                k if args.bindings.colors_top.contains(&k) => {
                     colors_window.move_top();
                 }
-                Key::ShiftDown => {
+                k if args.bindings.colors_down.contains(&k) => {
                     colors_window.move_down();
                 }
-                Key::CtrlShiftDown => {
+                k if args.bindings.colors_bottom.contains(&k) => {
                     colors_window.move_bottom();
                 }
-                Key::I => {
+                k if args.bindings.colors_invisible.contains(&k) => {
                     colors_window.set_invisible(true);
                 }
-                Key::ShiftI => {
+                k if args.bindings.colors_visible.contains(&k) => {
                     colors_window.set_invisible(false);
                 }
 
                 // Background window
-                Key::AltLeft => {
+                k if args.bindings.backgrounds_left.contains(&k) => {
                     backgrounds_window.move_left(true);
                 }
-                Key::AltRight => {
+                k if args.bindings.backgrounds_right.contains(&k) => {
                     backgrounds_window.move_right(true);
                 }
-                Key::AltCtrlLeft => {
+                k if args.bindings.backgrounds_far_left.contains(&k) => {
                     backgrounds_window.move_far_left(true);
                 }
-                Key::AltCtrlRight => {
+                k if args.bindings.backgrounds_far_right.contains(&k) => {
                     backgrounds_window.move_far_right(true);
                 }
-                Key::AltUp => {
+                k if args.bindings.backgrounds_up.contains(&k) => {
                     backgrounds_window.move_up();
                 }
-                Key::AltCtrlUp => {
+                k if args.bindings.backgrounds_top.contains(&k) => {
                     backgrounds_window.move_top();
                 }
-                Key::AltDown => {
+                k if args.bindings.backgrounds_down.contains(&k) => {
                     backgrounds_window.move_down();
                 }
-                Key::AltCtrlDown => {
+                k if args.bindings.backgrounds_bottom.contains(&k) => {
                     backgrounds_window.move_bottom();
                 }
-                Key::AltI => {
+                k if args.bindings.backgrounds_invisible.contains(&k) => {
                     backgrounds_window.set_invisible(true);
                 }
-                Key::AltShiftI => {
+                k if args.bindings.backgrounds_visible.contains(&k) => {
                     backgrounds_window.set_invisible(false);
                 }
 
                 //Glyphs window
-                Key::CtrlLeft => {
+                k if args.bindings.glyphs_left.contains(&k) => {
                     if mc > 0 {
                         mc -= 1;
                         mgr.move_graphic(selector_id, 2, (-1, 0))
@@ -810,18 +853,21 @@ fn main() {
                 }
 
                 // glyphs
-                Key::CtrlRight => {
+                k if args.bindings.glyphs_right.contains(&k) => {
                     if mc < 15 {
                         mc += 1;
                         mgr.move_graphic(selector_id, 2, (1, 0));
                     } else {
                         mgr.move_graphic(selector_id, 2, (-15, 0));
+                        let start_x = max(0, glyphs_offset.0) as usize + mc;
+                        let start_y = max(0, glyphs_offset.1) as usize + mr;
+                        mgr.clear_area(selector_layer, (start_x, start_y), (2, 3));
                         mc = 0;
                     }
                 }
 
                 // glyphs
-                Key::CtrlUp => {
+                k if args.bindings.glyphs_up.contains(&k) => {
                     if mr > 0 {
                         mr -= 1;
                         mgr.move_graphic(selector_id, 2, (0, -1))
@@ -832,18 +878,25 @@ fn main() {
                 }
 
                 //glyphs
-                Key::CtrlDown => {
+                k if args.bindings.glyphs_down.contains(&k) => {
                     if mr < 9 {
                         mr += 1;
                         mgr.move_graphic(selector_id, 2, (0, 1))
                     } else {
                         mgr.move_graphic(selector_id, 2, (0, mr as isize * (-1)));
+                        let start_x = max(0, glyphs_offset.0) as usize + mc;
+                        let start_y = max(0, glyphs_offset.1) as usize + mr;
+                        mgr.clear_area(
+                            selector_layer,
+                            (start_x as usize, start_y as usize),
+                            (2, 3),
+                        );
                         mr = 0;
                     }
                 }
 
                 //glyphs
-                Key::Space => {
+                k if args.bindings.glyphs_select.contains(&k) => {
                     mgr.start_animation(selector_id, 1);
                     mgr.enqueue_animation(selector_id, 0, Timestamp::now());
 
@@ -870,7 +923,7 @@ fn main() {
                 }
 
                 //glyphs
-                Key::PgUp => {
+                k if args.bindings.glyphs_prev.contains(&k) => {
                     if glyph_frame_id == 0 {
                         glyph_frame_id = max_glyph_frame_id;
                     } else {
@@ -879,12 +932,12 @@ fn main() {
                     mgr.set_graphic(glyph_matrix_id, glyph_frame_id, true)
                 }
                 //glyphs
-                Key::Home => {
+                k if args.bindings.glyphs_home.contains(&k) => {
                     glyph_frame_id = 0;
                     mgr.set_graphic(glyph_matrix_id, glyph_frame_id, true);
                 }
                 //glyphs
-                Key::PgDn => {
+                k if args.bindings.glyphs_next.contains(&k) => {
                     if glyph_frame_id == max_glyph_frame_id {
                         glyph_frame_id = 0;
                     } else {
@@ -893,13 +946,13 @@ fn main() {
                     mgr.set_graphic(glyph_matrix_id, glyph_frame_id, true)
                 }
                 //glyphs
-                Key::End => {
+                k if args.bindings.glyphs_end.contains(&k) => {
                     glyph_frame_id = max_glyph_frame_id;
                     mgr.set_graphic(glyph_matrix_id, glyph_frame_id, true);
                 }
 
                 // workspace window
-                Key::Left | Key::CtrlB | Key::H => {
+                k if args.bindings.workspace_left.contains(&k) => {
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
                     if c > 1 {
                         c -= 1;
@@ -918,7 +971,7 @@ fn main() {
                     }
                     mgr.set_glyph(workspace_id, g, c, r);
                 }
-                Key::CtrlA => {
+                k if args.bindings.workspace_line_start.contains(&k) => {
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
                     c = 1;
                     mgr.get_glyph(workspace_id, c, r);
@@ -929,7 +982,7 @@ fn main() {
                     mgr.set_glyph(workspace_id, g, c, r);
                 }
 
-                Key::CtrlE => {
+                k if args.bindings.workspace_line_end.contains(&k) => {
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
                     c = matrix_cols;
                     mgr.get_glyph(workspace_id, c, r);
@@ -941,7 +994,7 @@ fn main() {
                 }
 
                 // workspace window
-                Key::Right | Key::CtrlF | Key::L => {
+                k if args.bindings.workspace_right.contains(&k) => {
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
                     if c < matrix_cols {
                         c += 1;
@@ -962,13 +1015,13 @@ fn main() {
                 }
 
                 //workspace window
-                Key::C => {
+                k if args.bindings.workspace_select_color.contains(&k) => {
                     colors_window.select_color(glyph_under_cursor.color, false);
                 }
-                Key::B => {
+                k if args.bindings.workspace_select_background.contains(&k) => {
                     backgrounds_window.select_color(glyph_under_cursor.background, true);
                 }
-                Key::G => {
+                k if args.bindings.workspace_select_glyph.contains(&k) => {
                     'break_point: for c in 1..17 {
                         for r in 0..10 {
                             mgr.get_glyph(glyph_matrix_id, c, r);
@@ -988,7 +1041,7 @@ fn main() {
                 }
 
                 //workspace window
-                Key::Up | Key::CtrlP | Key::K => {
+                k if args.bindings.workspace_up.contains(&k) => {
                     // workspace_window.move_cursor_up();
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
                     if r > 1 {
@@ -1005,7 +1058,7 @@ fn main() {
                 }
 
                 // workspace window
-                Key::Down | Key::CtrlN | Key::J => {
+                k if args.bindings.workspace_down.contains(&k) => {
                     // workspace_window.move_cursor_down(glyph_under_cursor);
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
                     if r < matrix_rows {
@@ -1022,7 +1075,7 @@ fn main() {
                 }
 
                 // workspace window
-                Key::Backspace | Key::Delete => {
+                k if args.bindings.workspace_erase.contains(&k) => {
                     // workspace_window.erase_glyph();
                     mgr.set_glyph(workspace_id, Glyph::default(), c, r);
                     if c > 1 {
@@ -1037,34 +1090,33 @@ fn main() {
                     }
                     mgr.set_glyph(workspace_id, g, c, r);
                 }
-                Key::AltCtrlShiftUp => {
-                    println!("move up!");
-                }
-                Key::AltCtrlShiftDown => {}
-                Key::AltCtrlShiftLeft => {}
-                Key::AltCtrlShiftRight => {}
+                // Key::AltCtrlShiftUp => {
+                //     // println!("move up!");
+                // }
+                // Key::AltCtrlShiftDown => {}
+                // Key::AltCtrlShiftLeft => {}
+                // Key::AltCtrlShiftRight => {}
 
                 // style window
-                Key::AltShiftDown | Key::AltShiftJ => {
+                k if args.bindings.style_up.contains(&k) => {
+                    style_window.move_selector_up();
+                }
+                k if args.bindings.style_down.contains(&k) => {
                     style_window.move_selector_down();
+                }
+                k if args.bindings.style_enable.contains(&k) => {
+                    style_window.enable_selected_style();
+                }
+                k if args.bindings.style_disable.contains(&k) => {
+                    style_window.disable_selected_style();
                 }
                 // Key::AltCtrlShiftDown => {
                 //    style_window.move_selector_bottom();
                 // }
-                Key::AltShiftUp | Key::AltShiftK => {
-                    style_window.move_selector_up();
-                }
                 // Key::AltCtrlShiftUp => {
                 //     style_window.move_selector_top();
                 // }
-                Key::AltShiftLeft | Key::AltShiftH => {
-                    style_window.disable_selected_style();
-                }
-                Key::AltShiftRight | Key::AltShiftL => {
-                    style_window.enable_selected_style();
-                }
-
-                Key::AltP => {
+                k if args.bindings.print_graphic.contains(&k) => {
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
                     // mgr.print_screen_section(
                     //     (workspace_offset.0 + 1, workspace_offset.1 + 1),
@@ -1077,12 +1129,17 @@ fn main() {
                     if let Ok(AnimOk::PrintScreen(print_screen_text)) = result {
                         use std::fs::OpenOptions;
                         use std::io::Write;
+                        let secs = SystemTime::now()
+                            .duration_since(UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs();
+                        let filename = format!("print_graphic_{}.txf", secs);
 
                         let mut f = OpenOptions::new()
                             .create(true)
                             .write(true)
                             .append(false)
-                            .open("frame.prnt")
+                            .open(filename)
                             .expect("Unable to create file");
 
                         for line in print_screen_text.iter() {
@@ -1098,7 +1155,7 @@ fn main() {
                         //     f.write_all(fmted.as_bytes()).expect("Unable to write data");
                     }
                 }
-                Key::AltCtrlP => {
+                k if args.bindings.print_screen.contains(&k) => {
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
                     mgr.print_screen();
                     mgr.set_glyph(workspace_id, g, c, r);
@@ -1106,12 +1163,17 @@ fn main() {
                     if let Ok(AnimOk::PrintScreen(print_screen_text)) = result {
                         use std::fs::OpenOptions;
                         use std::io::Write;
+                        let secs = SystemTime::now()
+                            .duration_since(UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs();
+                        let filename = format!("print_screen_{}.txf", secs);
 
                         let mut f = OpenOptions::new()
                             .create(true)
                             .write(true)
                             .append(false)
-                            .open("screen.prnt")
+                            .open(filename)
                             .expect("Unable to create file");
 
                         for line in print_screen_text.iter() {
@@ -1128,7 +1190,7 @@ fn main() {
                     }
                 }
                 // exit program
-                Key::Escape | Key::ShiftQ | Key::CtrlQ => {
+                k if args.bindings.exit.contains(&k) => {
                     if let Some(output_file) = args.output_file {
                         mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
                         mgr.print_graphic(workspace_id, true);
@@ -1183,6 +1245,7 @@ fn main() {
                 }
 
                 _ => {
+                    println!("You pressed {}", key);
                     continue;
                 }
             }

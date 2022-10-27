@@ -1,0 +1,113 @@
+# Lines starting with # are comments and are ignored.
+# Uncomment a line if you want to modify given setting with your value.
+
+# rows and cols define screen size.
+# If not defined, max available values are used.
+#
+# rows 40
+# cols 120
+
+# Following offset settings define where on screen GUI elements should be placed,
+# starting from (0, 0) in top left corner.
+#
+# colors_offset 18x6
+# backgrounds_offset 18x0
+# styles_offset 0x0
+# glyphs_offset 0x0
+# workspace_offset 0x0
+
+# Defines the size of a frame you are about to create
+#
+workspace_size 30x20
+
+# Read initial data into workspace from given text file
+#
+# input_file path-to-frame-file
+
+# Write created frame to provided file name
+#
+# output_file path-to-result
+
+# Read glyph definitions from file
+# Glyph index file is a simple text file. 
+# Each line is a path to actual file with glyph definitions
+# Actual file with glyph definitions have following format:
+# 65+5,77,78
+# Above line defines seven glyphs 65, 66, 67, 68, 69, 77, 78.
+# Values are decimal representations of Unicode characters.
+# In each file only first 10 non-comment lines are read, 
+# with up to 16 glyphs from each line.
+#
+# glyphs path-to-glyphs-index-file
+
+# You can also define your own key bindings for user interface.
+# Key definitions in this file should match Key enum in key.rs file.
+# In general they follow this format:
+# [Alt][Ctrl][Shift]<some capital letter or symbol>
+# There are some exceptions like Enter (CtrlJ does not exist), 
+# Backspace (CtrlH does not exist either) etc.
+
+
+# Define keys for font color selection box
+#
+# colors_left ShiftLeft ShiftH
+# colors_right ShiftRight ShiftL
+# colors_far_right CtrlShiftRight
+# colors_far_left CtrlShiftLeft
+# colors_top CtrlShiftUp
+# colors_up ShiftUp ShiftK
+# colors_down ShiftDown ShiftJ
+# colors_bottom CtrlShiftDown
+# colors_invisible I
+# colors_visible ShiftI
+
+# Define keys for background selection box
+#
+# backgrounds_left AltLeft AltH
+# backgrounds_right AltRight AltL
+# backgrounds_far_right AltCtrlRight
+# backgrounds_far_left AltCtrlLeft
+# backgrounds_top AltCtrlUp
+# backgrounds_up AltUp AltK
+# backgrounds_down AltDown AltJ
+# backgrounds_bottom AltCtrlDown
+# backgrounds_invisible AltI
+# backgrounds_visible AltShiftI
+
+# Define keys for glyph selection box
+#
+ glyphs_left CtrlLeft Backspace
+ glyphs_right CtrlRight CtrlL
+ glyphs_up CtrlUp CtrlK
+ glyphs_down CtrlDown Enter
+ glyphs_select Space
+ glyphs_prev PgUp
+ glyphs_next PgDn
+ glyphs_home Home
+ glyphs_end End
+
+# Define keys for cursor movement in workspace box
+#
+ workspace_left Left CtrlB H
+ workspace_right Right CtrlF L
+ workspace_up Up CtrlP K
+ workspace_down Down CtrlN J
+ workspace_line_start CtrlA
+ workspace_line_end CtrlE
+ workspace_select_color C
+ workspace_select_background B
+ workspace_select_glyph G
+ workspace_erase Delete
+
+# Define keys for style selection box
+#
+# style_up AltShiftUp AltShiftK
+# style_down AltShiftDown AltShiftJ
+# style_enable AltShiftRight AltShiftL
+# style_disable AltShiftLeft AltShiftH
+
+# Define keys for global functions like print screen and exit
+#
+ print_graphic AltP
+ print_screen AltCtrlP
+ exit Escape ShiftQ CtrlQ
