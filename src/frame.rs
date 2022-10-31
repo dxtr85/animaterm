@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
 
+/// Read a frame from file.
 pub fn from_file<P>(filename: &P) -> Option<(usize, Vec<Glyph>)>
 where
     P: AsRef<Path>,

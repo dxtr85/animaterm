@@ -44,7 +44,7 @@ pub struct Screen {
     c_background: Color,
     c_x: usize,
     c_y: usize,
-    c_plain: bool,
+    // c_plain: bool,
     c_bright: bool,
     c_dim: bool,
     c_italic: bool,
@@ -59,6 +59,7 @@ pub struct Screen {
 }
 
 impl Screen {
+    /// Create a new Screen instance with given dimentions and fills it with provided glyph.
     pub fn new(cols: Option<usize>, rows: Option<usize>, glyph: Option<Glyph>) -> Self {
         let (new_rows, new_cols) = ask_os_for_rows_and_cols();
         let final_rows = if rows.is_none() {
@@ -101,7 +102,7 @@ impl Screen {
             c_background: dglyph.background,
             c_x,
             c_y,
-            c_plain: dglyph.plain,
+            // c_plain: dglyph.plain,
             c_bright: dglyph.bright,
             c_dim: dglyph.dim,
             c_italic: dglyph.italic,
@@ -116,6 +117,7 @@ impl Screen {
         }
     }
 
+    /// Swap current display with a new one. If required old display can be stored for later use.
     pub fn new_display(&mut self, display_id: usize, keep_existing: bool) -> usize {
         let new_display = Display::new(display_id, Glyph::default(), self.cols, self.rows);
         //let mut return_id = None;
@@ -128,10 +130,11 @@ impl Screen {
             //return_id = Some(self.shelve_id);
             self.shelve_id += 1;
         }
-        self.cls();
+        self.clear_screen();
         display_id
     }
 
+    /// Restore an old display, keep existing one if needed.
     pub fn restore_display(&mut self, display_id: usize, keep_existing: bool) -> Option<usize> {
         let mut return_id = None;
         if let Some((shelved_display, shelved_graphics)) = self.shelve.remove(&display_id) {
@@ -149,32 +152,25 @@ impl Screen {
         return_id
     }
 
-    pub fn add_graphic(&mut self, g: Graphic, layer: usize, offset: (isize, isize)) -> usize {
-        let graph_id = self.next_available_id;
+    /// Add a new graphic to screen's current display.
+    pub fn add_graphic(&mut self, graphic: Graphic, layer: usize, offset: (isize, isize)) -> usize {
+        let graphic_id = self.next_available_id;
         self.next_available_id += 1;
-        self.graphics.insert(graph_id, (g, layer, offset));
-        graph_id
+        self.graphics.insert(graphic_id, (graphic, layer, offset));
+        graphic_id
     }
 
-    pub fn move_graphic(&mut self, gid: usize, layer: usize, offset: (isize, isize)) {
+    /// Move a graphic to new layer and/or screen offset.
+    pub fn move_graphic(&mut self, graphic_id: usize, layer: usize, offset: (isize, isize)) {
         let mut cl_args = Vec::new();
         let mut new_offset = None;
         let mut frame_id = None;
-        if let Some(current_state) = self.graphics.get_mut(&gid) {
+        if let Some(current_state) = self.graphics.get_mut(&graphic_id) {
             frame_id = Some(current_state.0.current_frame);
             let delta_zero = current_state.2 .0 + offset.0;
             let delta_one = current_state.2 .1 + offset.1;
-            // let delta_zero = if offset.0 < 0 {
-            //     (current_state.2 .0).saturating_sub((offset.0).unsigned_abs() as usize)
-            // } else {
-            //     (current_state.2 .0) + (offset.0 as usize)
-            // };
-            // let delta_one = if offset.1 < 0 {
-            //     (current_state.2 .1).saturating_sub((offset.1).unsigned_abs() as usize)
-            // } else {
-            //     (current_state.2 .1) + (offset.1 as usize)
-            // };
             new_offset = Some((delta_zero, delta_one));
+
             // Layer has changed
             if current_state.1 != layer {
                 cl_args.push((
@@ -185,6 +181,7 @@ impl Screen {
                     current_state.0.rows,
                 ));
             }
+
             // Move left
             if offset.0 < 0 {
                 cl_args.push((
@@ -194,6 +191,7 @@ impl Screen {
                     (offset.0).abs() as usize - 1,
                     current_state.0.rows,
                 ));
+
                 // Move right
             } else if offset.0 > 0 && current_state.2 .0 + offset.0 > 0 {
                 cl_args.push((
@@ -204,6 +202,7 @@ impl Screen {
                     current_state.0.rows,
                 ));
             }
+
             // Move up
             if offset.1 < 0 {
                 cl_args.push((
@@ -225,16 +224,16 @@ impl Screen {
             }
         }
         for c in cl_args {
-            self.cla(c.0, c.1, c.2, c.3, c.4);
+            self.clear_area(c.0, c.1, c.2, c.3, c.4);
         }
         if let Some(no) = new_offset {
-            self.update_graphics_layer(gid, layer);
-            self.update_graphics_offset(gid, no);
+            self.update_graphics_layer(graphic_id, layer);
+            self.update_graphics_offset(graphic_id, no);
         }
         if let Some(fid) = frame_id {
-            self.set_graphic((&gid, &fid), false);
-            if let Some((graphic, layer, offset)) = self.graphics.get(&gid) {
-                let pixels = graphic.get(*offset);
+            self.set_graphic(&graphic_id, &fid, false);
+            if let Some((graphic, layer, offset)) = self.graphics.get(&graphic_id) {
+                let pixels = graphic.get_pixels(*offset);
                 self.update(vec![(pixels, *layer)]);
             }
         }
@@ -242,31 +241,35 @@ impl Screen {
         self.print_all(to_print);
     }
 
-    pub fn delete_graphic(&mut self, id: &usize) {
+    /// Delete a graphic from display.
+    pub fn delete_graphic(&mut self, graphic_id: &usize) {
         let mut clear_info = None;
-        if let Some((graphic, layer, offset)) = self.graphics.get_mut(id) {
+        if let Some((graphic, layer, offset)) = self.graphics.get_mut(graphic_id) {
             clear_info = Some((*layer, offset.0, offset.1, graphic.cols, graphic.rows));
         }
         if let Some(c) = clear_info {
-            self.cla(c.0, max(c.1, 0) as usize, max(c.2, 0) as usize, c.3, c.4);
+            self.clear_area(c.0, max(c.1, 0) as usize, max(c.2, 0) as usize, c.3, c.4);
         }
     }
 
-    pub fn set_graphic(&mut self, ids: (&usize, &usize), force: bool) {
+    /// Set a graphic to given frame.
+    pub fn set_graphic(&mut self, graphic_id: &usize, frame_id: &usize, force: bool) {
         let mut results = Vec::new();
-        if let Some((graphic, layer, offset)) = self.graphics.get_mut(ids.0) {
-            results.push((graphic.set_frame(ids.1, *offset, force), *layer));
+        if let Some((graphic, layer, offset)) = self.graphics.get_mut(graphic_id) {
+            results.push((graphic.set_frame(frame_id, *offset, force), *layer));
         }
         self.update(results);
         let to_print = self.refresh(force);
         self.print_all(to_print);
     }
 
+    /// Get a vector of strings representing current display's contents. Each string represents a line.
     pub fn print_screen(&mut self) -> Vec<String> {
         let to_print = self.refresh(true);
         self.get_text(to_print)
     }
 
+    /// Get a vector of strings representing selected area of a display.
     pub fn print_screen_section(
         &mut self,
         offset: (usize, usize),
@@ -288,10 +291,11 @@ impl Screen {
         self.get_text(to_print)
     }
 
-    pub fn print_graphic(&mut self, gid: usize, skip_border: bool) -> Vec<String> {
+    /// Get a vector of strings representing given graphic.
+    pub fn print_graphic(&mut self, graphic_id: usize, skip_border: bool) -> Vec<String> {
         let mut to_print = Vec::new();
-        if let Some((graphic, _layer, _offset)) = self.graphics.get(&gid) {
-            let mut pixels = graphic.get((0, 0));
+        if let Some((graphic, _layer, _offset)) = self.graphics.get(&graphic_id) {
+            let mut pixels = graphic.get_pixels((0, 0));
             if skip_border {
                 let max_c = graphic.cols - 1;
                 let max_r = graphic.rows;
@@ -307,9 +311,10 @@ impl Screen {
         self.get_text(to_print)
     }
 
-    pub fn set_graphic_color(&mut self, gid: usize, color: Color) {
+    /// Set all glyphs of graphic's frame to given color.
+    pub fn set_graphic_color(&mut self, graphic_id: usize, color: Color) {
         let mut results = Vec::new();
-        if let Some((graphic, layer, offset)) = self.graphics.get_mut(&gid) {
+        if let Some((graphic, layer, offset)) = self.graphics.get_mut(&graphic_id) {
             graphic.set_current_frame_color(color);
             let curr_frame = graphic.current_frame;
             results.push((graphic.set_frame(&curr_frame, *offset, true), *layer));
@@ -319,9 +324,10 @@ impl Screen {
         self.print_all(to_print);
     }
 
-    pub fn set_graphic_background(&mut self, gid: usize, color: Color) {
+    /// Set all glyphs of graphic's frame to given background color.
+    pub fn set_graphic_background(&mut self, graphic_id: usize, color: Color) {
         let mut results = Vec::new();
-        if let Some((graphic, layer, offset)) = self.graphics.get_mut(&gid) {
+        if let Some((graphic, layer, offset)) = self.graphics.get_mut(&graphic_id) {
             graphic.set_current_frame_background(color);
             let curr_frame = graphic.current_frame;
             results.push((graphic.set_frame(&curr_frame, *offset, true), *layer));
@@ -331,9 +337,10 @@ impl Screen {
         self.print_all(to_print);
     }
 
-    pub fn set_graphic_style(&mut self, gid: usize, style: Glyph) {
+    /// Set all glyphs of graphic's frame to given style.
+    pub fn set_graphic_style(&mut self, graphic_id: usize, style: Glyph) {
         let mut results = Vec::new();
-        if let Some((graphic, layer, offset)) = self.graphics.get_mut(&gid) {
+        if let Some((graphic, layer, offset)) = self.graphics.get_mut(&graphic_id) {
             graphic.set_current_frame_style(style);
             let curr_frame = graphic.current_frame;
             results.push((graphic.set_frame(&curr_frame, *offset, true), *layer));
@@ -343,73 +350,85 @@ impl Screen {
         self.print_all(to_print);
     }
 
-    pub fn set_invisible(&mut self, gid: usize, invisible: bool) {
-        if let Some((mut graphic, layer, offset)) = self.graphics.remove(&gid) {
+    /// Set visibility for given graphic.
+    pub fn set_invisible(&mut self, graphic_id: usize, invisible: bool) {
+        if let Some((mut graphic, layer, offset)) = self.graphics.remove(&graphic_id) {
             let pixels = graphic.set_invisible(invisible, offset);
             let fid = graphic.current_frame;
-            self.graphics.insert(gid, (graphic, layer, offset));
-            self.set_graphic((&gid, &fid), false);
+            self.graphics.insert(graphic_id, (graphic, layer, offset));
+            self.set_graphic(&graphic_id, &fid, false);
             self.update(vec![(pixels, layer)]);
             let to_print = self.refresh(false);
             self.print_all(to_print);
         }
     }
-    pub fn set_glyph(&mut self, gid: usize, glyph: Glyph, col: usize, row: usize) {
-        if let Some((mut graphic, layer, offset)) = self.graphics.remove(&gid) {
+
+    /// Set one particular glyph of current graphic's frame to given value.
+    pub fn set_glyph(&mut self, graphic_id: usize, glyph: Glyph, col: usize, row: usize) {
+        if let Some((mut graphic, layer, offset)) = self.graphics.remove(&graphic_id) {
             let pixel = graphic.set_glyph(glyph, col, row, offset);
             let fid = graphic.current_frame;
-            self.graphics.insert(gid, (graphic, layer, offset));
-            self.set_graphic((&gid, &fid), false);
+            self.graphics.insert(graphic_id, (graphic, layer, offset));
+            self.set_graphic(&graphic_id, &fid, false);
             self.update(vec![(pixel, layer)]);
             let to_print = self.refresh(false);
             self.print_all(to_print);
         }
     }
 
-    pub fn get_glyph(&mut self, gid: usize, col: usize, row: usize) -> Option<Glyph> {
-        if let Some((gr, _l, _o)) = self.graphics.get(&gid) {
+    /// Get a glyph from a graphic located by given coordinates.
+    pub fn get_glyph(&mut self, graphic_id: usize, col: usize, row: usize) -> Option<Glyph> {
+        if let Some((gr, _l, _o)) = self.graphics.get(&graphic_id) {
             return gr.get_glyph(col, row);
         }
         None
     }
-    pub fn empty_frame(&mut self, gid: usize) -> Option<usize> {
-        if let Some((mut graphic, layer, offset)) = self.graphics.remove(&gid) {
+
+    /// Insert an empty frame to a graphic.
+    pub fn empty_frame(&mut self, graphic_id: usize) -> Option<usize> {
+        if let Some((mut graphic, layer, offset)) = self.graphics.remove(&graphic_id) {
             let result = graphic.empty_frame();
-            self.graphics.insert(gid, (graphic, layer, offset));
+            self.graphics.insert(graphic_id, (graphic, layer, offset));
             if result.is_some() {
-                self.set_graphic((&gid, &result.unwrap()), true);
+                self.set_graphic(&graphic_id, &result.unwrap(), true);
             }
             return result;
         }
         None
     }
 
-    pub fn clone_frame(&mut self, gid: usize, frame_id: Option<usize>) -> Option<usize> {
-        if let Some((mut graphic, layer, offset)) = self.graphics.remove(&gid) {
+    /// Insert a new frame for given graphic cloned from requested frame (or current frame if None provided).
+    pub fn clone_frame(&mut self, graphic_id: usize, frame_id: Option<usize>) -> Option<usize> {
+        if let Some((mut graphic, layer, offset)) = self.graphics.remove(&graphic_id) {
             let mut fr_id = graphic.current_frame;
             if let Some(id) = frame_id {
                 fr_id = id;
             }
             let result = graphic.clone_frame(fr_id);
-            self.graphics.insert(gid, (graphic, layer, offset));
+            self.graphics.insert(graphic_id, (graphic, layer, offset));
             if result.is_some() {
-                self.set_graphic((&gid, &result.unwrap()), true);
+                self.set_graphic(&graphic_id, &result.unwrap(), true);
             }
             return result;
         }
         None
     }
 
-    pub fn update_graphics_layer(&mut self, gid: usize, layer: usize) {
-        if let Some((graphic, _layer, offset)) = self.graphics.remove(&gid) {
-            self.graphics.insert(gid, (graphic, layer, offset));
+    /// Set a graphic's layer to given value.
+    pub fn update_graphics_layer(&mut self, graphic_id: usize, layer: usize) {
+        if let Some((graphic, _layer, offset)) = self.graphics.remove(&graphic_id) {
+            self.graphics.insert(graphic_id, (graphic, layer, offset));
         }
     }
-    pub fn update_graphics_offset(&mut self, gid: usize, offset: (isize, isize)) {
-        if let Some((graphic, layer, _offset)) = self.graphics.remove(&gid) {
-            self.graphics.insert(gid, (graphic, layer, offset));
+
+    /// Set a graphic's offset to given value.
+    pub fn update_graphics_offset(&mut self, graphic_id: usize, offset: (isize, isize)) {
+        if let Some((graphic, layer, _offset)) = self.graphics.remove(&graphic_id) {
+            self.graphics.insert(graphic_id, (graphic, layer, offset));
         }
     }
+
+    /// Add an animation to a graphic.
     pub fn add_animation(&mut self, graphic_id: usize, a: Animation) -> Option<usize> {
         if let Some((mut graphic, layer, offset)) = self.graphics.remove(&graphic_id) {
             let add_result = graphic.add_animation(a);
@@ -420,35 +439,39 @@ impl Screen {
         }
     }
 
-    pub fn start_animation(&mut self, gid: &usize, aid: usize) {
-        if let Some((graphic, _layer, _offset)) = self.graphics.get_mut(gid) {
+    /// Start an animation for given graphic.
+    pub fn start_animation(&mut self, graphic_id: &usize, aid: usize) {
+        if let Some((graphic, _layer, _offset)) = self.graphics.get_mut(graphic_id) {
             graphic.start_animation(aid, self.time.tick());
         }
     }
 
-    pub fn enqueue_animation(&mut self, gid: &usize, aid: usize, when: Timestamp) {
-        if let Some((graphic, _layer, _offset)) = self.graphics.get_mut(gid) {
+    /// Enqueue an animation to a given graphic to be run after other animation that is currently running finishes.
+    pub fn enqueue_animation(&mut self, graphic_id: &usize, aid: usize, when: Timestamp) {
+        if let Some((graphic, _layer, _offset)) = self.graphics.get_mut(graphic_id) {
             graphic.enqueue_animation(aid, self.time.tick() + when);
         }
     }
 
-    // TODO: rewrite this
-    pub fn restart_animation(&mut self, gid: usize, aid: usize, when: Timestamp) {
-        if let Some((graphic, _layer, _offset)) = self.graphics.get_mut(&gid) {
+    /// Start given animation from beginning.
+    pub fn restart_animation(&mut self, graphic_id: usize, aid: usize, when: Timestamp) {
+        if let Some((graphic, _layer, _offset)) = self.graphics.get_mut(&graphic_id) {
             graphic.restart_animation(aid, when);
         }
     }
 
-    pub fn pause_animation(&mut self, gid: usize) {
-        if let Some((graphic, _layer, _offset)) = self.graphics.get_mut(&gid) {
+    /// Pause given animation on current frame
+    pub fn pause_animation(&mut self, graphic_id: usize) {
+        if let Some((graphic, _layer, _offset)) = self.graphics.get_mut(&graphic_id) {
             if let Some(anim_id) = graphic.running_anim {
                 graphic.pause_animation(anim_id, Timestamp::now());
             }
         }
     }
 
-    pub fn pause_animation_on_frame(&mut self, gid: &usize, fid: usize) {
-        if let Some((graphic, _layer, _offset)) = self.graphics.get_mut(gid) {
+    /// Stop running an animation when a particular frame is being displayed.
+    pub fn pause_animation_on_frame(&mut self, graphic_id: &usize, fid: usize) {
+        if let Some((graphic, _layer, _offset)) = self.graphics.get_mut(graphic_id) {
             if let Some(anim_id) = graphic.running_anim {
                 graphic.pause_animation_on_frame(anim_id, fid);
             }
@@ -456,12 +479,14 @@ impl Screen {
         }
     }
 
-    pub fn stop_animation(&mut self, gid: &usize) {
-        if let Some((graphic, _layer, _offset)) = self.graphics.get_mut(gid) {
+    /// Stop running an animation.
+    pub fn stop_animation(&mut self, graphic_id: &usize) {
+        if let Some((graphic, _layer, _offset)) = self.graphics.get_mut(graphic_id) {
             graphic.stop_animation();
         }
     }
 
+    /// Update all graphics that run an animation.
     pub fn update_graphics(&mut self) {
         let mut pixels = vec![];
         for (_id, (graphic, layer, offset)) in &mut self.graphics {
@@ -477,7 +502,7 @@ impl Screen {
             if let Some(anim_id) = graphic.running_anim {
                 keep_running = true;
                 if let Some(anim) = graphic.animations.get_mut(&anim_id) {
-                    if let Some((frame_id, running)) = anim.new_update(self.time.tick()) {
+                    if let Some((frame_id, running)) = anim.update(self.time.tick()) {
                         pixels.push((graphic.set_frame(&frame_id, *offset, false), *layer));
                         keep_running = running;
                     }
@@ -493,13 +518,15 @@ impl Screen {
         self.print_all(to_print);
     }
 
-    pub fn cls(&mut self) {
+    /// Clear entire screen.
+    pub fn clear_screen(&mut self) {
         print!("\x1b[0m\x1b[21;22;23;24;25;26;27;29;37;40m\x1b[1;1Hm");
         println!("\x1b[H{:<1$}", "", self.cols * self.rows);
         self.flush_out();
     }
 
-    pub fn cla(
+    /// Clear an area of a screen.
+    pub fn clear_area(
         &mut self,
         layer: usize,
         start_x: usize,
@@ -521,6 +548,7 @@ impl Screen {
         self.print_all(to_print);
     }
 
+    /// Get a vector of localized glyphs to be refreshed (or entire screen if using force).
     fn refresh(&mut self, force: bool) -> Vec<(usize, usize, Glyph)> {
         let mut cap = 64;
         if force {
@@ -532,13 +560,10 @@ impl Screen {
                 to_print.push((gcake.col, gcake.row, gcake.get_glyph()));
             }
         }
-        // let ile = to_print.len();
-        // if ile > 0 {
-        //     println!("To refresh: {}", ile);
-        // }
         to_print
     }
 
+    /// Print all provided Glyphs on screen.
     pub fn print_all(&mut self, glyphs: Vec<(usize, usize, Glyph)>) {
         for (x, y, g) in glyphs {
             self.print(x, y, g);
@@ -563,6 +588,7 @@ impl Screen {
         self.c_underline = false;
     }
 
+    /// Convert a vector of localized glyphs into a vector of strings each representing a line of text.
     pub fn get_text(&mut self, glyphs: Vec<(usize, usize, Glyph)>) -> Vec<String> {
         let mut result = Vec::with_capacity(self.rows);
         let mut line_text = String::new();
@@ -577,7 +603,7 @@ impl Screen {
                 }
                 last_line = y;
             }
-            let modifier = self.gformat_old(glyph, first_glyph);
+            let modifier = self.gformat_out(glyph, first_glyph);
             if !modifier.is_empty() {
                 line_text.push_str(&format!("\x1b[{}m{}", modifier, glyph.character));
                 // line_text.push_str(&modifier);
@@ -595,6 +621,7 @@ impl Screen {
         result
     }
 
+    /// Update a pixel to new value.
     pub fn update(&mut self, pixels: Vec<(Vec<Pixel>, usize)>) {
         for (ps, layer) in pixels {
             for p in ps {
@@ -610,6 +637,7 @@ impl Screen {
         }
     }
 
+    /// Print a glyph on screent in given location.
     pub fn print(&mut self, x: usize, y: usize, glyph: Glyph) {
         if x > self.cols || y > self.rows {
             return;
@@ -630,7 +658,8 @@ impl Screen {
         print!("{}{}", formated, glyph.character);
     }
 
-    fn gformat_old(&mut self, glyph: Glyph, first_glyph: bool) -> String {
+    /// Get a string representing given glyph for writing into a text file.
+    fn gformat_out(&mut self, glyph: Glyph, first_glyph: bool) -> String {
         let mut modifier = String::new(); //"\x1b[".to_string();
                                           // let mut add_modifier = false;
                                           // Plain = 0,
@@ -796,6 +825,7 @@ impl Screen {
         modifier
     }
 
+    /// Get a string of a given glyph to print on screen.
     fn gformat(&mut self, glyph: Glyph) -> String {
         let mut modifier = String::new(); //"\x1b[".to_string();
                                           // let mut add_modifier = false;
@@ -905,6 +935,7 @@ impl Screen {
         modifier
     }
 
+    /// Initialize required parameters for library to work as expected.
     pub fn initialize(&mut self) {
         self.termios.c_lflag &= !(ICANON | ECHO); // no echo and canonical mode
         tcsetattr(self.stdin, TCSANOW, &mut self.termios)
@@ -914,6 +945,7 @@ impl Screen {
         print!("\x1b[?25l"); // disable cursor
     }
 
+    /// Restore original settings of users terminal.
     pub fn cleanup(self) {
         print!("\x1b[?25h"); // enable cursor
         print!("\x1b[2J"); // clear screen

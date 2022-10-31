@@ -2,17 +2,24 @@ use std::ops::{Add, AddAssign, Sub};
 use std::time::Instant;
 
 #[derive(PartialOrd, Debug, Clone, Copy)]
+/// Time representation.
 pub struct Timestamp(u64, u32, Instant);
+
 impl Timestamp {
+    /// Create a new timestamp representing it's moment of creation.
     pub fn now() -> Self {
         Timestamp(0, 0, Instant::now())
     }
+
+    /// Update current time.
     pub fn tick(&mut self) -> Self {
         let now = Instant::now();
         let dif = now - self.2;
         *self += Timestamp(dif.as_secs(), dif.subsec_millis(), now);
         *self
     }
+
+    /// Create a new timestamp representing a moment in future.
     pub fn new(sec: u64, msec: u32) -> Self {
         Timestamp(sec, msec, Instant::now())
     }

@@ -51,7 +51,7 @@
 //! ```
 //! ## Functionality
 //! With `mgr` under your control you can do all kinds of things:
-//! * create a [`graphic.Graphic`] containing multiple Frame with fully adjustable [`Color`] and [`Glyph`] - [see example](#create-a-graphic-containing-multiple-frames);
+//! * create a [`Graphic`] containing multiple Frame with fully adjustable [`Color`] and [`Glyph`] - [see example](#create-a-graphic-containing-multiple-frames);
 //! * add an [`animation.Animation`] to a [`graphic.Graphic`] and run it - [see example](#add-an-animation-to-a-graphic);
 //! * take action according to [`key.Key`] press - [see example](#take-action-according-to-key-press);
 //! * change Frame or [`animation.Animation`] of displayed [`graphic.Graphic`] to a different one - [see example1](#switch-selected-graphic-to-a-different-frame) [or example_2](#switch-selected-graphic-to-a-different-animation);
@@ -248,7 +248,7 @@ mod display;
 mod glyphcake;
 mod helpers;
 mod key;
-pub use key::str_to_key;
+pub use helpers::str_to_key;
 pub use key::Key;
 mod tests;
 pub mod utilities;

@@ -106,7 +106,7 @@ impl Animation {
     }
 
     /// This method is being called internally to check if an Animation should be updated on screen.
-    pub fn new_update(&mut self, dtime: Timestamp) -> Option<(usize, bool)> {
+    pub fn update(&mut self, dtime: Timestamp) -> Option<(usize, bool)> {
         let mut frame = None;
         if self.running {
             if let Some(stop_frame) = self.stop_frame {

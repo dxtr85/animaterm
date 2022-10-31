@@ -1,3 +1,94 @@
+//! # A working TUI application for terminal frames creation.
+//! Frames can be easily saved as plain text files.
+//!
+//! You can view frame files by issuing `cat <frame_file>` or `less -R <frame_file>`.
+//!
+//! ## Default key bingings
+//! ### General shortcuts
+//!            Print graphic to a file: Key::AltP
+//!            Print screen to a file: Key::AltCtrlP
+//!            Save and Exit application: Key::Escape
+//! ### Workspace window
+//!            Move left: Key::Left
+//!            Move right: Key::Right
+//!            Move up: Key::Up
+//!            Move down: Key::Down
+//!            Move line start: Key::CtrlA
+//!            Move line end: Key::CtrlE
+//!            Select color from workspace: Key::C
+//!            Select background from workspace: Key::B
+//!            Select glyph from workspace: Key::G
+//!            Erase glyph: Key::Delete
+//! ### Colors window
+//!            Move left: Key::ShiftLeft
+//!            Move right: Key::ShiftRight
+//!            Move far right: Key::CtrlShiftRight
+//!            Move far left: Key::CtrlShiftLeft
+//!            Move top: Key::CtrlShiftUp
+//!            Move up: Key::ShiftUp
+//!            Move down: Key::ShiftDown
+//!            Move bottom: Key::CtrlShiftDown
+//!            Set window invisible: Key::I
+//!            Sete window visible: Key::ShiftI
+//! ### Backgrounds window
+//!            Move left: Key::AltLeft
+//!            Move right: Key::AltRight
+//!            Move far right: Key::AltCtrlRight
+//!            Move far left: Key::AltCtrlLeft
+//!            Move top: Key::AltCtrlUp
+//!            Move up: Key::AltUp
+//!            Move down: Key::AltDown
+//!            Move bottom: Key::AltCtrlDown
+//!            Set window invisible: Key::AltI
+//!            Set window visible: Key::AltShiftI
+//! ### Glyphs window
+//!            Move left: Key::CtrlLeft
+//!            Move right: Key::CtrlRight
+//!            Move up: Key::CtrlUp
+//!            Move down: Key::CtrlDown
+//!            Select glyph: Key::Space
+//!            Prev set of glyphs: Key::PgUp
+//!            Next set of glyphs: Key::PgDn
+//!            First set of glyphs: Key::Home
+//!            Last set of glyphs: Key::End
+//! ### Style window
+//!            Move up: Key::AltShiftUp
+//!            Move down: Key::AltShiftDown
+//!            Enable style: Key::AltShiftRight
+//!            Disable style: Key::AltShiftLeft
+//!
+//! ## Optional command line arguments
+//! Any optional arguments overwrite settings from configuration file.
+//!
+//! --help - print help message
+//!
+//! --config_file <path to config file> - load config from file
+//!
+//! --rows <number> - how many rows should the screen consist of (at least 29)
+//!
+//! --cols <number> - how many columns should be in each line (at least 84)
+//!
+//! --colors_offset <number>x<number> - where should Colors window be placed (i.e 0x0)
+//!
+//! --backgrounds_offset <number>x<number> - where should Backgrounds window be placed
+//!
+//! --styles_offset <number>x<number> - where should Styles window be placed
+//!
+//! --glyphs_offset <number>x<number> - where should Glyphs window be placed
+//!
+//! --workspace_offset <number>x<number> - where should Workspace window be placed
+//!
+//! --workspace_size <number>x<number> - Width and Height of Workspace's interior (i.e 20x10)
+//!
+//! --input_file <file_name> - Read a frame into workspace from file
+//!
+//! --output_file <file_name> - Write a workspace frame into file
+//!
+//! --glyphs <filename> - index file containing filenames with glyph definitions, each filename in separate line
+//!
+//! ## Configuration file
+//! Please see [default_config.txt](../../../src/bin/studio/default_config.txt)
+
 use animaterm::prelude::*;
 use animaterm::utilities::progress_bar;
 use std::cmp::max;

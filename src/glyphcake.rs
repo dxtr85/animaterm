@@ -1,5 +1,6 @@
 use super::Glyph;
 use std::mem::replace;
+/// This structure represents multiple layers in a single screen location, each with it's own glyph.
 pub struct GlyphCake {
     pub col: usize,
     pub row: usize,
@@ -9,6 +10,7 @@ pub struct GlyphCake {
 }
 
 impl GlyphCake {
+    /// Creates a new glyphcace instance to be used in a display.
     pub fn new(col: usize, row: usize, glyph: Option<Glyph>, layer: usize) -> Self {
         let mut glyphs = vec![None; layer];
         let modified = false;
@@ -22,6 +24,7 @@ impl GlyphCake {
         }
     }
 
+    /// Set a new glyph for given layer.
     pub fn update(&mut self, glyph: Glyph, layer: usize) {
         let what_to_insert = if glyph.transparent { None } else { Some(glyph) };
         if layer >= self.top_layer {
@@ -40,6 +43,7 @@ impl GlyphCake {
         }
     }
 
+    /// Reduce total count of layers by removing the top one.
     pub fn decrease_top_layer(&mut self) {
         let mut current_glyph = self.glyphs.get(self.top_layer).unwrap();
         while current_glyph.is_none() && self.top_layer > 0 {
@@ -52,6 +56,7 @@ impl GlyphCake {
         }
     }
 
+    /// Get a glyph representing top non-transparent layer.
     pub fn get_glyph(&mut self) -> Glyph {
         self.modified = false;
         let glyph = self.glyphs.get(self.top_layer);

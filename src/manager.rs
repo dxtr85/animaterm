@@ -74,7 +74,7 @@ impl Manager {
         let cols = screen.cols;
         let rows = screen.rows;
         screen.initialize();
-        screen.cls();
+        screen.clear_screen();
         let (sender, receiver) = mpsc::channel();
         let (result_sender, result_receiver) = mpsc::channel();
 
@@ -160,8 +160,8 @@ impl Manager {
                                 }
                             };
                         }
-                        Message::SetGraphic(gid, fid, force) => {
-                            screen.set_graphic((&gid, &fid), force);
+                        Message::SetGraphic(graphic_id, frame_id, force) => {
+                            screen.set_graphic(&graphic_id, &frame_id, force);
                         }
                         Message::SetGraphicColor(gid, color) => {
                             screen.set_graphic_color(gid, color);
@@ -222,7 +222,7 @@ impl Manager {
                         Message::ClearArea(layer, offset, size) => {
                             let start_x: usize = max(0, offset.0) as usize;
                             let start_y: usize = max(0, offset.1) as usize;
-                            screen.cla(layer, start_x, start_y, size.0, size.1);
+                            screen.clear_area(layer, start_x, start_y, size.0, size.1);
                         }
                         Message::CloneFrame(gid, fid) => {
                             let result = screen.clone_frame(gid, fid);

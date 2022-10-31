@@ -6,6 +6,7 @@ enum ExpectedToken {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+/// A structure representing a single unicode character on screen together with it's colors and style.
 pub struct Glyph {
     pub character: char,
     pub color: Color,
@@ -23,6 +24,7 @@ pub struct Glyph {
 }
 
 impl Glyph {
+    /// Create a new glyph.
     pub fn new(
         character: char,
         color: Color,
@@ -54,6 +56,8 @@ impl Glyph {
             strike,
         }
     }
+
+    /// Create a new empty space black glyph with all styles disabled.
     pub fn plain() -> Self {
         Glyph {
             character: ' ',
@@ -72,6 +76,7 @@ impl Glyph {
         }
     }
 
+    /// Create an empty space glyph that is transparent for printing logic.
     pub fn transparent() -> Self {
         Glyph {
             character: ' ',
@@ -90,78 +95,91 @@ impl Glyph {
         }
     }
 
+    /// Create a black glyph.
     pub fn black() -> Self {
         let mut g = Glyph::default();
         g.set_background(Color::black());
         g
     }
 
+    /// Create a red glyph.
     pub fn red() -> Self {
         let mut g = Glyph::default();
         g.set_background(Color::red());
         g
     }
 
+    /// Create a green glyph.
     pub fn green() -> Self {
         let mut g = Glyph::default();
         g.set_background(Color::green());
         g
     }
 
+    /// Create a yellow glyph.
     pub fn yellow() -> Self {
         let mut g = Glyph::default();
         g.set_background(Color::yellow());
         g
     }
 
+    /// Create a blue glyph.
     pub fn blue() -> Self {
         let mut g = Glyph::default();
         g.set_background(Color::blue());
         g
     }
 
+    /// Create a magenta glyph.
     pub fn magenta() -> Self {
         let mut g = Glyph::default();
         g.set_background(Color::magenta());
         g
     }
 
+    /// Create a cyan glyph.
     pub fn cyan() -> Self {
         let mut g = Glyph::default();
         g.set_background(Color::cyan());
         g
     }
 
+    /// Create a white glyph.
     pub fn white() -> Self {
         let mut g = Glyph::default();
         g.set_background(Color::white());
         g
     }
 
+    /// Create a orange glyph.
     pub fn orange() -> Self {
         let mut g = Glyph::default();
         g.set_background(Color::orange());
         g
     }
 
+    /// Create a indigo glyph.
     pub fn indigo() -> Self {
         let mut g = Glyph::default();
         g.set_background(Color::indigo());
         g
     }
 
+    /// Create a violet glyph.
     pub fn violet() -> Self {
         let mut g = Glyph::default();
         g.set_background(Color::violet());
         g
     }
 
+    /// Create a regular white on black glyph with given character.
     pub fn default_with_char(character: char) -> Self {
         let mut g = Glyph::default();
         g.set_char(character);
         g
     }
 
+    /// Update a glyph with style information provided as &str.
     pub fn update_from_str(&mut self, style_definition: &str) {
         if style_definition.len() == 0 {
             eprintln!("can not update empty style");
@@ -477,30 +495,39 @@ impl Glyph {
             }
         }
     }
+
+    /// Set glyph's character to given value.
     pub fn set_char(&mut self, character: char) {
         self.character = character;
     }
+    /// Set glyph's color to given value.
     pub fn set_color(&mut self, color: Color) {
         self.color = color;
     }
+    /// Set glyph's background to given value.
     pub fn set_background(&mut self, background: Color) {
         self.background = background;
     }
+    /// Set glyph's transparency setting to given value.
     pub fn set_transparent(&mut self, transparent: bool) {
         self.transparent = transparent;
     }
+    /// Set glyph's brightness to given value.
     pub fn set_bright(&mut self, bright: bool) {
         self.bright = bright;
         if self.bright {
             self.dim = false;
         }
     }
+    /// Set glyph's dimming setting to given value.
     pub fn set_dim(&mut self, dim: bool) {
         self.dim = dim;
         if self.dim {
             self.bright = false;
         }
     }
+
+    /// Set glyph's plain setting to given value.
     pub fn set_plain(&mut self, plain: bool) {
         self.plain = plain;
         if self.plain {
@@ -517,31 +544,44 @@ impl Glyph {
             self.background = Color::black();
         }
     }
+
+    /// Set glyph's italic seetting to given value.
     pub fn set_italic(&mut self, italic: bool) {
         self.italic = italic;
     }
+
+    /// Set glyph's underline setting to given value.
     pub fn set_underline(&mut self, underline: bool) {
         self.underline = underline;
     }
+
+    /// Set glyph's blink setting to given value.
     pub fn set_blink(&mut self, blink: bool) {
         self.blink = blink;
         if self.blink {
             self.blink_fast = false;
         }
     }
+
+    /// Set glyph's blinkfast setting to given value.
     pub fn set_blinkfast(&mut self, blink: bool) {
         self.blink_fast = blink;
         if self.blink_fast {
             self.blink = false;
         }
     }
+
+    /// Set glyph's reverse setting to given value.
     pub fn set_reverse(&mut self, reverse: bool) {
         self.reverse = reverse;
     }
+
+    /// Set glyph's strike setting to given value.
     pub fn set_strike(&mut self, strike: bool) {
         self.strike = strike;
     }
 }
+
 impl Default for Glyph {
     fn default() -> Self {
         Glyph {
