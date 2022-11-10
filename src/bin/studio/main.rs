@@ -1,93 +1,170 @@
-//! # A working TUI application for terminal frames creation.
-//! Frames can be easily saved as plain text files.
+//! # A TUI application for frames creation.
+//!
+//! This terminal application allows you to easily create
+//! a basic building blocks of every graphic - a frame.
+//! A frame is a collection of glyphs that are arranged into
+//! a rectangular shape and presented on screen.
+//!
+//! A graphic consists of at least one frame.
+//!
+//! On exit Workspace is always saved to **output_file**, if defined.
+//!
+//! You can also save current state of Workspace by calling print_graphic function (default keybinding is **AltP**).
+//!
+//! You can also call print_screen (default **AltCtrlP**) in order to save entire screen to a timestamped file.
+//!
+//! ## Navigation
+//! All navigation in studio is done via keyboard. You can customize your preffered key for every
+//! available action in this app.
+//!
+//! ## TUI elements
+//! studio consists of five interactive windows:
+//! - Color
+//! - Background
+//! - Style
+//! - Glyphs
+//! - Workspace
+//!
+//! Color and  Background windows are used to select font color and background
+//! of a glyph you are about to place on Workspace.
+//!
+//! Style window allows you to select font style such as Italic, Underline etc.
+//!
+//! Glyph window is used for selecting the shape of a glyph to be placed onto Workspace.
+//!
+//! Workspace is a canvas on which you build your creation.
+//! ## Frame file format
+//! A frame file is a regular text file enhanced with ANSI escape codes for colors and style modification.
+//!
+//! Each line in this file represents a single row of glyphs.
 //!
 //! You can view frame files by issuing `cat <frame_file>` or `less -R <frame_file>`.
 //!
-//! ## Default key bingings
-//! ### General shortcuts
-//!            Print graphic to a file: Key::AltP
-//!            Print screen to a file: Key::AltCtrlP
-//!            Save and Exit application: Key::Escape
-//! ### Workspace window
-//!            Move left: Key::Left
-//!            Move right: Key::Right
-//!            Move up: Key::Up
-//!            Move down: Key::Down
-//!            Move line start: Key::CtrlA
-//!            Move line end: Key::CtrlE
-//!            Select color from workspace: Key::C
-//!            Select background from workspace: Key::B
-//!            Select glyph from workspace: Key::G
-//!            Erase glyph: Key::Delete
-//! ### Colors window
-//!            Move left: Key::ShiftLeft
-//!            Move right: Key::ShiftRight
-//!            Move far right: Key::CtrlShiftRight
-//!            Move far left: Key::CtrlShiftLeft
-//!            Move top: Key::CtrlShiftUp
-//!            Move up: Key::ShiftUp
-//!            Move down: Key::ShiftDown
-//!            Move bottom: Key::CtrlShiftDown
-//!            Set window invisible: Key::I
-//!            Sete window visible: Key::ShiftI
-//! ### Backgrounds window
-//!            Move left: Key::AltLeft
-//!            Move right: Key::AltRight
-//!            Move far right: Key::AltCtrlRight
-//!            Move far left: Key::AltCtrlLeft
-//!            Move top: Key::AltCtrlUp
-//!            Move up: Key::AltUp
-//!            Move down: Key::AltDown
-//!            Move bottom: Key::AltCtrlDown
-//!            Set window invisible: Key::AltI
-//!            Set window visible: Key::AltShiftI
-//! ### Glyphs window
-//!            Move left: Key::CtrlLeft
-//!            Move right: Key::CtrlRight
-//!            Move up: Key::CtrlUp
-//!            Move down: Key::CtrlDown
-//!            Select glyph: Key::Space
-//!            Prev set of glyphs: Key::PgUp
-//!            Next set of glyphs: Key::PgDn
-//!            First set of glyphs: Key::Home
-//!            Last set of glyphs: Key::End
-//! ### Style window
-//!            Move up: Key::AltShiftUp
-//!            Move down: Key::AltShiftDown
-//!            Enable style: Key::AltShiftRight
-//!            Disable style: Key::AltShiftLeft
+//! ## Graphic index file format
+//! In order to define a graphic with some frames and animations you create a plaintext graphic index file.
+//!
+//! A graphic index file can contain frame definitions each in a separate line.
+//!
+//! Graphic index file can also contain animation definitions, also each in a separate line.
+//! ### Frame definition
+//!
+//! Syntax for frame definition is: frame <frame_id> <frame_definition_file>
+//!
+//! > frame 9 9.txf
+//!
+//! ### Animation definition
+//!
+//! It's syntax is: animation \[loop\] \[run\] <frame_id>:<time_in_msec>
+//!
+//! loop is optional and if used it defines an animation that starts over after reaching last frame.
+//!
+//! run is also optional and if used will start this animation once a graphic is placed on screen.
+//!
+//! <frame_id>:<time_msec> defines a frame and it's display time. You can define a lot of these in every animation definition.
+//!
+//! > animation loop run 0:1000 1:1000 2:1000 3:1000 4:1000 5:1000 6:1000 7:1000 8:1000 9:1000
+
+//!
+//! ## Configuration file
+//! Please see [default_config.txt](../../../src/bin/studio/default_config.txt)
 //!
 //! ## Optional command line arguments
 //! Any optional arguments overwrite settings from configuration file.
 //!
 //! --help - print help message
 //!
-//! --config_file <path to config file> - load config from file
+//! --config_file {path to config file} - load config from file
 //!
-//! --rows <number> - how many rows should the screen consist of (at least 29)
+//! --rows {number} - how many rows should the screen consist of (at least 29)
 //!
-//! --cols <number> - how many columns should be in each line (at least 84)
+//! --cols {number} - how many columns should be in each line (at least 84)
 //!
-//! --colors_offset <number>x<number> - where should Colors window be placed (i.e 0x0)
+//! --colors_offset {number}x{number} - where should Colors window be placed (i.e 0x0)
 //!
-//! --backgrounds_offset <number>x<number> - where should Backgrounds window be placed
+//! --backgrounds_offset {number}x{number} - where should Backgrounds window be placed
 //!
-//! --styles_offset <number>x<number> - where should Styles window be placed
+//! --styles_offset {number}x{number} - where should Styles window be placed
 //!
-//! --glyphs_offset <number>x<number> - where should Glyphs window be placed
+//! --glyphs_offset {number}x{number} - where should Glyphs window be placed
 //!
-//! --workspace_offset <number>x<number> - where should Workspace window be placed
+//! --workspace_offset {number}x{number} - where should Workspace window be placed
 //!
-//! --workspace_size <number>x<number> - Width and Height of Workspace's interior (i.e 20x10)
+//! --workspace_size {number}x{number} - Width and Height of Workspace's interior (i.e 20x10)
 //!
-//! --input_file <file_name> - Read a frame into workspace from file
+//! --input_file {file_name} - Read a frame into workspace from file
 //!
-//! --output_file <file_name> - Write a workspace frame into file
+//! --output_file {file_name} - Write a workspace frame into file
 //!
-//! --glyphs <filename> - index file containing filenames with glyph definitions, each filename in separate line
+//! --wallpaler_file {file_name} - Load wallpaler graphic from file
 //!
-//! ## Configuration file
-//! Please see [default_config.txt](../../../src/bin/studio/default_config.txt)
+//! --glyphs {filename} - index file containing filenames with glyph definitions, each filename in separate line
+//!
+//! ## Known issues
+//! - Loading a wallpaper graphic tends to slow down application startup
+//! - Dimming style causes glyphs to be displayed inconsistently
+//! ## Default key bingings
+//! You can use number keys from 0 to 9 to perform an action selected number of times.
+//!
+//! If you want to place selected glyph in 64 consecutive positions on workspace you press: 6 4 Space.
+//! ### General shortcuts
+//!            Print Workspace to a file: AltP
+//!            Print screen to a file: AltCtrlP
+//!            Action counter reset: R
+//!            Save and exit application: Escape
+//! ### Workspace window
+//!            Move left: Left
+//!            Move right: Right
+//!            Move up: Up
+//!            Move down: Down
+//!            Move line start: CtrlA
+//!            Move line end: CtrlE
+//!            Set color on selected glyph: C
+//!            Set background on selected glyph: B
+//!            Set glyph on selected glyph: G
+//!            Set style on selected glyph: S
+//!            Select color from workspace: ShiftC
+//!            Select background from workspace: ShiftB
+//!            Select glyph from workspace: ShiftG
+//!            Select style from workspace: ShiftS
+//!            Erase glyph: Delete
+//! ### Colors window
+//!            Move left: ShiftLeft
+//!            Move right: ShiftRight
+//!            Move far right: CtrlShiftRight
+//!            Move far left: CtrlShiftLeft
+//!            Move top: CtrlShiftUp
+//!            Move up: ShiftUp
+//!            Move down: ShiftDown
+//!            Move bottom: CtrlShiftDown
+//!            Set window invisible: I
+//!            Sete window visible: ShiftI
+//! ### Backgrounds window
+//!            Move left: AltLeft
+//!            Move right: AltRight
+//!            Move far right: AltCtrlRight
+//!            Move far left: AltCtrlLeft
+//!            Move top: AltCtrlUp
+//!            Move up: AltUp
+//!            Move down: AltDown
+//!            Move bottom: AltCtrlDown
+//!            Set window invisible: AltI
+//!            Set window visible: AltShiftI
+//! ### Glyphs window
+//!            Move left: CtrlLeft
+//!            Move right: CtrlRight
+//!            Move up: CtrlUp
+//!            Move down: CtrlDown
+//!            Select glyph: Space
+//!            Prev set of glyphs: PgUp
+//!            Next set of glyphs: PgDn
+//!            First set of glyphs: Home
+//!            Last set of glyphs: End
+//! ### Style window
+//!            Move up: AltShiftUp
+//!            Move down: AltShiftDown
+//!            Enable style: AltShiftRight
+//!            Disable style: AltShiftLeft
+//!
 
 use animaterm::prelude::*;
 use animaterm::utilities::progress_bar;
@@ -147,6 +224,9 @@ fn main() {
         if cl_args.output_file.is_some() {
             args.output_file = cl_args.output_file;
         }
+        if cl_args.wallpaper_file.is_some() {
+            args.wallpaper_file = cl_args.wallpaper_file;
+        }
         if cl_args.glyphs.is_some() {
             args.glyphs = cl_args.glyphs;
         }
@@ -173,6 +253,25 @@ fn main() {
     let mut glyphs_offset = (start_col as isize, (start_row + 7) as isize);
     if let Some(user_offset) = args.glyphs_offset {
         glyphs_offset = user_offset;
+    }
+    let mut wallpaper_id = None;
+    if let Some(wallpaper_file) = args.wallpaper_file {
+        let opt_wallpaper_graphic = Graphic::from_file(wallpaper_file);
+        if let Some(wallpaper_graphic) = opt_wallpaper_graphic {
+            let result = mgr.add_graphic(wallpaper_graphic, 0, (0, 0));
+            if result.is_none() {
+                eprintln!("Unable to create wallpaper graphic.");
+            } else {
+                wallpaper_id = result;
+            }
+        } else {
+            eprintln!("Unable to load wallpaper graphic file.")
+        }
+    }
+    if let Some(w_id) = wallpaper_id {
+        mgr.set_graphic(w_id, 0, true);
+    } else {
+        eprintln!("Wallpaper id is None");
     }
     let selector_id;
     let selector_layer = 2;
@@ -206,7 +305,7 @@ fn main() {
     let color_selector_id;
     let result = mgr.add_graphic(
         build_color_selector(Some("Color")),
-        0,
+        1,
         (color_offset_cols, color_offset_rows),
     );
     if let Some(id) = result {
@@ -221,7 +320,7 @@ fn main() {
     let basic_sel_id;
     let result = mgr.add_graphic(
         build_basic_colors_graphic(glyph, Glyph::default()),
-        1,
+        2,
         (color_offset_cols + 3, color_offset_rows + 3),
     );
     if let Some(id) = result {
@@ -243,7 +342,7 @@ fn main() {
                 ("    \u{25C6}", glyph),
             ],
         ),
-        1,
+        2,
         (color_offset_cols + 1, color_offset_rows + 1),
     );
     if let Some(id) = result {
@@ -259,7 +358,7 @@ fn main() {
     let pb1t_id;
     let result = mgr.add_graphic(
         Graphic::from_texts(6, vec![("Red   ", glyph), ("Bright", glyph2)]),
-        1,
+        2,
         (color_offset_cols + 3, color_offset_rows + 3),
     );
     if let Some(id) = result {
@@ -274,7 +373,7 @@ fn main() {
     let pb2t_id;
     let result = mgr.add_graphic(
         Graphic::from_text(6, "Green ", glyph),
-        1,
+        2,
         (color_offset_cols + 3, color_offset_rows + 4),
     );
     if let Some(id) = result {
@@ -289,7 +388,7 @@ fn main() {
     let pb3t_id;
     let result = mgr.add_graphic(
         Graphic::from_text(6, "Blue  ", glyph),
-        1,
+        2,
         (color_offset_cols + 3, color_offset_rows + 5),
     );
     if let Some(id) = result {
@@ -316,7 +415,7 @@ fn main() {
                 Glyph::default_with_char('\u{2589}'),
             ]),
         ),
-        1,
+        2,
         (color_offset_cols + 9, color_offset_rows + 3),
     );
     if let Some(id) = result {
@@ -342,7 +441,7 @@ fn main() {
                 Glyph::default_with_char('\u{2589}'),
             ]),
         ),
-        1,
+        2,
         (color_offset_cols + 9, color_offset_rows + 4),
     );
     if let Some(id) = result {
@@ -368,7 +467,7 @@ fn main() {
                 Glyph::default_with_char('\u{2589}'),
             ]),
         ),
-        1,
+        2,
         (color_offset_cols + 9, color_offset_rows + 5),
     );
     if let Some(id) = result {
@@ -419,7 +518,7 @@ fn main() {
     let bg_sel_id;
     let result = mgr.add_graphic(
         build_color_selector(Some("Background")),
-        0,
+        1,
         (bg_offset_cols, bg_offset_rows),
     );
     if let Some(id) = result {
@@ -443,7 +542,7 @@ fn main() {
                 ("    \u{25C6}", glyph),
             ],
         ),
-        1,
+        2,
         (bg_offset_cols + 1, bg_offset_rows + 1),
     );
     if let Some(id) = result {
@@ -459,7 +558,7 @@ fn main() {
     let bg_pb1t_id;
     let result = mgr.add_graphic(
         Graphic::from_texts(6, vec![("Red   ", glyph), ("Bright", glyph2)]),
-        1,
+        2,
         (bg_offset_cols + 3, bg_offset_rows + 3),
     );
     if let Some(id) = result {
@@ -474,7 +573,7 @@ fn main() {
     let bg_pb2t_id;
     let result = mgr.add_graphic(
         Graphic::from_text(6, "Green ", glyph),
-        1,
+        2,
         (bg_offset_cols + 3, bg_offset_rows + 4),
     );
     if let Some(id) = result {
@@ -489,7 +588,7 @@ fn main() {
     let bg_pb3t_id;
     let result = mgr.add_graphic(
         Graphic::from_text(6, "Blue  ", glyph),
-        1,
+        2,
         (bg_offset_cols + 3, bg_offset_rows + 5),
     );
     if let Some(id) = result {
@@ -518,7 +617,7 @@ fn main() {
                 Glyph::default_with_char('\u{2589}'),
             ]),
         ),
-        1,
+        2,
         (bg_offset_cols + 9, bg_offset_rows + 3),
     );
     if let Some(id) = result {
@@ -543,7 +642,7 @@ fn main() {
                 Glyph::default_with_char('\u{2589}'),
             ]),
         ),
-        1,
+        2,
         (bg_offset_cols + 9, bg_offset_rows + 4),
     );
     if let Some(id) = result {
@@ -568,7 +667,7 @@ fn main() {
                 Glyph::default_with_char('\u{2589}'),
             ]),
         ),
-        1,
+        2,
         (bg_offset_cols + 9, bg_offset_rows + 5),
     );
     if let Some(id) = result {
@@ -588,7 +687,7 @@ fn main() {
     let bg_basic_sel_id;
     let result = mgr.add_graphic(
         build_basic_colors_graphic(glyph, Glyph::default()),
-        1,
+        2,
         (bg_offset_cols + 3, bg_offset_rows + 3),
     );
     if let Some(id) = result {
@@ -663,7 +762,7 @@ fn main() {
     let style_window_id;
     let result = mgr.add_graphic(
         style_graphics.remove(0),
-        0,
+        1,
         (styles_offset_cols, styles_offset_rows),
     );
     if let Some(id) = result {
@@ -865,6 +964,8 @@ fn main() {
         false,
     );
     mgr.set_glyph(workspace_id, g, c, r);
+    let mut action_counter = 1;
+    let mut counter_initialized = false;
     loop {
         if let Some(key) = mgr.read_key() {
             match key {
@@ -994,16 +1095,21 @@ fn main() {
                     mgr.get_glyph(glyph_matrix_id, mc + 1, mr + 1);
                     let result = mgr.read_result();
                     if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
-                        mgr.set_glyph(workspace_id, glyph, c, r);
-                        if c < matrix_cols {
-                            c += 1;
-                        } else if r < matrix_rows {
-                            c = 1;
-                            r += 1;
-                        } else {
-                            c = 1;
-                            r = 1;
+                        while action_counter > 0 {
+                            mgr.set_glyph(workspace_id, glyph, c, r);
+                            if c < matrix_cols {
+                                c += 1;
+                            } else if r < matrix_rows {
+                                c = 1;
+                                r += 1;
+                            } else {
+                                c = 1;
+                                r = 1;
+                            }
+                            action_counter -= 1;
                         }
+                        action_counter = 1;
+                        counter_initialized = false;
                         mgr.get_glyph(workspace_id, c, r);
                         let result = mgr.read_result();
                         if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
@@ -1106,6 +1212,121 @@ fn main() {
                 }
 
                 //workspace window
+                k if args.bindings.workspace_set_color.contains(&k) => {
+                    // println!("set color!");
+                    mgr.get_glyph(glyph_matrix_id, mc + 1, mr + 1);
+                    let result = mgr.read_result();
+                    if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                        while action_counter > 0 {
+                            glyph_under_cursor.set_color(glyph.color);
+                            mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
+                            if c < matrix_cols {
+                                c += 1;
+                            } else if r < matrix_rows {
+                                c = 1;
+                                r += 1;
+                            } else {
+                                c = 1;
+                                r = 1;
+                            }
+                            mgr.get_glyph(workspace_id, c, r);
+                            let result = mgr.read_result();
+                            if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                                glyph_under_cursor = glyph;
+                            }
+                            action_counter -= 1;
+                        }
+                        mgr.set_glyph(workspace_id, g, c, r);
+                        action_counter = 1;
+                        counter_initialized = false;
+                    }
+                }
+                k if args.bindings.workspace_set_background.contains(&k) => {
+                    mgr.get_glyph(glyph_matrix_id, mc + 1, mr + 1);
+                    let result = mgr.read_result();
+                    if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                        while action_counter > 0 {
+                            glyph_under_cursor.set_background(glyph.background);
+                            mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
+                            if c < matrix_cols {
+                                c += 1;
+                            } else if r < matrix_rows {
+                                c = 1;
+                                r += 1;
+                            } else {
+                                c = 1;
+                                r = 1;
+                            }
+                            mgr.get_glyph(workspace_id, c, r);
+                            let result = mgr.read_result();
+                            if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                                glyph_under_cursor = glyph;
+                            }
+                            action_counter -= 1;
+                        }
+                        mgr.set_glyph(workspace_id, g, c, r);
+                        action_counter = 1;
+                        counter_initialized = false;
+                    }
+                }
+                k if args.bindings.workspace_set_glyph.contains(&k) => {
+                    mgr.get_glyph(glyph_matrix_id, mc + 1, mr + 1);
+                    let result = mgr.read_result();
+                    if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                        while action_counter > 0 {
+                            glyph_under_cursor.set_char(glyph.character);
+                            mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
+                            if c < matrix_cols {
+                                c += 1;
+                            } else if r < matrix_rows {
+                                c = 1;
+                                r += 1;
+                            } else {
+                                c = 1;
+                                r = 1;
+                            }
+                            mgr.get_glyph(workspace_id, c, r);
+                            let result = mgr.read_result();
+                            if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                                glyph_under_cursor = glyph;
+                            }
+                            action_counter -= 1;
+                        }
+                        mgr.set_glyph(workspace_id, g, c, r);
+                        action_counter = 1;
+                        counter_initialized = false;
+                    }
+                }
+                k if args.bindings.workspace_set_style.contains(&k) => {
+                    let mut new_glyph = style_window.style_glyph.clone();
+                    new_glyph.set_char(glyph_under_cursor.character);
+                    new_glyph.set_color(glyph_under_cursor.color);
+                    new_glyph.set_background(glyph_under_cursor.background);
+                    while action_counter > 0 {
+                        mgr.set_glyph(workspace_id, new_glyph, c, r);
+                        if c < matrix_cols {
+                            c += 1;
+                        } else if r < matrix_rows {
+                            c = 1;
+                            r += 1;
+                        } else {
+                            c = 1;
+                            r = 1;
+                        }
+                        mgr.get_glyph(workspace_id, c, r);
+                        let result = mgr.read_result();
+                        if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                            glyph_under_cursor = glyph;
+                        }
+                        action_counter -= 1;
+                    }
+                    mgr.set_glyph(workspace_id, g, c, r);
+                    action_counter = 1;
+                    counter_initialized = false;
+                }
+                k if args.bindings.workspace_select_color.contains(&k) => {
+                    colors_window.select_color(glyph_under_cursor.color, false);
+                }
                 k if args.bindings.workspace_select_color.contains(&k) => {
                     colors_window.select_color(glyph_under_cursor.color, false);
                 }
@@ -1129,6 +1350,72 @@ fn main() {
                             }
                         }
                     }
+                }
+                k if args.bindings.workspace_select_style.contains(&k) => {
+                    if glyph_under_cursor.bright {
+                        mgr.set_graphic(style_bright_id, 1, false);
+                        style_window.style_glyph.set_bright(true);
+                    } else {
+                        mgr.set_graphic(style_bright_id, 0, false);
+                        style_window.style_glyph.set_bright(false);
+                    }
+                    if glyph_under_cursor.dim {
+                        mgr.set_graphic(style_dim_id, 1, false);
+                        style_window.style_glyph.set_dim(true);
+                    } else {
+                        mgr.set_graphic(style_dim_id, 0, false);
+                        style_window.style_glyph.set_dim(false);
+                    }
+                    if glyph_under_cursor.italic {
+                        mgr.set_graphic(style_italic_id, 1, false);
+                        style_window.style_glyph.set_italic(true);
+                    } else {
+                        mgr.set_graphic(style_italic_id, 0, false);
+                        style_window.style_glyph.set_italic(false);
+                    }
+                    if glyph_under_cursor.underline {
+                        mgr.set_graphic(style_underline_id, 1, false);
+                        style_window.style_glyph.set_underline(true);
+                    } else {
+                        mgr.set_graphic(style_underline_id, 0, false);
+                        style_window.style_glyph.set_underline(false);
+                    }
+                    if glyph_under_cursor.blink {
+                        mgr.set_graphic(style_blink_id, 1, false);
+                        style_window.style_glyph.set_blink(true);
+                    } else {
+                        mgr.set_graphic(style_blink_id, 0, false);
+                        style_window.style_glyph.set_blink(false);
+                    }
+                    if glyph_under_cursor.blink_fast {
+                        mgr.set_graphic(style_blinkfast_id, 1, false);
+                        style_window.style_glyph.set_blinkfast(true);
+                    } else {
+                        mgr.set_graphic(style_blinkfast_id, 0, false);
+                        style_window.style_glyph.set_blinkfast(false);
+                    }
+                    if glyph_under_cursor.reverse {
+                        mgr.set_graphic(style_reverse_id, 1, false);
+                        style_window.style_glyph.set_reverse(true);
+                    } else {
+                        mgr.set_graphic(style_reverse_id, 0, false);
+                        style_window.style_glyph.set_reverse(false);
+                    }
+                    if glyph_under_cursor.transparent {
+                        mgr.set_graphic(style_transparent_id, 1, false);
+                        style_window.style_glyph.set_transparent(true);
+                    } else {
+                        mgr.set_graphic(style_transparent_id, 0, false);
+                        style_window.style_glyph.set_transparent(false);
+                    }
+                    if glyph_under_cursor.strike {
+                        mgr.set_graphic(style_strike_id, 1, false);
+                        style_window.style_glyph.set_strike(true);
+                    } else {
+                        mgr.set_graphic(style_strike_id, 0, false);
+                        style_window.style_glyph.set_strike(false);
+                    }
+                    style_window.activate_style_on_glyph_matrix();
                 }
 
                 //workspace window
@@ -1167,19 +1454,23 @@ fn main() {
 
                 // workspace window
                 k if args.bindings.workspace_erase.contains(&k) => {
-                    // workspace_window.erase_glyph();
-                    mgr.set_glyph(workspace_id, Glyph::default(), c, r);
-                    if c > 1 {
-                        c -= 1
-                    } else {
-                        if r > 1 {
-                            r -= 1;
+                    while action_counter > 0 {
+                        mgr.set_glyph(workspace_id, Glyph::default(), c, r);
+                        if c > 1 {
+                            c -= 1
                         } else {
-                            r = matrix_rows;
+                            if r > 1 {
+                                r -= 1;
+                            } else {
+                                r = matrix_rows;
+                            }
+                            c = matrix_cols;
                         }
-                        c = matrix_cols;
+                        mgr.set_glyph(workspace_id, g, c, r);
+                        action_counter -= 1;
                     }
-                    mgr.set_glyph(workspace_id, g, c, r);
+                    action_counter = 1;
+                    counter_initialized = false;
                 }
                 // Key::AltCtrlShiftUp => {
                 //     // println!("move up!");
@@ -1280,6 +1571,11 @@ fn main() {
                         //     f.write_all(fmted.as_bytes()).expect("Unable to write data");
                     }
                 }
+                // reset action counter
+                k if args.bindings.action_counter_reset.contains(&k) => {
+                    action_counter = 1;
+                    counter_initialized = false;
+                }
                 // exit program
                 k if args.bindings.exit.contains(&k) => {
                     if let Some(output_file) = args.output_file {
@@ -1334,9 +1630,91 @@ fn main() {
                     }
                     break;
                 }
+                Key::Zero => {
+                    action_counter *= 10;
+                }
+                Key::One => {
+                    if counter_initialized {
+                        action_counter *= 10;
+                        action_counter += 1;
+                    }
+                    counter_initialized = true;
+                }
+                Key::Two => {
+                    if counter_initialized {
+                        action_counter *= 10;
+                        action_counter += 2;
+                    } else {
+                        counter_initialized = true;
+                        action_counter = 2;
+                    }
+                }
+                Key::Three => {
+                    if counter_initialized {
+                        action_counter *= 10;
+                        action_counter += 3;
+                    } else {
+                        counter_initialized = true;
+                        action_counter = 3;
+                    }
+                }
+                Key::Four => {
+                    if counter_initialized {
+                        action_counter *= 10;
+                        action_counter += 4;
+                    } else {
+                        counter_initialized = true;
+                        action_counter = 4;
+                    }
+                }
+                Key::Five => {
+                    if counter_initialized {
+                        action_counter *= 10;
+                        action_counter += 5;
+                    } else {
+                        counter_initialized = true;
+                        action_counter = 5;
+                    }
+                }
+                Key::Six => {
+                    if counter_initialized {
+                        action_counter *= 10;
+                        action_counter += 6;
+                    } else {
+                        counter_initialized = true;
+                        action_counter = 6;
+                    }
+                }
+                Key::Seven => {
+                    if counter_initialized {
+                        action_counter *= 10;
+                        action_counter += 7;
+                    } else {
+                        counter_initialized = true;
+                        action_counter = 7;
+                    }
+                }
+                Key::Eight => {
+                    if counter_initialized {
+                        action_counter *= 10;
+                        action_counter += 8;
+                    } else {
+                        counter_initialized = true;
+                        action_counter = 8;
+                    }
+                }
+                Key::Nine => {
+                    if counter_initialized {
+                        action_counter *= 10;
+                        action_counter += 9;
+                    } else {
+                        counter_initialized = true;
+                        action_counter = 9;
+                    }
+                }
 
                 _ => {
-                    println!("You pressed {}", key);
+                    // println!("You pressed {}", key);
                     continue;
                 }
             }

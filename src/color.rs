@@ -1,5 +1,5 @@
 #[derive(PartialEq, Clone, Copy, Debug)]
-/// A helper enum used for better code readability.
+/// A helper used for better code readability.
 pub enum ColorName {
     Black = 0,
     Red = 1,

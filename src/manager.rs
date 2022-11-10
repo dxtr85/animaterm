@@ -388,12 +388,6 @@ impl Manager {
         String::from_utf8_lossy(&keys_read).chars().next()
     }
 
-    /// Use this method in case you want to service results returned from Manager's
-    /// operations in your own codebase.
-    pub fn get_result_iter(&mut self) -> Option<mpsc::IntoIter<Result<AnimOk, AnimError>>> {
-        replace(&mut self.result_receiver, None)
-    }
-
     /// Use this method in case you want Manager to take back servicing results on his actions.
     pub fn set_result_iter(
         &mut self,
@@ -494,10 +488,10 @@ impl Manager {
     }
 
     /// Move a graphic left or right on the screen, optionally changing which layer it is placed on.
-    pub fn move_graphic(&self, gid: usize, layer: usize, offset: (isize, isize)) {
+    pub fn move_graphic(&self, graphic_id: usize, layer: usize, offset: (isize, isize)) {
         if self
             .sender
-            .send(Message::MoveGraphic(gid, layer, offset))
+            .send(Message::MoveGraphic(graphic_id, layer, offset))
             .is_err()
         {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send MoveGraphic message")
@@ -569,6 +563,17 @@ impl Manager {
     pub fn empty_frame(&self, gid: usize) {
         if self.sender.send(Message::EmptyFrame(gid)).is_err() {
             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send EmptyFrame message")
+        };
+    }
+
+    /// Add a cloned frame to a graphic.
+    pub fn clone_frame(&self, graphic_id: usize, frame_id: Option<usize>) {
+        if self
+            .sender
+            .send(Message::CloneFrame(graphic_id, frame_id))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send ClearArea message")
         };
     }
 

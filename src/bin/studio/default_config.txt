@@ -7,8 +7,8 @@
 # rows 40
 # cols 120
 
-# Following offset settings define where on screen GUI elements should be placed,
-# starting from (0, 0) in top left corner.
+# Following offset settings define where on screen GUI elements 
+# should be placed, starting from (0, 0) in top left corner.
 #
 # colors_offset 18x6
 # backgrounds_offset 18x0
@@ -18,7 +18,7 @@
 
 # Defines the size of a frame you are about to create
 #
-workspace_size 30x20
+# workspace_size 30x20
 
 # Read initial data into workspace from given text file
 #
@@ -28,10 +28,14 @@ workspace_size 30x20
 #
 # output_file path-to-result
 
+# Load wallpaper graphic from selected file
+#
+wallpaper_file /home/dxtr/projects/animaterm/fbsd.txg
+
 # Read glyph definitions from file
 # Glyph index file is a simple text file. 
 # Each line is a path to actual file with glyph definitions
-# Actual file with glyph definitions have following format:
+# Actual files with glyph definitions have following format:
 # 65+5,77,78
 # Above line defines seven glyphs 65, 66, 67, 68, 69, 77, 78.
 # Values are decimal representations of Unicode characters.
@@ -76,28 +80,28 @@ workspace_size 30x20
 
 # Define keys for glyph selection box
 #
- glyphs_left CtrlLeft Backspace
- glyphs_right CtrlRight CtrlL
- glyphs_up CtrlUp CtrlK
- glyphs_down CtrlDown Enter
- glyphs_select Space
- glyphs_prev PgUp
- glyphs_next PgDn
- glyphs_home Home
- glyphs_end End
+# glyphs_left CtrlLeft Backspace
+# glyphs_right CtrlRight CtrlL
+# glyphs_up CtrlUp CtrlK
+# glyphs_down CtrlDown Enter
+# glyphs_select Space
+# glyphs_prev PgUp
+# glyphs_next PgDn
+# glyphs_home Home
+# glyphs_end End
 
 # Define keys for cursor movement in workspace box
 #
- workspace_left Left CtrlB H
- workspace_right Right CtrlF L
- workspace_up Up CtrlP K
- workspace_down Down CtrlN J
- workspace_line_start CtrlA
- workspace_line_end CtrlE
- workspace_select_color C
- workspace_select_background B
- workspace_select_glyph G
- workspace_erase Delete
+# workspace_left Left CtrlB H
+# workspace_right Right CtrlF L
+# workspace_up Up CtrlP K
+# workspace_down Down CtrlN J
+# workspace_line_start CtrlA
+# workspace_line_end CtrlE
+# workspace_select_color C
+# workspace_select_background B
+# workspace_select_glyph G
+# workspace_erase Delete
 
 # Define keys for style selection box
 #
@@ -108,6 +112,6 @@ workspace_size 30x20
 
 # Define keys for global functions like print screen and exit
 #
- print_graphic AltP
- print_screen AltCtrlP
- exit Escape ShiftQ CtrlQ
+# print_graphic AltP
+# print_screen AltCtrlP
+# exit Escape ShiftQ CtrlQ

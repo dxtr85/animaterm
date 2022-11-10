@@ -5,6 +5,7 @@ use animaterm::{
 use std::collections::HashMap;
 use std::default::Default;
 use std::env;
+use std::path::Path;
 use std::process::exit;
 
 static ROWS_MIN: usize = 4;
@@ -23,10 +24,37 @@ fn main() {
     let mut mgr = Manager::new(true, cols, rows, Some(g), None);
     let (cols, rows) = mgr.screen_size();
 
-    //let gl = Glyph::default();
+    let title = "Navigation help".to_string();
+    let text = "CtrlPgUp,CtrlPgDn, -------------------------------------
+AltPgUp,AltPgDn, ---------------------------------------
+PgUp,PgDn, ---------------------------------------------
+U,D, ---------------------------------------------------
+CtrlU,CtrlD -------------------------------------------- 
+AltU,AltD ----------------------------------------------
+AltUp | AltK -------------------------------------------
+CtrlUp | CtrlK -----------------------------------------
+Up | K -------------------------------------------------
+AltDown | AltJ -----------------------------------------
+CtrlDown -----------------------------------------------
+Down | J -----------------------------------------------
+AltLeft | AltH -----------------------------------------
+CtrlLeft | Backspace -----------------------------------
+Left | H -----------------------------------------------
+AltRight | AltL ----------------------------------------
+CtrlRight | CtrlL --------------------------------------
+Right | L - all above move graphics around the screen --
+----------- and up/down layers. ------------------------
+Tab - show a message box -------------------------------
+Enter - type some text and hit Enter again -------------
+        "
+    .to_string();
+    let mbox = message_box(Some(title), text, Glyph::default(), 60, 23);
+    let mbid = mgr.add_graphic(mbox, 4, (1, 10)).unwrap();
+    mgr.set_graphic(mbid, 0, true);
     let (gr, pid) = build_graphic(130, 10);
+    let gr_layer = 1;
     let gid;
-    let result = mgr.add_graphic(gr, 1, (3, 15));
+    let result = mgr.add_graphic(gr, gr_layer, (3, 15));
     if let Some(id) = result {
         gid = id;
     } else {
@@ -52,11 +80,19 @@ fn main() {
     mgr.start_animation(pbid, 0);
     let mut mbox_created = false;
     let mut mbox_id = 100;
-    let mut mbox_layer = 3;
-    if let Some(id) = mgr.add_graphic(Graphic::from_file("index.txg").unwrap(), mbox_layer, (1, 0))
-    {
-        mgr.move_graphic(id, 2, (-1, 0));
-        mbox_id = id;
+    let mut mbox_layer = 2;
+    if Path::new("index.txg").exists() {
+        if let Some(id) =
+            mgr.add_graphic(Graphic::from_file("index.txg").unwrap(), mbox_layer, (1, 0))
+        {
+            mgr.move_graphic(id, 2, (-1, 0));
+            mbox_id = id;
+            mbox_layer = 4;
+        }
+    } else {
+        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to load index.txg. Run this example from within top examples directory!");
+        eprintln!("\x1b[97;41;5mERR\x1b[m Or copy *.txf and index.txg from there to current dir.");
+        exit(1);
     }
 
     loop {
@@ -145,6 +181,7 @@ fn main() {
                     mgr.move_graphic(gid, 1, (1, 0));
                 }
                 Key::Tab => {
+                    mbox_layer += 1;
                     if !mbox_created {
                         if let  Some(mbid) = mgr.add_graphic(
                             build_mbox(60, 20, "La ku ka ra cza ga wi ga ba ga da da da ja nie".to_string(),
@@ -186,26 +223,50 @@ fn main() {
                 }
                 Key::Enter => {
                     if !mbox_created {
-                        let line = mgr.read_line();
-                        if let Some(mbid) = mgr.add_graphic(
-                            build_mbox(60, 20, line, String::new()),
+                        mbox_layer += 1;
+                        if let Some(tid) = mgr.add_graphic(
+                            build_mbox(
+                                40,
+                                1,
+                                "Please enter title and hit Enter".to_string(),
+                                String::new(),
+                            ),
                             mbox_layer,
-                            (0, 0),
+                            (cols as isize / 2 - 20, rows as isize / 2),
                         ) {
-                            mbox_id = mbid;
-                            mgr.set_graphic(mbid, 0, true);
-                            mbox_created = true;
+                            mgr.set_graphic(tid, 0, true);
+                            let line = mgr.read_line();
+                            if let Some(mbid) = mgr.add_graphic(
+                                build_mbox(
+                                    60,
+                                    20,
+                                    line,
+                                    "Hit Enter to type content in.".to_string(),
+                                ),
+                                mbox_layer,
+                                (0, 0),
+                            ) {
+                                mgr.delete_graphic(tid);
+                                mbox_id = mbid;
+                                mgr.set_graphic(mbid, 0, true);
+                                mbox_created = true;
+                            }
                         }
                     } else {
                         let mut x = 1;
                         let mut y = 1;
                         mbox_created = false;
+                        let mut rev = Glyph::default();
+                        rev.set_reverse(true);
+                        for i in 1..31 {
+                            mgr.set_glyph(mbox_id, rev, i, 1);
+                        }
                         loop {
                             if let Some(c) = mgr.read_char() {
                                 if c == '\t' {
                                     break;
                                 }
-                                if c as u8 == 8 {
+                                if c as u8 == 8 || c as u8 == 127 {
                                     x -= 1;
                                     if x == 0 {
                                         if y > 1 {

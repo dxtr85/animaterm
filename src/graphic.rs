@@ -103,7 +103,7 @@ impl Graphic {
         for line in read_lines {
             if let Ok(line) = line {
                 if line.trim().starts_with(hash) {
-                    eprintln!("hashowa");
+                    // eprintln!("hashowa");
                     continue;
                 }
                 if line.is_empty() {

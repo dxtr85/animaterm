@@ -23,6 +23,7 @@ pub struct Arguments {
     pub output_file: Option<String>,
     pub glyphs: Option<String>,
     pub bindings: Bindings,
+    pub wallpaper_file: Option<String>,
 }
 
 pub struct Bindings {
@@ -61,9 +62,14 @@ pub struct Bindings {
     pub workspace_down: Vec<Key>,
     pub workspace_line_start: Vec<Key>,
     pub workspace_line_end: Vec<Key>,
+    pub workspace_set_color: Vec<Key>,
+    pub workspace_set_background: Vec<Key>,
+    pub workspace_set_glyph: Vec<Key>,
+    pub workspace_set_style: Vec<Key>,
     pub workspace_select_color: Vec<Key>,
     pub workspace_select_background: Vec<Key>,
     pub workspace_select_glyph: Vec<Key>,
+    pub workspace_select_style: Vec<Key>,
     pub workspace_erase: Vec<Key>,
     pub style_up: Vec<Key>,
     pub style_down: Vec<Key>,
@@ -71,6 +77,7 @@ pub struct Bindings {
     pub style_disable: Vec<Key>,
     pub print_graphic: Vec<Key>,
     pub print_screen: Vec<Key>,
+    pub action_counter_reset: Vec<Key>,
     pub exit: Vec<Key>,
 }
 
@@ -112,9 +119,14 @@ impl Default for Bindings {
             workspace_down: vec![Key::Down],
             workspace_line_start: vec![Key::CtrlA],
             workspace_line_end: vec![Key::CtrlE],
-            workspace_select_color: vec![Key::C],
-            workspace_select_background: vec![Key::B],
-            workspace_select_glyph: vec![Key::G],
+            workspace_set_color: vec![Key::C],
+            workspace_set_background: vec![Key::B],
+            workspace_set_glyph: vec![Key::G],
+            workspace_set_style: vec![Key::S],
+            workspace_select_color: vec![Key::ShiftC],
+            workspace_select_background: vec![Key::ShiftB],
+            workspace_select_glyph: vec![Key::ShiftG],
+            workspace_select_style: vec![Key::ShiftS],
             workspace_erase: vec![Key::Delete],
             style_up: vec![Key::AltShiftUp],
             style_down: vec![Key::AltShiftDown],
@@ -122,6 +134,7 @@ impl Default for Bindings {
             style_disable: vec![Key::AltShiftLeft],
             print_graphic: vec![Key::AltP],
             print_screen: vec![Key::AltCtrlP],
+            action_counter_reset: vec![Key::R],
             exit: vec![Key::Escape],
         }
     }
@@ -142,6 +155,7 @@ impl Default for Arguments {
             output_file: None,
             glyphs: None,
             bindings: Bindings::default(),
+            wallpaper_file: None,
         }
     }
 }
@@ -158,6 +172,7 @@ enum ArgType {
     ConfigFile,
     InputFile,
     OutputFile,
+    WallpaperFile,
     Glyphs,
 }
 
@@ -211,6 +226,7 @@ pub fn parse_arguments() -> Arguments {
             );
             println!(" --input_file <file_name> - Read a frame into workspace from file");
             println!(" --output_file <file_name> - Write a workspace frame into file");
+            println!(" --wallpaper_file <file_name> - Load wallpaler graphic from file");
             println!(
                 " --glyphs <filename> - index file containing filenames with glyph definitions, each filename in separate line");
             exit(0)
@@ -258,6 +274,10 @@ pub fn parse_arguments() -> Arguments {
                             what_to_parse = WhatToParse::Name;
                             Some(ArgType::OutputFile)
                         }
+                        "wallpaper_file" => {
+                            what_to_parse = WhatToParse::Name;
+                            Some(ArgType::WallpaperFile)
+                        }
                         "glyphs" => {
                             what_to_parse = WhatToParse::Name;
                             Some(ArgType::Glyphs)
@@ -280,6 +300,9 @@ pub fn parse_arguments() -> Arguments {
                         }
                         &Some(ArgType::OutputFile) => {
                             arguments.output_file = Some(arg.trim().to_owned());
+                        }
+                        &Some(ArgType::WallpaperFile) => {
+                            arguments.wallpaper_file = Some(arg.trim().to_owned());
                         }
                         _ => {
                             eprintln!(
@@ -446,6 +469,9 @@ fn parse_line(args: &mut Arguments, line: &str) {
         }
         "output_file" => {
             args.output_file = Some(String::from(splited[1]));
+        }
+        "wallpaper_file" => {
+            args.wallpaper_file = Some(String::from(splited[1]));
         }
         "glyphs" => {
             args.glyphs = Some(String::from(splited[1]));
@@ -835,6 +861,50 @@ fn parse_line(args: &mut Arguments, line: &str) {
                 args.bindings.workspace_line_end = keys;
             }
         }
+        "workspace_set_color" => {
+            let mut keys = vec![];
+            for s in splited.into_iter().skip(1) {
+                if let Some(key) = str_to_key(s) {
+                    keys.push(key);
+                }
+            }
+            if keys.len() > 0 {
+                args.bindings.workspace_set_color = keys;
+            }
+        }
+        "workspace_set_background" => {
+            let mut keys = vec![];
+            for s in splited.into_iter().skip(1) {
+                if let Some(key) = str_to_key(s) {
+                    keys.push(key);
+                }
+            }
+            if keys.len() > 0 {
+                args.bindings.workspace_set_background = keys;
+            }
+        }
+        "workspace_set_glyph" => {
+            let mut keys = vec![];
+            for s in splited.into_iter().skip(1) {
+                if let Some(key) = str_to_key(s) {
+                    keys.push(key);
+                }
+            }
+            if keys.len() > 0 {
+                args.bindings.workspace_set_glyph = keys;
+            }
+        }
+        "workspace_set_style" => {
+            let mut keys = vec![];
+            for s in splited.into_iter().skip(1) {
+                if let Some(key) = str_to_key(s) {
+                    keys.push(key);
+                }
+            }
+            if keys.len() > 0 {
+                args.bindings.workspace_set_style = keys;
+            }
+        }
         "workspace_select_color" => {
             let mut keys = vec![];
             for s in splited.into_iter().skip(1) {
@@ -866,6 +936,17 @@ fn parse_line(args: &mut Arguments, line: &str) {
             }
             if keys.len() > 0 {
                 args.bindings.workspace_select_glyph = keys;
+            }
+        }
+        "workspace_select_style" => {
+            let mut keys = vec![];
+            for s in splited.into_iter().skip(1) {
+                if let Some(key) = str_to_key(s) {
+                    keys.push(key);
+                }
+            }
+            if keys.len() > 0 {
+                args.bindings.workspace_select_style = keys;
             }
         }
         "workspace_erase" => {
@@ -943,6 +1024,17 @@ fn parse_line(args: &mut Arguments, line: &str) {
             }
             if keys.len() > 0 {
                 args.bindings.print_screen = keys;
+            }
+        }
+        "action_counter_reset" => {
+            let mut keys = vec![];
+            for s in splited.into_iter().skip(1) {
+                if let Some(key) = str_to_key(s) {
+                    keys.push(key);
+                }
+            }
+            if keys.len() > 0 {
+                args.bindings.action_counter_reset = keys;
             }
         }
         "exit" => {

@@ -243,6 +243,18 @@ impl StyleWindow {
         };
     }
 
+    pub fn activate_style_on_glyph_matrix(&self) {
+        if self
+            .sender
+            .send(Message::SetGraphicStyle(
+                self.glyph_matrix_id,
+                self.style_glyph,
+            ))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicStyle message")
+        };
+    }
     pub fn enable_selected_style(&mut self) {
         match self.style_selector_value {
             0 => {
@@ -501,15 +513,6 @@ impl StyleWindow {
             }
             _ => {}
         };
-        if self
-            .sender
-            .send(Message::SetGraphicStyle(
-                self.glyph_matrix_id,
-                self.style_glyph,
-            ))
-            .is_err()
-        {
-            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicStyle message")
-        };
+        self.activate_style_on_glyph_matrix();
     }
 }
