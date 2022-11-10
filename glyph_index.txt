@@ -1,4 +1,3 @@
 glyphs.txt
 smileys.txt
-arrows.txt
 src/a.txt
