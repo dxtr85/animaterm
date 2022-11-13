@@ -4,6 +4,7 @@ with many boiled down examples that will allow developers to focus on their appl
 instead of having to think too much about presentation layer annoyances.
 
 <img src="https://i.ibb.co/kDbrgbh/Zrzut-ekranu-z-2022-11-10-17-36-24.png" alt="studio app" style="float: left; margin-right: 10px;" />
+
 # Why
 Inspired by [this post](http://xn--rpa.cc/irl/term.html) I decided that as my first more serious
 project written in Rust I will try to create a generic library for terminal user interface management.
