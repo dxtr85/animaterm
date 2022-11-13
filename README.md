@@ -3,6 +3,7 @@ The goal is to make TUI creation fast & simple by providing sufficient documenta
 with many boiled down examples that will allow developers to focus on their application's logic
 instead of having to think too much about presentation layer annoyances.
 
+![studio](https://ibb.co/1Xypfy9)
 # Why
 Inspired by [this post](http://xn--rpa.cc/irl/term.html) I decided that as my first more serious
 project written in Rust I will try to create a generic library for terminal user interface management.
