@@ -15,6 +15,7 @@ use std::mem::replace;
 
 #[derive(Debug)]
 /// A structure representing graphic containing current frame and animation information etc.
+/// Every frame in a graphic has to be of the same size of rows x cols.
 pub struct Graphic {
     pub rows: usize,
     pub cols: usize,
