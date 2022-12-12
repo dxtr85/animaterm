@@ -20,6 +20,7 @@ This library uses [termios](https://docs.rs/termios/latest/termios/) as it's onl
 
 Graphic objects can be defined and loaded as a plaintext file. Graphic's building blocks - frames
 are also text files, with optional ANSI escape codes that allow using colors and various styles.
+A graphic can only consist of frames that have identical size, equal to Graphic's cols x rows.
 
 Internally rendering is being served on a separate thread, so waiting for a key press does not make any difference to animation playback.
 
