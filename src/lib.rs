@@ -241,6 +241,8 @@ mod error;
 pub use error::AnimError;
 mod manager;
 pub use manager::{Manager, Message};
+mod macros;
+
 mod response;
 pub use response::AnimOk;
 mod screen;
@@ -275,7 +277,10 @@ pub mod prelude {
     pub use crate::frame_from_file;
     pub use crate::glyph::Glyph;
     pub use crate::graphic::Graphic;
+    pub use crate::helpers::map_bytes_to_key;
+    pub use crate::helpers::map_key_to_char;
     pub use crate::key::Key;
+    pub use crate::macros::MacroSequence;
     pub use crate::manager::Manager;
     pub use crate::response::AnimOk;
     pub use crate::time::Timestamp;

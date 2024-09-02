@@ -2,7 +2,7 @@ use animaterm::prelude::*;
 use animaterm::utilities::{message_box, progress_bar};
 
 fn main() {
-    let mut mgr = Manager::new(true, None, None, None, None);
+    let mut mgr = Manager::new(true, None, None, None, None, None);
 
     let screen_size = mgr.screen_size();
     let title = "Navigation help".to_string();

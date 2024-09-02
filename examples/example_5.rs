@@ -21,7 +21,7 @@ fn main() {
     g.set_char(char::from_u32(9626).unwrap());
     g.set_bright(true);
 
-    let mut mgr = Manager::new(true, cols, rows, Some(g), None);
+    let mut mgr = Manager::new(true, cols, rows, Some(g), None, None);
     let (cols, rows) = mgr.screen_size();
 
     let title = "Navigation help".to_string();

@@ -3,7 +3,7 @@ use animaterm::utilities::message_box;
 use std::collections::HashMap;
 
 fn main() {
-    let mut mgr = Manager::new(true, None, None, None, None);
+    let mut mgr = Manager::new(true, None, None, None, None, None);
 
     let mut library = HashMap::with_capacity(2);
     let cols = 10;

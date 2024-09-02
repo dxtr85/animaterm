@@ -1,3 +1,5 @@
+use crate::macros::MacroSequence;
+
 use super::animation::Animation;
 use super::color::Color;
 use super::error::AnimError;
@@ -5,9 +7,11 @@ use super::glyph::Glyph;
 use super::graphic::Graphic;
 use super::helpers::map_bytes_to_key;
 use super::key::Key;
+use super::macros::Macros;
 use super::response::AnimOk::{self, *};
 use super::screen::Screen;
 use super::Timestamp;
+
 use std::cmp::max;
 use std::io;
 use std::io::Read;
@@ -39,6 +43,7 @@ pub enum Message {
     SetGraphicStyle(usize, Glyph),
     SetInvisible(usize, bool),
     MoveGraphic(usize, usize, (isize, isize)),
+    MoveCursor(usize, usize),
     DeleteGraphic(usize),
     NewDisplay(usize, bool),
     RestoreDisplay(usize, bool),
@@ -58,17 +63,37 @@ pub struct Manager {
     key_receiver: Option<mpsc::Receiver<u8>>,
     key_recv_timeout: Duration,
     result_receiver: Option<mpsc::IntoIter<Result<AnimOk, AnimError>>>,
+    macros: Macros,
 }
 
 impl Manager {
     /// Use this method to create a new instance of Manager.
     /// One can decide should capturing user input from the keyboard be enabled.
+    /// macros is used to allow user defining key macros only when capturing keyboard:
+    /// First element in macros Vec defines a Key which is used to toggle Macro recording
+    /// e.g. macros: Some(vec![(Key::CtrlM,vec![])]) - pressing CtrlM will
+    /// toggle Macro recording mode.
+    /// Following vector elements can be used to insert pre-defined macros in a form:
+    /// (triggering_key, (looped, Vec<(key_n, delay_n)>)).
+    /// When user enables macro recording mode it consists of three phases:
+    /// 0. user enters Macro recording mode by pressing Key::CtrlM;
+    ///   (Optional) if user presses CtrlM again this newly defined macro
+    ///    will be defined as a looping macro - once all keys from it's sequence
+    ///    have been sent to the user, it starts over again.
+    /// 1. pressing first key combination defines triggering key;
+    /// 2. pressing second and further key combinations records key, and time duration
+    ///    between current key and following one;
+    /// 3. user finishes Macro recording mode by pressing CtrlM;
+    ///
+    ///    To start or stop any macro user has to press it's triggering key,
+    ///    Starting a new macro automatically stops previous running macro, if any.
     pub fn new(
         capture_keyboard: bool,
         cols: Option<usize>,
         rows: Option<usize>,
         glyph: Option<Glyph>,
         screen_refresh_timeout: Option<Duration>,
+        macros: Option<Vec<(Key, MacroSequence)>>,
     ) -> Self {
         let mut screen = Screen::new(cols, rows, glyph);
         let cols = screen.cols;
@@ -97,15 +122,14 @@ impl Manager {
                                 if result_sender.send(Result::Ok(AnimationAdded(id))).is_err() {
                                     eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send AnimationAdded message.")
                                 }
-                            } else {
-                                if result_sender
-                                    .send(Result::Err(AnimError::FailAddingAnimation(gid)))
-                                    .is_err()
-                                {
-                                    eprintln!(
+                            } else if result_sender
+                                .send(Result::Err(AnimError::FailAddingAnimation(gid)))
+                                .is_err()
+                            {
+                                eprintln!(
                         "\x1b[97;41;5mERR\x1b[m Unable to send FailAddingAnimation message.")
-                                }
-                            };
+                            }
+                            // };
                         }
                         Message::StartAnimation(gid, aid) => {
                             screen.start_animation(&gid, aid);
@@ -151,13 +175,12 @@ impl Manager {
                                 {
                                     eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send GlyphRetrieved message")
                                 }
-                            } else {
-                                if result_sender
-                                    .send(Result::Err(AnimError::FailGettingGlyph(gid)))
-                                    .is_err()
-                                {
-                                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send FailGettingGlyph message")
-                                }
+                            } else if result_sender
+                                .send(Result::Err(AnimError::FailGettingGlyph(gid)))
+                                .is_err()
+                            {
+                                eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send FailGettingGlyph message")
+                                // }
                             };
                         }
                         Message::SetGraphic(graphic_id, frame_id, force) => {
@@ -210,13 +233,14 @@ impl Manager {
                                         "\x1b[97;41;5mERR\x1b[m Unable to send FrameAdded message"
                                     )
                                 }
-                            } else {
-                                if result_sender
-                                    .send(Result::Err(AnimError::FailAddingFrame(gid)))
-                                    .is_err()
-                                {
-                                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send FailAddingFrame message")
-                                }
+                            } else if result_sender
+                                .send(Result::Err(AnimError::FailAddingFrame(gid)))
+                                .is_err()
+                            {
+                                eprintln!(
+                                    "\x1b[97;41;5mERR\x1b[m Unable to send FailAddingFrame message"
+                                )
+                                // }
                             };
                         }
                         Message::ClearArea(layer, offset, size) => {
@@ -232,13 +256,14 @@ impl Manager {
                                         "\x1b[97;41;5mERR\x1b[m Unable to send FrameAdded message"
                                     )
                                 }
-                            } else {
-                                if result_sender
-                                    .send(Result::Err(AnimError::FailAddingFrame(gid)))
-                                    .is_err()
-                                {
-                                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send FailAddingFrame message")
-                                }
+                            } else if result_sender
+                                .send(Result::Err(AnimError::FailAddingFrame(gid)))
+                                .is_err()
+                            {
+                                eprintln!(
+                                    "\x1b[97;41;5mERR\x1b[m Unable to send FailAddingFrame message"
+                                )
+                                // }
                             };
                         }
                         Message::NewDisplay(display_id, keep_existing) => {
@@ -252,6 +277,9 @@ impl Manager {
                             // {
                             //     result_sender.send(Result::Ok(DisplayRestored(stored_display_id)));
                             // }
+                        }
+                        Message::MoveCursor(x, y) => {
+                            screen.print_all(vec![(x, y, Glyph::transparent())])
                         }
                     }
                 }
@@ -274,15 +302,15 @@ impl Manager {
                     if reader.read_exact(&mut buffer).is_err() {
                         eprintln!("\x1b[97;41;5mERR\x1b[m Unable to read to buffer")
                     }
-                    if buffer[0] > 0 {
-                        if key_sender.send(buffer[0]).is_err() {
-                            finish = true;
-                        }
+                    if buffer[0] > 0 && key_sender.send(buffer[0]).is_err() {
+                        finish = true;
+                        // }
                     }
                 }
             });
             key_receiver = Some(key_rcver);
         }
+        let macros = Macros::new(macros);
         Manager {
             scrn_size: (cols, rows),
             join_handle,
@@ -292,13 +320,14 @@ impl Manager {
             key_receiver,
             key_recv_timeout: Duration::from_millis(1),
             result_receiver: Some(result_receiver.into_iter()),
+            macros,
         }
     }
 
     /// In case one has his own logic for serving raw user input from
     /// the keyboard, both for specific case or for all cases.
     pub fn get_key_receiver(&mut self) -> Option<mpsc::Receiver<u8>> {
-        replace(&mut self.key_receiver, None)
+        self.key_receiver.take()
     }
 
     /// Use this method to restore or provide your own key receiver for Manager to take
@@ -319,11 +348,11 @@ impl Manager {
         self.sender.clone()
     }
 
-    fn read_bytes(&self, receiver: &Option<mpsc::Receiver<u8>>) -> Vec<u8> {
+    fn read_bytes(&self, receiver: &Option<mpsc::Receiver<u8>>) -> Option<Vec<u8>> {
         let mut keys_read: Vec<u8> = Vec::with_capacity(10);
         if let Some(key_rcvr) = receiver {
             let mut all_bytes_read = false;
-            if let Ok(first_byte) = key_rcvr.recv() {
+            if let Ok(first_byte) = key_rcvr.recv_timeout(Duration::from_millis(1)) {
                 keys_read.push(first_byte);
                 if first_byte != 27 && first_byte < 128 {
                     all_bytes_read = true
@@ -336,37 +365,71 @@ impl Manager {
                         }
                     }
                 }
+            } else {
+                return None;
             }
         } else {
             eprintln!("mgr has no key receiver!")
         }
-        keys_read
+        Some(keys_read)
     }
 
     /// Use this method to get a Key value of what user pressed on his keyboard.
-    pub fn read_key(&mut self) -> Option<Key> {
-        let k_rcvr = replace(&mut self.key_receiver, None);
-        //if let Some(key_rcvr) = k_rcvr {
-        let keys_read = self.read_bytes(&k_rcvr);
-        let _replaced = replace(&mut self.key_receiver, k_rcvr);
-        return map_bytes_to_key(keys_read);
-        // } else {
-        //     eprintln!("mgr has no key receiver!");
-        // }
+    pub fn read_key(&mut self) -> Key {
+        loop {
+            // print!("l");
+            if self.macros.running.is_some() && self.macros.recording.is_none() {
+                let key_from_macro = self.macros.key_recv.try_recv();
+                match key_from_macro {
+                    Ok(key) => return key,
+                    Err(mpsc::TryRecvError::Disconnected) => {
+                        // println!("disconnected");
+                        let (_, key_recv) = std::sync::mpsc::channel();
+                        self.macros.key_recv = key_recv;
+                        self.macros.running = None;
+                    }
+                    Err(_e) => {
+                        // println!("Other error: {}", _e);
+                    }
+                }
+            } else if self.macros.running.is_some() {
+                // Stop a running macro when recording a new one
+                self.macros.stop();
+            }
+            let k_rcvr = self.key_receiver.take();
+            let read_result = self.read_bytes(&k_rcvr);
+            self.key_receiver = k_rcvr;
+            if let Some(keys_read) = read_result {
+                if let Some(key) = map_bytes_to_key(keys_read) {
+                    // println!("me: {}", self.macros.enabled);
+                    if self.macros.enabled {
+                        if self.macros.is_record_key(&key) || self.macros.recording.is_some() {
+                            self.macros.record(&key);
+                            return key;
+                        } else if !self.macros.run(&key) {
+                            return key;
+                        }
+                    } else {
+                        // println!("{}", key);
+                        return key;
+                    }
+                }
+            }
+        }
     }
 
     /// Use this method to get a String of what user has entered up to Enter key.
     pub fn read_line(&mut self) -> String {
-        let k_rcvr = replace(&mut self.key_receiver, None);
+        let k_rcvr = self.key_receiver.take();
         let mut all_bytes: Vec<u8> = Vec::with_capacity(128);
-        let mut keys_read;
         let mut enter_pressed = false;
         while !enter_pressed {
-            keys_read = self.read_bytes(&k_rcvr);
-            if keys_read.len() == 1 && keys_read[0] == 10 {
-                enter_pressed = true;
-            } else if keys_read.len() > 0 {
-                all_bytes.append(&mut keys_read);
+            if let Some(mut keys_read) = self.read_bytes(&k_rcvr) {
+                if keys_read.len() == 1 && keys_read[0] == 10 {
+                    enter_pressed = true;
+                } else if !keys_read.is_empty() {
+                    all_bytes.append(&mut keys_read);
+                }
             }
         }
         let _replaced = replace(&mut self.key_receiver, k_rcvr);
@@ -375,17 +438,19 @@ impl Manager {
 
     /// Use this method to get a char of what user has entered on his keyboard.
     pub fn read_char(&mut self) -> Option<char> {
-        let k_rcvr = replace(&mut self.key_receiver, None);
-        let mut keys_read = Vec::new();
-        let mut something_read = false;
-        while !something_read {
-            keys_read = self.read_bytes(&k_rcvr);
-            if keys_read.len() > 0 {
-                something_read = true;
+        let k_rcvr = self.key_receiver.take();
+        k_rcvr.as_ref()?;
+        // if k_rcvr.is_none() {
+        //     return None;
+        // };
+        loop {
+            if let Some(keys_read) = self.read_bytes(&k_rcvr) {
+                if !keys_read.is_empty() {
+                    let _replaced = replace(&mut self.key_receiver, k_rcvr);
+                    return String::from_utf8_lossy(&keys_read).chars().next();
+                }
             }
         }
-        let _replaced = replace(&mut self.key_receiver, k_rcvr);
-        String::from_utf8_lossy(&keys_read).chars().next()
     }
 
     /// Use this method in case you want Manager to take back servicing results on his actions.
@@ -553,9 +618,9 @@ impl Manager {
         P: AsRef<Path> + std::fmt::Debug,
     {
         if let Some(graphic) = Graphic::from_file(filename) {
-            return Ok(AnimOk::GraphicCreated(graphic));
+            Ok(AnimOk::GraphicCreated(graphic))
         } else {
-            return Err(AnimError::UnableToBuildGraphicFromFile);
+            Err(AnimError::UnableToBuildGraphicFromFile)
         }
     }
 
@@ -577,6 +642,12 @@ impl Manager {
         };
     }
 
+    /// Create a new clean display, optionally keeping current one.
+    pub fn move_cursor(&self, x: usize, y: usize) {
+        if self.sender.send(Message::MoveCursor(x, y)).is_err() {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send MoveCursor message")
+        };
+    }
     /// Create a new clean display, optionally keeping current one.
     pub fn new_display(&mut self, keep_existing: bool) -> usize {
         let new_id = self.next_screen_id;

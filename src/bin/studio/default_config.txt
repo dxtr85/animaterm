@@ -115,3 +115,16 @@ wallpaper_file /home/dxtr/projects/animaterm/fbsd.txg
 # print_graphic AltP
 # print_screen AltCtrlP
 # exit Escape ShiftQ CtrlQ
+
+# Define macro key - pressing this key will trigger macro recording mode
+#
+# macro AltM
+
+# Define a macro
+# Pressing a trigger key will cause the app to receive a sequence of keys
+# delayed from one another by specified amount of time.
+# If a 'loop' keyword is used, this macro will be repeated until 'trigger key'
+# is pressed again, or another macro is called.
+# format: macro <trigger key> [loop] <key_1:delay_1> ... <key_n:delay_n>
+# i.e. macro F10 loop Right:500 Down:500 Left:500 Up:500
+

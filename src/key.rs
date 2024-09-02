@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 /// Represents user keyboard input.
 pub enum Key {
     CtrlA,

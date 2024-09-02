@@ -1,3 +1,4 @@
+use animaterm::prelude::MacroSequence;
 use animaterm::{str_to_key, Key};
 use std::env;
 use std::fmt::Display;
@@ -5,10 +6,12 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
 use std::process::exit;
+use std::time::Duration;
 
 static ROWS_MIN: usize = 29;
 static COLS_MIN: usize = 84;
 
+#[derive(Default)]
 pub struct Arguments {
     pub rows: Option<usize>,
     pub cols: Option<usize>,
@@ -24,6 +27,7 @@ pub struct Arguments {
     pub glyphs: Option<String>,
     pub bindings: Bindings,
     pub wallpaper_file: Option<String>,
+    pub macros: Vec<(Key, MacroSequence)>,
 }
 
 pub struct Bindings {
@@ -78,6 +82,7 @@ pub struct Bindings {
     pub print_graphic: Vec<Key>,
     pub print_screen: Vec<Key>,
     pub action_counter_reset: Vec<Key>,
+    pub macro_key: Vec<Key>,
     pub exit: Vec<Key>,
 }
 
@@ -135,27 +140,8 @@ impl Default for Bindings {
             print_graphic: vec![Key::AltP],
             print_screen: vec![Key::AltCtrlP],
             action_counter_reset: vec![Key::R],
+            macro_key: vec![Key::AltM],
             exit: vec![Key::Escape],
-        }
-    }
-}
-impl Default for Arguments {
-    fn default() -> Self {
-        Arguments {
-            rows: None,
-            cols: None,
-            colors_offset: None,
-            backgrounds_offset: None,
-            styles_offset: None,
-            glyphs_offset: None,
-            workspace_offset: None,
-            workspace_size: None,
-            config_file: None,
-            input_file: None,
-            output_file: None,
-            glyphs: None,
-            bindings: Bindings::default(),
-            wallpaper_file: None,
         }
     }
 }
@@ -1035,6 +1021,41 @@ fn parse_line(args: &mut Arguments, line: &str) {
             }
             if keys.len() > 0 {
                 args.bindings.action_counter_reset = keys;
+            }
+        }
+        "macro" => {
+            let s_len = splited.len();
+            if s_len > 1 {
+                let is_loop = s_len > 2 && splited[2] == "loop";
+                let mut item_iter = splited.into_iter();
+                item_iter.next();
+                let trigger_key_str = item_iter.next().unwrap();
+                let trigger_key = str_to_key(trigger_key_str).unwrap_or_else(|| {
+                    panic!("Unable to read macro trigger key {}", trigger_key_str)
+                });
+                if is_loop {
+                    item_iter.next();
+                }
+                let mut keys = vec![];
+                for item in item_iter {
+                    let mut split_iter = item.split(':');
+                    let key_str = split_iter.next().expect("Unable to read macro key string");
+                    let dur_str = split_iter
+                        .next()
+                        .expect("Unable to read macro duration string");
+                    let key = str_to_key(key_str).expect("Unable to parse macro key string");
+                    let delay = u64::from_str_radix(dur_str.trim(), 10)
+                        .expect("Unable to parse macro duration");
+                    keys.push((key, Duration::from_millis(delay)));
+                }
+                if !keys.is_empty() {
+                    args.macros
+                        .push((trigger_key, MacroSequence::new(is_loop, keys)));
+                } else if args.macros.is_empty() {
+                    args.bindings.macro_key = vec![trigger_key.clone()];
+                    args.macros
+                        .push((trigger_key, MacroSequence::new(is_loop, keys)));
+                }
             }
         }
         "exit" => {

@@ -107,6 +107,7 @@
 //!
 //! If you want to place selected glyph in 64 consecutive positions on workspace you press: 6 4 Space.
 //! ### General shortcuts
+//!            Define a key macro: AltM
 //!            Print Workspace to a file: AltP
 //!            Print screen to a file: AltCtrlP
 //!            Action counter reset: R
@@ -234,18 +235,50 @@ fn main() {
 
     let cols = args.cols;
     let rows = args.rows;
+    // used for providing user visual feedback on which phase of macro-recording
+    // he currently is
+    let mut macro_mode: u8 = 0;
+    let mut macro_loop = false;
     verify_cols_and_rows(cols, rows);
     let mut glyph = Glyph::default();
     glyph.set_char(char::from_u32(9626).unwrap());
     glyph.set_background(Color::new_gray(7));
     glyph.set_bright(true);
     glyph.set_color(Color::new_gray(17));
+    let macros = if !args.macros.is_empty() {
+        Some(args.macros)
+    } else {
+        let bind_macro = args.bindings.macro_key[0].clone();
+        // panic!("Macro key: {}", bind_macro);
+        Some(vec![
+            // Macro recording is triggered by AltM (if not overwritten by user)
+            (
+                bind_macro,
+                // Key::AltM,
+                MacroSequence::empty(),
+            ),
+            // One looping macro is defined, triggered by F10 function key
+            (
+                Key::F10,
+                MacroSequence::new(
+                    true,
+                    vec![
+                        (Key::Right, Duration::from_millis(500)),
+                        (Key::Down, Duration::from_millis(500)),
+                        (Key::Left, Duration::from_millis(500)),
+                        (Key::Up, Duration::from_millis(500)),
+                    ],
+                ),
+            ),
+        ])
+    };
     let mut mgr = Manager::new(
         true,
         cols,
         rows,
         Some(glyph),
         Some(Duration::from_millis(10)),
+        macros,
     );
     let (screen_cols, screen_rows) = mgr.screen_size();
     let start_col = screen_cols.saturating_sub(84) / 2;
@@ -967,242 +1000,153 @@ fn main() {
     let mut action_counter = 1;
     let mut counter_initialized = false;
     loop {
-        if let Some(key) = mgr.read_key() {
-            match key {
-                // Colors window
-                k if args.bindings.colors_left.contains(&k) => {
-                    colors_window.move_left(false);
-                }
-                k if args.bindings.colors_right.contains(&k) => {
-                    colors_window.move_right(false);
-                }
-                k if args.bindings.colors_far_right.contains(&k) => {
-                    colors_window.move_far_right(false);
-                }
-                k if args.bindings.colors_far_left.contains(&k) => {
-                    colors_window.move_far_left(false);
-                }
-                k if args.bindings.colors_up.contains(&k) => {
-                    colors_window.move_up();
-                }
-                k if args.bindings.colors_top.contains(&k) => {
-                    colors_window.move_top();
-                }
-                k if args.bindings.colors_down.contains(&k) => {
-                    colors_window.move_down();
-                }
-                k if args.bindings.colors_bottom.contains(&k) => {
-                    colors_window.move_bottom();
-                }
-                k if args.bindings.colors_invisible.contains(&k) => {
-                    colors_window.set_invisible(true);
-                }
-                k if args.bindings.colors_visible.contains(&k) => {
-                    colors_window.set_invisible(false);
-                }
+        let key_pressed = mgr.read_key();
+        if macro_mode == 2 && !args.bindings.macro_key.contains(&key_pressed) {
+            if macro_loop {
+                mgr.set_graphic(selector_id, 28, true);
+            } else {
+                mgr.set_graphic(selector_id, 26, true);
+            }
+            macro_mode = 3;
+        }
+        match key_pressed {
+            // Colors window
+            k if args.bindings.colors_left.contains(&k) => {
+                colors_window.move_left(false);
+            }
+            k if args.bindings.colors_right.contains(&k) => {
+                colors_window.move_right(false);
+            }
+            k if args.bindings.colors_far_right.contains(&k) => {
+                colors_window.move_far_right(false);
+            }
+            k if args.bindings.colors_far_left.contains(&k) => {
+                colors_window.move_far_left(false);
+            }
+            k if args.bindings.colors_up.contains(&k) => {
+                colors_window.move_up();
+            }
+            k if args.bindings.colors_top.contains(&k) => {
+                colors_window.move_top();
+            }
+            k if args.bindings.colors_down.contains(&k) => {
+                colors_window.move_down();
+            }
+            k if args.bindings.colors_bottom.contains(&k) => {
+                colors_window.move_bottom();
+            }
+            k if args.bindings.colors_invisible.contains(&k) => {
+                colors_window.set_invisible(true);
+            }
+            k if args.bindings.colors_visible.contains(&k) => {
+                colors_window.set_invisible(false);
+            }
 
-                // Background window
-                k if args.bindings.backgrounds_left.contains(&k) => {
-                    backgrounds_window.move_left(true);
-                }
-                k if args.bindings.backgrounds_right.contains(&k) => {
-                    backgrounds_window.move_right(true);
-                }
-                k if args.bindings.backgrounds_far_left.contains(&k) => {
-                    backgrounds_window.move_far_left(true);
-                }
-                k if args.bindings.backgrounds_far_right.contains(&k) => {
-                    backgrounds_window.move_far_right(true);
-                }
-                k if args.bindings.backgrounds_up.contains(&k) => {
-                    backgrounds_window.move_up();
-                }
-                k if args.bindings.backgrounds_top.contains(&k) => {
-                    backgrounds_window.move_top();
-                }
-                k if args.bindings.backgrounds_down.contains(&k) => {
-                    backgrounds_window.move_down();
-                }
-                k if args.bindings.backgrounds_bottom.contains(&k) => {
-                    backgrounds_window.move_bottom();
-                }
-                k if args.bindings.backgrounds_invisible.contains(&k) => {
-                    backgrounds_window.set_invisible(true);
-                }
-                k if args.bindings.backgrounds_visible.contains(&k) => {
-                    backgrounds_window.set_invisible(false);
-                }
+            // Background window
+            k if args.bindings.backgrounds_left.contains(&k) => {
+                backgrounds_window.move_left(true);
+            }
+            k if args.bindings.backgrounds_right.contains(&k) => {
+                backgrounds_window.move_right(true);
+            }
+            k if args.bindings.backgrounds_far_left.contains(&k) => {
+                backgrounds_window.move_far_left(true);
+            }
+            k if args.bindings.backgrounds_far_right.contains(&k) => {
+                backgrounds_window.move_far_right(true);
+            }
+            k if args.bindings.backgrounds_up.contains(&k) => {
+                backgrounds_window.move_up();
+            }
+            k if args.bindings.backgrounds_top.contains(&k) => {
+                backgrounds_window.move_top();
+            }
+            k if args.bindings.backgrounds_down.contains(&k) => {
+                backgrounds_window.move_down();
+            }
+            k if args.bindings.backgrounds_bottom.contains(&k) => {
+                backgrounds_window.move_bottom();
+            }
+            k if args.bindings.backgrounds_invisible.contains(&k) => {
+                backgrounds_window.set_invisible(true);
+            }
+            k if args.bindings.backgrounds_visible.contains(&k) => {
+                backgrounds_window.set_invisible(false);
+            }
 
-                //Glyphs window
-                k if args.bindings.glyphs_left.contains(&k) => {
-                    if mc > 0 {
-                        mc -= 1;
-                        mgr.move_graphic(selector_id, 2, (-1, 0))
-                    } else {
-                        mgr.move_graphic(selector_id, 2, (15, 0));
-                        mc = 15;
-                    }
+            //Glyphs window
+            k if args.bindings.glyphs_left.contains(&k) => {
+                if mc > 0 {
+                    mc -= 1;
+                    mgr.move_graphic(selector_id, 2, (-1, 0))
+                } else {
+                    mgr.move_graphic(selector_id, 2, (15, 0));
+                    mc = 15;
                 }
+            }
 
-                // glyphs
-                k if args.bindings.glyphs_right.contains(&k) => {
-                    if mc < 15 {
-                        mc += 1;
-                        mgr.move_graphic(selector_id, 2, (1, 0));
-                    } else {
-                        mgr.move_graphic(selector_id, 2, (-15, 0));
-                        let start_x = max(0, glyphs_offset.0) as usize + mc;
-                        let start_y = max(0, glyphs_offset.1) as usize + mr;
-                        mgr.clear_area(selector_layer, (start_x, start_y), (2, 3));
-                        mc = 0;
-                    }
+            // glyphs
+            k if args.bindings.glyphs_right.contains(&k) => {
+                if mc < 15 {
+                    mc += 1;
+                    mgr.move_graphic(selector_id, 2, (1, 0));
+                } else {
+                    mgr.move_graphic(selector_id, 2, (-15, 0));
+                    let start_x = max(0, glyphs_offset.0) as usize + mc;
+                    let start_y = max(0, glyphs_offset.1) as usize + mr;
+                    mgr.clear_area(selector_layer, (start_x, start_y), (2, 3));
+                    mc = 0;
                 }
+            }
 
-                // glyphs
-                k if args.bindings.glyphs_up.contains(&k) => {
-                    if mr > 0 {
-                        mr -= 1;
-                        mgr.move_graphic(selector_id, 2, (0, -1))
-                    } else {
-                        mgr.move_graphic(selector_id, 2, (0, 9));
-                        mr = 9;
-                    }
+            // glyphs
+            k if args.bindings.glyphs_up.contains(&k) => {
+                if mr > 0 {
+                    mr -= 1;
+                    mgr.move_graphic(selector_id, 2, (0, -1))
+                } else {
+                    mgr.move_graphic(selector_id, 2, (0, 9));
+                    mr = 9;
                 }
+            }
 
-                //glyphs
-                k if args.bindings.glyphs_down.contains(&k) => {
-                    if mr < 9 {
-                        mr += 1;
-                        mgr.move_graphic(selector_id, 2, (0, 1))
-                    } else {
-                        mgr.move_graphic(selector_id, 2, (0, mr as isize * (-1)));
-                        let start_x = max(0, glyphs_offset.0) as usize + mc;
-                        let start_y = max(0, glyphs_offset.1) as usize + mr;
-                        mgr.clear_area(
-                            selector_layer,
-                            (start_x as usize, start_y as usize),
-                            (2, 3),
-                        );
-                        mr = 0;
-                    }
+            //glyphs
+            k if args.bindings.glyphs_down.contains(&k) => {
+                if mr < 9 {
+                    mr += 1;
+                    mgr.move_graphic(selector_id, 2, (0, 1))
+                } else {
+                    mgr.move_graphic(selector_id, 2, (0, mr as isize * (-1)));
+                    let start_x = max(0, glyphs_offset.0) as usize + mc;
+                    let start_y = max(0, glyphs_offset.1) as usize + mr;
+                    mgr.clear_area(selector_layer, (start_x as usize, start_y as usize), (2, 3));
+                    mr = 0;
                 }
+            }
 
-                //glyphs
-                k if args.bindings.glyphs_select.contains(&k) => {
-                    mgr.start_animation(selector_id, 1);
-                    mgr.enqueue_animation(selector_id, 0, Timestamp::now());
+            //glyphs
+            k if args.bindings.glyphs_select.contains(&k) => {
+                mgr.start_animation(selector_id, 1);
+                mgr.enqueue_animation(selector_id, 0, Timestamp::now());
 
-                    mgr.get_glyph(glyph_matrix_id, mc + 1, mr + 1);
-                    let result = mgr.read_result();
-                    if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
-                        while action_counter > 0 {
-                            mgr.set_glyph(workspace_id, glyph, c, r);
-                            if c < matrix_cols {
-                                c += 1;
-                            } else if r < matrix_rows {
-                                c = 1;
-                                r += 1;
-                            } else {
-                                c = 1;
-                                r = 1;
-                            }
-                            action_counter -= 1;
-                        }
-                        action_counter = 1;
-                        counter_initialized = false;
-                        mgr.get_glyph(workspace_id, c, r);
-                        let result = mgr.read_result();
-                        if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
-                            glyph_under_cursor = glyph;
-                        }
-                        mgr.set_glyph(workspace_id, g, c, r);
-                    }
-                }
-
-                //glyphs
-                k if args.bindings.glyphs_prev.contains(&k) => {
-                    if glyph_frame_id == 0 {
-                        glyph_frame_id = max_glyph_frame_id;
-                    } else {
-                        glyph_frame_id -= 1;
-                    }
-                    mgr.set_graphic(glyph_matrix_id, glyph_frame_id, true)
-                }
-                //glyphs
-                k if args.bindings.glyphs_home.contains(&k) => {
-                    glyph_frame_id = 0;
-                    mgr.set_graphic(glyph_matrix_id, glyph_frame_id, true);
-                }
-                //glyphs
-                k if args.bindings.glyphs_next.contains(&k) => {
-                    if glyph_frame_id == max_glyph_frame_id {
-                        glyph_frame_id = 0;
-                    } else {
-                        glyph_frame_id += 1;
-                    }
-                    mgr.set_graphic(glyph_matrix_id, glyph_frame_id, true)
-                }
-                //glyphs
-                k if args.bindings.glyphs_end.contains(&k) => {
-                    glyph_frame_id = max_glyph_frame_id;
-                    mgr.set_graphic(glyph_matrix_id, glyph_frame_id, true);
-                }
-
-                // workspace window
-                k if args.bindings.workspace_left.contains(&k) => {
-                    mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                    if c > 1 {
-                        c -= 1;
-                    } else {
-                        c = matrix_cols;
-                        if r > 1 {
-                            r -= 1;
-                        } else {
-                            r = matrix_rows;
-                        }
-                    }
-                    mgr.get_glyph(workspace_id, c, r);
-                    let result = mgr.read_result();
-                    if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
-                        glyph_under_cursor = glyph;
-                    }
-                    mgr.set_glyph(workspace_id, g, c, r);
-                }
-                k if args.bindings.workspace_line_start.contains(&k) => {
-                    mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                    c = 1;
-                    mgr.get_glyph(workspace_id, c, r);
-                    let result = mgr.read_result();
-                    if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
-                        glyph_under_cursor = glyph;
-                    }
-                    mgr.set_glyph(workspace_id, g, c, r);
-                }
-
-                k if args.bindings.workspace_line_end.contains(&k) => {
-                    mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                    c = matrix_cols;
-                    mgr.get_glyph(workspace_id, c, r);
-                    let result = mgr.read_result();
-                    if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
-                        glyph_under_cursor = glyph;
-                    }
-                    mgr.set_glyph(workspace_id, g, c, r);
-                }
-
-                // workspace window
-                k if args.bindings.workspace_right.contains(&k) => {
-                    mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                    if c < matrix_cols {
-                        c += 1;
-                    } else {
-                        c = 1;
-                        if r < matrix_rows {
+                mgr.get_glyph(glyph_matrix_id, mc + 1, mr + 1);
+                let result = mgr.read_result();
+                if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                    while action_counter > 0 {
+                        mgr.set_glyph(workspace_id, glyph, c, r);
+                        if c < matrix_cols {
+                            c += 1;
+                        } else if r < matrix_rows {
+                            c = 1;
                             r += 1;
                         } else {
+                            c = 1;
                             r = 1;
                         }
+                        action_counter -= 1;
                     }
+                    action_counter = 1;
+                    counter_initialized = false;
                     mgr.get_glyph(workspace_id, c, r);
                     let result = mgr.read_result();
                     if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
@@ -1210,100 +1154,109 @@ fn main() {
                     }
                     mgr.set_glyph(workspace_id, g, c, r);
                 }
+            }
 
-                //workspace window
-                k if args.bindings.workspace_set_color.contains(&k) => {
-                    // println!("set color!");
-                    mgr.get_glyph(glyph_matrix_id, mc + 1, mr + 1);
-                    let result = mgr.read_result();
-                    if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
-                        while action_counter > 0 {
-                            glyph_under_cursor.set_color(glyph.color);
-                            mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                            if c < matrix_cols {
-                                c += 1;
-                            } else if r < matrix_rows {
-                                c = 1;
-                                r += 1;
-                            } else {
-                                c = 1;
-                                r = 1;
-                            }
-                            mgr.get_glyph(workspace_id, c, r);
-                            let result = mgr.read_result();
-                            if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
-                                glyph_under_cursor = glyph;
-                            }
-                            action_counter -= 1;
-                        }
-                        mgr.set_glyph(workspace_id, g, c, r);
-                        action_counter = 1;
-                        counter_initialized = false;
+            //glyphs
+            k if args.bindings.glyphs_prev.contains(&k) => {
+                if glyph_frame_id == 0 {
+                    glyph_frame_id = max_glyph_frame_id;
+                } else {
+                    glyph_frame_id -= 1;
+                }
+                mgr.set_graphic(glyph_matrix_id, glyph_frame_id, true)
+            }
+            //glyphs
+            k if args.bindings.glyphs_home.contains(&k) => {
+                glyph_frame_id = 0;
+                mgr.set_graphic(glyph_matrix_id, glyph_frame_id, true);
+            }
+            //glyphs
+            k if args.bindings.glyphs_next.contains(&k) => {
+                if glyph_frame_id == max_glyph_frame_id {
+                    glyph_frame_id = 0;
+                } else {
+                    glyph_frame_id += 1;
+                }
+                mgr.set_graphic(glyph_matrix_id, glyph_frame_id, true)
+            }
+            //glyphs
+            k if args.bindings.glyphs_end.contains(&k) => {
+                glyph_frame_id = max_glyph_frame_id;
+                mgr.set_graphic(glyph_matrix_id, glyph_frame_id, true);
+            }
+
+            // workspace window
+            k if args.bindings.workspace_left.contains(&k) => {
+                mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
+                if c > 1 {
+                    c -= 1;
+                } else {
+                    c = matrix_cols;
+                    if r > 1 {
+                        r -= 1;
+                    } else {
+                        r = matrix_rows;
                     }
                 }
-                k if args.bindings.workspace_set_background.contains(&k) => {
-                    mgr.get_glyph(glyph_matrix_id, mc + 1, mr + 1);
-                    let result = mgr.read_result();
-                    if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
-                        while action_counter > 0 {
-                            glyph_under_cursor.set_background(glyph.background);
-                            mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                            if c < matrix_cols {
-                                c += 1;
-                            } else if r < matrix_rows {
-                                c = 1;
-                                r += 1;
-                            } else {
-                                c = 1;
-                                r = 1;
-                            }
-                            mgr.get_glyph(workspace_id, c, r);
-                            let result = mgr.read_result();
-                            if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
-                                glyph_under_cursor = glyph;
-                            }
-                            action_counter -= 1;
-                        }
-                        mgr.set_glyph(workspace_id, g, c, r);
-                        action_counter = 1;
-                        counter_initialized = false;
+                mgr.get_glyph(workspace_id, c, r);
+                let result = mgr.read_result();
+                if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                    glyph_under_cursor = glyph;
+                }
+                mgr.set_glyph(workspace_id, g, c, r);
+            }
+            k if args.bindings.workspace_line_start.contains(&k) => {
+                mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
+                c = 1;
+                mgr.get_glyph(workspace_id, c, r);
+                let result = mgr.read_result();
+                if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                    glyph_under_cursor = glyph;
+                }
+                mgr.set_glyph(workspace_id, g, c, r);
+            }
+
+            k if args.bindings.workspace_line_end.contains(&k) => {
+                mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
+                c = matrix_cols;
+                mgr.get_glyph(workspace_id, c, r);
+                let result = mgr.read_result();
+                if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                    glyph_under_cursor = glyph;
+                }
+                mgr.set_glyph(workspace_id, g, c, r);
+            }
+
+            // workspace window
+            k if args.bindings.workspace_right.contains(&k) => {
+                mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
+                if c < matrix_cols {
+                    c += 1;
+                } else {
+                    c = 1;
+                    if r < matrix_rows {
+                        r += 1;
+                    } else {
+                        r = 1;
                     }
                 }
-                k if args.bindings.workspace_set_glyph.contains(&k) => {
-                    mgr.get_glyph(glyph_matrix_id, mc + 1, mr + 1);
-                    let result = mgr.read_result();
-                    if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
-                        while action_counter > 0 {
-                            glyph_under_cursor.set_char(glyph.character);
-                            mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                            if c < matrix_cols {
-                                c += 1;
-                            } else if r < matrix_rows {
-                                c = 1;
-                                r += 1;
-                            } else {
-                                c = 1;
-                                r = 1;
-                            }
-                            mgr.get_glyph(workspace_id, c, r);
-                            let result = mgr.read_result();
-                            if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
-                                glyph_under_cursor = glyph;
-                            }
-                            action_counter -= 1;
-                        }
-                        mgr.set_glyph(workspace_id, g, c, r);
-                        action_counter = 1;
-                        counter_initialized = false;
-                    }
+                mgr.get_glyph(workspace_id, c, r);
+                let result = mgr.read_result();
+                if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                    glyph_under_cursor = glyph;
                 }
-                k if args.bindings.workspace_set_style.contains(&k) => {
-                    let mut new_glyph = style_window.style_glyph.clone();
-                    new_glyph.set_char(glyph_under_cursor.character);
-                    new_glyph.set_color(glyph_under_cursor.color);
-                    new_glyph.set_background(glyph_under_cursor.background);
+                mgr.set_glyph(workspace_id, g, c, r);
+            }
+
+            //workspace window
+            k if args.bindings.workspace_set_color.contains(&k) => {
+                // println!("set color!");
+                mgr.get_glyph(glyph_matrix_id, mc + 1, mr + 1);
+                let result = mgr.read_result();
+                if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
                     while action_counter > 0 {
-                        mgr.set_glyph(workspace_id, new_glyph, c, r);
+                        glyph_under_cursor.set_color(glyph.color);
+                        mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
                         if c < matrix_cols {
                             c += 1;
                         } else if r < matrix_rows {
@@ -1324,124 +1277,77 @@ fn main() {
                     action_counter = 1;
                     counter_initialized = false;
                 }
-                k if args.bindings.workspace_select_color.contains(&k) => {
-                    colors_window.select_color(glyph_under_cursor.color, false);
-                }
-                k if args.bindings.workspace_select_color.contains(&k) => {
-                    colors_window.select_color(glyph_under_cursor.color, false);
-                }
-                k if args.bindings.workspace_select_background.contains(&k) => {
-                    backgrounds_window.select_color(glyph_under_cursor.background, true);
-                }
-                k if args.bindings.workspace_select_glyph.contains(&k) => {
-                    'break_point: for c in 1..17 {
-                        for r in 0..10 {
-                            mgr.get_glyph(glyph_matrix_id, c, r);
-                            let result = mgr.read_result();
-                            if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
-                                if glyph.character == glyph_under_cursor.character {
-                                    let dc: isize = c as isize - mc as isize - 1;
-                                    let dr: isize = r as isize - mr as isize - 1;
-                                    mc = c - 1;
-                                    mr = r - 1;
-                                    mgr.move_graphic(selector_id, 2, (dc, dr));
-                                    break 'break_point;
-                                };
-                            }
+            }
+            k if args.bindings.workspace_set_background.contains(&k) => {
+                mgr.get_glyph(glyph_matrix_id, mc + 1, mr + 1);
+                let result = mgr.read_result();
+                if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                    while action_counter > 0 {
+                        glyph_under_cursor.set_background(glyph.background);
+                        mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
+                        if c < matrix_cols {
+                            c += 1;
+                        } else if r < matrix_rows {
+                            c = 1;
+                            r += 1;
+                        } else {
+                            c = 1;
+                            r = 1;
                         }
-                    }
-                }
-                k if args.bindings.workspace_select_style.contains(&k) => {
-                    if glyph_under_cursor.bright {
-                        mgr.set_graphic(style_bright_id, 1, false);
-                        style_window.style_glyph.set_bright(true);
-                    } else {
-                        mgr.set_graphic(style_bright_id, 0, false);
-                        style_window.style_glyph.set_bright(false);
-                    }
-                    if glyph_under_cursor.dim {
-                        mgr.set_graphic(style_dim_id, 1, false);
-                        style_window.style_glyph.set_dim(true);
-                    } else {
-                        mgr.set_graphic(style_dim_id, 0, false);
-                        style_window.style_glyph.set_dim(false);
-                    }
-                    if glyph_under_cursor.italic {
-                        mgr.set_graphic(style_italic_id, 1, false);
-                        style_window.style_glyph.set_italic(true);
-                    } else {
-                        mgr.set_graphic(style_italic_id, 0, false);
-                        style_window.style_glyph.set_italic(false);
-                    }
-                    if glyph_under_cursor.underline {
-                        mgr.set_graphic(style_underline_id, 1, false);
-                        style_window.style_glyph.set_underline(true);
-                    } else {
-                        mgr.set_graphic(style_underline_id, 0, false);
-                        style_window.style_glyph.set_underline(false);
-                    }
-                    if glyph_under_cursor.blink {
-                        mgr.set_graphic(style_blink_id, 1, false);
-                        style_window.style_glyph.set_blink(true);
-                    } else {
-                        mgr.set_graphic(style_blink_id, 0, false);
-                        style_window.style_glyph.set_blink(false);
-                    }
-                    if glyph_under_cursor.blink_fast {
-                        mgr.set_graphic(style_blinkfast_id, 1, false);
-                        style_window.style_glyph.set_blinkfast(true);
-                    } else {
-                        mgr.set_graphic(style_blinkfast_id, 0, false);
-                        style_window.style_glyph.set_blinkfast(false);
-                    }
-                    if glyph_under_cursor.reverse {
-                        mgr.set_graphic(style_reverse_id, 1, false);
-                        style_window.style_glyph.set_reverse(true);
-                    } else {
-                        mgr.set_graphic(style_reverse_id, 0, false);
-                        style_window.style_glyph.set_reverse(false);
-                    }
-                    if glyph_under_cursor.transparent {
-                        mgr.set_graphic(style_transparent_id, 1, false);
-                        style_window.style_glyph.set_transparent(true);
-                    } else {
-                        mgr.set_graphic(style_transparent_id, 0, false);
-                        style_window.style_glyph.set_transparent(false);
-                    }
-                    if glyph_under_cursor.strike {
-                        mgr.set_graphic(style_strike_id, 1, false);
-                        style_window.style_glyph.set_strike(true);
-                    } else {
-                        mgr.set_graphic(style_strike_id, 0, false);
-                        style_window.style_glyph.set_strike(false);
-                    }
-                    style_window.activate_style_on_glyph_matrix();
-                }
-
-                //workspace window
-                k if args.bindings.workspace_up.contains(&k) => {
-                    // workspace_window.move_cursor_up();
-                    mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                    if r > 1 {
-                        r -= 1;
-                    } else {
-                        r = matrix_rows;
-                    }
-                    mgr.get_glyph(workspace_id, c, r);
-                    let result = mgr.read_result();
-                    if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
-                        glyph_under_cursor = glyph;
+                        mgr.get_glyph(workspace_id, c, r);
+                        let result = mgr.read_result();
+                        if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                            glyph_under_cursor = glyph;
+                        }
+                        action_counter -= 1;
                     }
                     mgr.set_glyph(workspace_id, g, c, r);
+                    action_counter = 1;
+                    counter_initialized = false;
                 }
-
-                // workspace window
-                k if args.bindings.workspace_down.contains(&k) => {
-                    // workspace_window.move_cursor_down(glyph_under_cursor);
-                    mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                    if r < matrix_rows {
+            }
+            k if args.bindings.workspace_set_glyph.contains(&k) => {
+                mgr.get_glyph(glyph_matrix_id, mc + 1, mr + 1);
+                let result = mgr.read_result();
+                if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                    while action_counter > 0 {
+                        glyph_under_cursor.set_char(glyph.character);
+                        mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
+                        if c < matrix_cols {
+                            c += 1;
+                        } else if r < matrix_rows {
+                            c = 1;
+                            r += 1;
+                        } else {
+                            c = 1;
+                            r = 1;
+                        }
+                        mgr.get_glyph(workspace_id, c, r);
+                        let result = mgr.read_result();
+                        if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                            glyph_under_cursor = glyph;
+                        }
+                        action_counter -= 1;
+                    }
+                    mgr.set_glyph(workspace_id, g, c, r);
+                    action_counter = 1;
+                    counter_initialized = false;
+                }
+            }
+            k if args.bindings.workspace_set_style.contains(&k) => {
+                let mut new_glyph = style_window.style_glyph.clone();
+                new_glyph.set_char(glyph_under_cursor.character);
+                new_glyph.set_color(glyph_under_cursor.color);
+                new_glyph.set_background(glyph_under_cursor.background);
+                while action_counter > 0 {
+                    mgr.set_glyph(workspace_id, new_glyph, c, r);
+                    if c < matrix_cols {
+                        c += 1;
+                    } else if r < matrix_rows {
+                        c = 1;
                         r += 1;
                     } else {
+                        c = 1;
                         r = 1;
                     }
                     mgr.get_glyph(workspace_id, c, r);
@@ -1449,276 +1355,438 @@ fn main() {
                     if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
                         glyph_under_cursor = glyph;
                     }
-                    mgr.set_glyph(workspace_id, g, c, r);
+                    action_counter -= 1;
                 }
-
-                // workspace window
-                k if args.bindings.workspace_erase.contains(&k) => {
-                    while action_counter > 0 {
-                        mgr.set_glyph(workspace_id, Glyph::default(), c, r);
-                        if c > 1 {
-                            c -= 1
-                        } else {
-                            if r > 1 {
-                                r -= 1;
-                            } else {
-                                r = matrix_rows;
-                            }
-                            c = matrix_cols;
+                mgr.set_glyph(workspace_id, g, c, r);
+                action_counter = 1;
+                counter_initialized = false;
+            }
+            k if args.bindings.workspace_select_color.contains(&k) => {
+                colors_window.select_color(glyph_under_cursor.color, false);
+            }
+            k if args.bindings.workspace_select_color.contains(&k) => {
+                colors_window.select_color(glyph_under_cursor.color, false);
+            }
+            k if args.bindings.workspace_select_background.contains(&k) => {
+                backgrounds_window.select_color(glyph_under_cursor.background, true);
+            }
+            k if args.bindings.workspace_select_glyph.contains(&k) => {
+                'break_point: for c in 1..17 {
+                    for r in 0..10 {
+                        mgr.get_glyph(glyph_matrix_id, c, r);
+                        let result = mgr.read_result();
+                        if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                            if glyph.character == glyph_under_cursor.character {
+                                let dc: isize = c as isize - mc as isize - 1;
+                                let dr: isize = r as isize - mr as isize - 1;
+                                mc = c - 1;
+                                mr = r - 1;
+                                mgr.move_graphic(selector_id, 2, (dc, dr));
+                                break 'break_point;
+                            };
                         }
-                        mgr.set_glyph(workspace_id, g, c, r);
-                        action_counter -= 1;
                     }
-                    action_counter = 1;
-                    counter_initialized = false;
                 }
-                // Key::AltCtrlShiftUp => {
-                //     // println!("move up!");
-                // }
-                // Key::AltCtrlShiftDown => {}
-                // Key::AltCtrlShiftLeft => {}
-                // Key::AltCtrlShiftRight => {}
+            }
+            k if args.bindings.workspace_select_style.contains(&k) => {
+                if glyph_under_cursor.bright {
+                    mgr.set_graphic(style_bright_id, 1, false);
+                    style_window.style_glyph.set_bright(true);
+                } else {
+                    mgr.set_graphic(style_bright_id, 0, false);
+                    style_window.style_glyph.set_bright(false);
+                }
+                if glyph_under_cursor.dim {
+                    mgr.set_graphic(style_dim_id, 1, false);
+                    style_window.style_glyph.set_dim(true);
+                } else {
+                    mgr.set_graphic(style_dim_id, 0, false);
+                    style_window.style_glyph.set_dim(false);
+                }
+                if glyph_under_cursor.italic {
+                    mgr.set_graphic(style_italic_id, 1, false);
+                    style_window.style_glyph.set_italic(true);
+                } else {
+                    mgr.set_graphic(style_italic_id, 0, false);
+                    style_window.style_glyph.set_italic(false);
+                }
+                if glyph_under_cursor.underline {
+                    mgr.set_graphic(style_underline_id, 1, false);
+                    style_window.style_glyph.set_underline(true);
+                } else {
+                    mgr.set_graphic(style_underline_id, 0, false);
+                    style_window.style_glyph.set_underline(false);
+                }
+                if glyph_under_cursor.blink {
+                    mgr.set_graphic(style_blink_id, 1, false);
+                    style_window.style_glyph.set_blink(true);
+                } else {
+                    mgr.set_graphic(style_blink_id, 0, false);
+                    style_window.style_glyph.set_blink(false);
+                }
+                if glyph_under_cursor.blink_fast {
+                    mgr.set_graphic(style_blinkfast_id, 1, false);
+                    style_window.style_glyph.set_blinkfast(true);
+                } else {
+                    mgr.set_graphic(style_blinkfast_id, 0, false);
+                    style_window.style_glyph.set_blinkfast(false);
+                }
+                if glyph_under_cursor.reverse {
+                    mgr.set_graphic(style_reverse_id, 1, false);
+                    style_window.style_glyph.set_reverse(true);
+                } else {
+                    mgr.set_graphic(style_reverse_id, 0, false);
+                    style_window.style_glyph.set_reverse(false);
+                }
+                if glyph_under_cursor.transparent {
+                    mgr.set_graphic(style_transparent_id, 1, false);
+                    style_window.style_glyph.set_transparent(true);
+                } else {
+                    mgr.set_graphic(style_transparent_id, 0, false);
+                    style_window.style_glyph.set_transparent(false);
+                }
+                if glyph_under_cursor.strike {
+                    mgr.set_graphic(style_strike_id, 1, false);
+                    style_window.style_glyph.set_strike(true);
+                } else {
+                    mgr.set_graphic(style_strike_id, 0, false);
+                    style_window.style_glyph.set_strike(false);
+                }
+                style_window.activate_style_on_glyph_matrix();
+            }
 
-                // style window
-                k if args.bindings.style_up.contains(&k) => {
-                    style_window.move_selector_up();
+            //workspace window
+            k if args.bindings.workspace_up.contains(&k) => {
+                // workspace_window.move_cursor_up();
+                mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
+                if r > 1 {
+                    r -= 1;
+                } else {
+                    r = matrix_rows;
                 }
-                k if args.bindings.style_down.contains(&k) => {
-                    style_window.move_selector_down();
+                mgr.get_glyph(workspace_id, c, r);
+                let result = mgr.read_result();
+                if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                    glyph_under_cursor = glyph;
                 }
-                k if args.bindings.style_enable.contains(&k) => {
-                    style_window.enable_selected_style();
+                mgr.set_glyph(workspace_id, g, c, r);
+            }
+
+            // workspace window
+            k if args.bindings.workspace_down.contains(&k) => {
+                // workspace_window.move_cursor_down(glyph_under_cursor);
+                mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
+                if r < matrix_rows {
+                    r += 1;
+                } else {
+                    r = 1;
                 }
-                k if args.bindings.style_disable.contains(&k) => {
-                    style_window.disable_selected_style();
+                mgr.get_glyph(workspace_id, c, r);
+                let result = mgr.read_result();
+                if let Ok(AnimOk::GlyphRetrieved(_gid, glyph)) = result {
+                    glyph_under_cursor = glyph;
                 }
-                // Key::AltCtrlShiftDown => {
-                //    style_window.move_selector_bottom();
-                // }
-                // Key::AltCtrlShiftUp => {
-                //     style_window.move_selector_top();
-                // }
-                k if args.bindings.print_graphic.contains(&k) => {
+                mgr.set_glyph(workspace_id, g, c, r);
+            }
+
+            // workspace window
+            k if args.bindings.workspace_erase.contains(&k) => {
+                while action_counter > 0 {
+                    mgr.set_glyph(workspace_id, Glyph::default(), c, r);
+                    if c > 1 {
+                        c -= 1
+                    } else {
+                        if r > 1 {
+                            r -= 1;
+                        } else {
+                            r = matrix_rows;
+                        }
+                        c = matrix_cols;
+                    }
+                    mgr.set_glyph(workspace_id, g, c, r);
+                    action_counter -= 1;
+                }
+                action_counter = 1;
+                counter_initialized = false;
+            }
+            // Key::AltCtrlShiftUp => {
+            //     // println!("move up!");
+            // }
+            // Key::AltCtrlShiftDown => {}
+            // Key::AltCtrlShiftLeft => {}
+            // Key::AltCtrlShiftRight => {}
+
+            // style window
+            k if args.bindings.style_up.contains(&k) => {
+                style_window.move_selector_up();
+            }
+            k if args.bindings.style_down.contains(&k) => {
+                style_window.move_selector_down();
+            }
+            k if args.bindings.style_enable.contains(&k) => {
+                style_window.enable_selected_style();
+            }
+            k if args.bindings.style_disable.contains(&k) => {
+                style_window.disable_selected_style();
+            }
+            // Key::AltCtrlShiftDown => {
+            //    style_window.move_selector_bottom();
+            // }
+            // Key::AltCtrlShiftUp => {
+            //     style_window.move_selector_top();
+            // }
+            k if args.bindings.print_graphic.contains(&k) => {
+                mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
+                // mgr.print_screen_section(
+                //     (workspace_offset.0 + 1, workspace_offset.1 + 1),
+                //     matrix_cols,
+                //     matrix_rows,
+                // );
+                mgr.print_graphic(workspace_id, true);
+                mgr.set_glyph(workspace_id, g, c, r);
+                let result = mgr.read_result();
+                if let Ok(AnimOk::PrintScreen(print_screen_text)) = result {
+                    use std::fs::OpenOptions;
+                    use std::io::Write;
+                    let secs = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs();
+                    let filename = format!("print_graphic_{}.txf", secs);
+
+                    let mut f = OpenOptions::new()
+                        .create(true)
+                        .write(true)
+                        .append(false)
+                        .open(filename)
+                        .expect("Unable to create file");
+
+                    for line in print_screen_text.iter() {
+                        f.write_all(line.as_bytes()).expect("Unable to write data");
+                        // f.write_all("\x1b[K".as_bytes())
+                        //     .expect("Unable to write data");
+                        // f.write_all("\x1b[1B".as_bytes())
+                        //     .expect("Unable to write data");
+                        let fmted = format!("\n");
+                        f.write_all(fmted.as_bytes()).expect("Unable to write data");
+                    }
+                    //     let fmted = format!("\n\x1b[{}D", self.wiersze[0].len());
+                    //     f.write_all(fmted.as_bytes()).expect("Unable to write data");
+                }
+            }
+            k if args.bindings.print_screen.contains(&k) => {
+                mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
+                mgr.print_screen();
+                mgr.set_glyph(workspace_id, g, c, r);
+                let result = mgr.read_result();
+                if let Ok(AnimOk::PrintScreen(print_screen_text)) = result {
+                    use std::fs::OpenOptions;
+                    use std::io::Write;
+                    let secs = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs();
+                    let filename = format!("print_screen_{}.txf", secs);
+
+                    let mut f = OpenOptions::new()
+                        .create(true)
+                        .write(true)
+                        .append(false)
+                        .open(filename)
+                        .expect("Unable to create file");
+
+                    for line in print_screen_text.iter() {
+                        f.write_all(line.as_bytes()).expect("Unable to write data");
+                        // f.write_all("\x1b[K".as_bytes())
+                        //     .expect("Unable to write data");
+                        // f.write_all("\x1b[1B".as_bytes())
+                        //     .expect("Unable to write data");
+                        let fmted = format!("\n");
+                        f.write_all(fmted.as_bytes()).expect("Unable to write data");
+                    }
+                    //     let fmted = format!("\n\x1b[{}D", self.wiersze[0].len());
+                    //     f.write_all(fmted.as_bytes()).expect("Unable to write data");
+                }
+            }
+            // reset action counter
+            k if args.bindings.action_counter_reset.contains(&k) => {
+                action_counter = 1;
+                counter_initialized = false;
+            }
+            // macro recording presentation logic
+            k if args.bindings.macro_key.contains(&k) => {
+                match macro_mode {
+                    0 => {
+                        macro_mode = 1;
+                        mgr.stop_animation(selector_id);
+                        mgr.set_graphic(selector_id, 25, true);
+                    }
+                    1 => {}
+                    2 => {
+                        macro_loop = !macro_loop;
+                        if macro_loop {
+                            mgr.set_graphic(selector_id, 27, true);
+                        } else {
+                            mgr.set_graphic(selector_id, 25, true);
+                        }
+                    }
+                    3 => {
+                        macro_mode = 0;
+                        macro_loop = false;
+                        mgr.start_animation(selector_id, 0);
+                        // looped = false;
+                    }
+                    _ => {
+                        // println!("This should not happen");
+                    }
+                };
+            }
+            // exit program
+            k if args.bindings.exit.contains(&k) => {
+                if let Some(output_file) = args.output_file {
                     mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                    // mgr.print_screen_section(
-                    //     (workspace_offset.0 + 1, workspace_offset.1 + 1),
-                    //     matrix_cols,
-                    //     matrix_rows,
-                    // );
                     mgr.print_graphic(workspace_id, true);
                     mgr.set_glyph(workspace_id, g, c, r);
                     let result = mgr.read_result();
                     if let Ok(AnimOk::PrintScreen(print_screen_text)) = result {
                         use std::fs::OpenOptions;
                         use std::io::Write;
-                        let secs = SystemTime::now()
-                            .duration_since(UNIX_EPOCH)
-                            .unwrap()
-                            .as_secs();
-                        let filename = format!("print_graphic_{}.txf", secs);
+                        let old_path = Path::new(&output_file);
 
-                        let mut f = OpenOptions::new()
-                            .create(true)
-                            .write(true)
-                            .append(false)
-                            .open(filename)
-                            .expect("Unable to create file");
-
-                        for line in print_screen_text.iter() {
-                            f.write_all(line.as_bytes()).expect("Unable to write data");
-                            // f.write_all("\x1b[K".as_bytes())
-                            //     .expect("Unable to write data");
-                            // f.write_all("\x1b[1B".as_bytes())
-                            //     .expect("Unable to write data");
-                            let fmted = format!("\n");
-                            f.write_all(fmted.as_bytes()).expect("Unable to write data");
-                        }
-                        //     let fmted = format!("\n\x1b[{}D", self.wiersze[0].len());
-                        //     f.write_all(fmted.as_bytes()).expect("Unable to write data");
-                    }
-                }
-                k if args.bindings.print_screen.contains(&k) => {
-                    mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                    mgr.print_screen();
-                    mgr.set_glyph(workspace_id, g, c, r);
-                    let result = mgr.read_result();
-                    if let Ok(AnimOk::PrintScreen(print_screen_text)) = result {
-                        use std::fs::OpenOptions;
-                        use std::io::Write;
-                        let secs = SystemTime::now()
-                            .duration_since(UNIX_EPOCH)
-                            .unwrap()
-                            .as_secs();
-                        let filename = format!("print_screen_{}.txf", secs);
-
-                        let mut f = OpenOptions::new()
-                            .create(true)
-                            .write(true)
-                            .append(false)
-                            .open(filename)
-                            .expect("Unable to create file");
-
-                        for line in print_screen_text.iter() {
-                            f.write_all(line.as_bytes()).expect("Unable to write data");
-                            // f.write_all("\x1b[K".as_bytes())
-                            //     .expect("Unable to write data");
-                            // f.write_all("\x1b[1B".as_bytes())
-                            //     .expect("Unable to write data");
-                            let fmted = format!("\n");
-                            f.write_all(fmted.as_bytes()).expect("Unable to write data");
-                        }
-                        //     let fmted = format!("\n\x1b[{}D", self.wiersze[0].len());
-                        //     f.write_all(fmted.as_bytes()).expect("Unable to write data");
-                    }
-                }
-                // reset action counter
-                k if args.bindings.action_counter_reset.contains(&k) => {
-                    action_counter = 1;
-                    counter_initialized = false;
-                }
-                // exit program
-                k if args.bindings.exit.contains(&k) => {
-                    if let Some(output_file) = args.output_file {
-                        mgr.set_glyph(workspace_id, glyph_under_cursor, c, r);
-                        mgr.print_graphic(workspace_id, true);
-                        mgr.set_glyph(workspace_id, g, c, r);
-                        let result = mgr.read_result();
-                        if let Ok(AnimOk::PrintScreen(print_screen_text)) = result {
-                            use std::fs::OpenOptions;
-                            use std::io::Write;
-                            let old_path = Path::new(&output_file);
-
-                            if Path::exists(old_path) {
-                                let mut old_file;
-                                let mut base = output_file.clone();
-                                base.push('_');
-                                for i in 0..usize::MAX {
-                                    old_file = base.clone();
-                                    old_file.push_str(&format!("{}", i));
-                                    let new_path = Path::new(&old_file);
-                                    if !Path::exists(new_path) {
-                                        if rename(old_path, new_path).is_err() {
-                                            eprintln!(
-                                                "Unable to rename existing file {}, removing it.",
-                                                output_file
-                                            );
-                                        }
-                                        break;
+                        if Path::exists(old_path) {
+                            let mut old_file;
+                            let mut base = output_file.clone();
+                            base.push('_');
+                            for i in 0..usize::MAX {
+                                old_file = base.clone();
+                                old_file.push_str(&format!("{}", i));
+                                let new_path = Path::new(&old_file);
+                                if !Path::exists(new_path) {
+                                    if rename(old_path, new_path).is_err() {
+                                        eprintln!(
+                                            "Unable to rename existing file {}, removing it.",
+                                            output_file
+                                        );
                                     }
+                                    break;
                                 }
                             }
-
-                            let mut f = OpenOptions::new()
-                                .create(true)
-                                .write(true)
-                                .append(true)
-                                .open(output_file)
-                                .expect("Unable to create file");
-
-                            for line in print_screen_text.iter() {
-                                f.write_all(line.as_bytes()).expect("Unable to write data");
-                                // f.write_all("\x1b[K".as_bytes())
-                                //     .expect("Unable to write data");
-                                // f.write_all("\x1b[1B".as_bytes())
-                                //     .expect("Unable to write data");
-                                let fmted = format!("\n");
-                                f.write_all(fmted.as_bytes()).expect("Unable to write data");
-                            }
-                            //     let fmted = format!("\n\x1b[{}D", self.wiersze[0].len());
-                            //     f.write_all(fmted.as_bytes()).expect("Unable to write data");
                         }
-                    }
-                    break;
-                }
-                Key::Zero => {
-                    action_counter *= 10;
-                }
-                Key::One => {
-                    if counter_initialized {
-                        action_counter *= 10;
-                        action_counter += 1;
-                    }
-                    counter_initialized = true;
-                }
-                Key::Two => {
-                    if counter_initialized {
-                        action_counter *= 10;
-                        action_counter += 2;
-                    } else {
-                        counter_initialized = true;
-                        action_counter = 2;
-                    }
-                }
-                Key::Three => {
-                    if counter_initialized {
-                        action_counter *= 10;
-                        action_counter += 3;
-                    } else {
-                        counter_initialized = true;
-                        action_counter = 3;
-                    }
-                }
-                Key::Four => {
-                    if counter_initialized {
-                        action_counter *= 10;
-                        action_counter += 4;
-                    } else {
-                        counter_initialized = true;
-                        action_counter = 4;
-                    }
-                }
-                Key::Five => {
-                    if counter_initialized {
-                        action_counter *= 10;
-                        action_counter += 5;
-                    } else {
-                        counter_initialized = true;
-                        action_counter = 5;
-                    }
-                }
-                Key::Six => {
-                    if counter_initialized {
-                        action_counter *= 10;
-                        action_counter += 6;
-                    } else {
-                        counter_initialized = true;
-                        action_counter = 6;
-                    }
-                }
-                Key::Seven => {
-                    if counter_initialized {
-                        action_counter *= 10;
-                        action_counter += 7;
-                    } else {
-                        counter_initialized = true;
-                        action_counter = 7;
-                    }
-                }
-                Key::Eight => {
-                    if counter_initialized {
-                        action_counter *= 10;
-                        action_counter += 8;
-                    } else {
-                        counter_initialized = true;
-                        action_counter = 8;
-                    }
-                }
-                Key::Nine => {
-                    if counter_initialized {
-                        action_counter *= 10;
-                        action_counter += 9;
-                    } else {
-                        counter_initialized = true;
-                        action_counter = 9;
-                    }
-                }
 
-                _ => {
-                    // println!("You pressed {}", key);
-                    continue;
+                        let mut f = OpenOptions::new()
+                            .create(true)
+                            .write(true)
+                            .append(true)
+                            .open(output_file)
+                            .expect("Unable to create file");
+
+                        for line in print_screen_text.iter() {
+                            f.write_all(line.as_bytes()).expect("Unable to write data");
+                            // f.write_all("\x1b[K".as_bytes())
+                            //     .expect("Unable to write data");
+                            // f.write_all("\x1b[1B".as_bytes())
+                            //     .expect("Unable to write data");
+                            let fmted = format!("\n");
+                            f.write_all(fmted.as_bytes()).expect("Unable to write data");
+                        }
+                        //     let fmted = format!("\n\x1b[{}D", self.wiersze[0].len());
+                        //     f.write_all(fmted.as_bytes()).expect("Unable to write data");
+                    }
+                }
+                break;
+            }
+            Key::Zero => {
+                action_counter *= 10;
+            }
+            Key::One => {
+                if counter_initialized {
+                    action_counter *= 10;
+                    action_counter += 1;
+                }
+                counter_initialized = true;
+            }
+            Key::Two => {
+                if counter_initialized {
+                    action_counter *= 10;
+                    action_counter += 2;
+                } else {
+                    counter_initialized = true;
+                    action_counter = 2;
                 }
             }
+            Key::Three => {
+                if counter_initialized {
+                    action_counter *= 10;
+                    action_counter += 3;
+                } else {
+                    counter_initialized = true;
+                    action_counter = 3;
+                }
+            }
+            Key::Four => {
+                if counter_initialized {
+                    action_counter *= 10;
+                    action_counter += 4;
+                } else {
+                    counter_initialized = true;
+                    action_counter = 4;
+                }
+            }
+            Key::Five => {
+                if counter_initialized {
+                    action_counter *= 10;
+                    action_counter += 5;
+                } else {
+                    counter_initialized = true;
+                    action_counter = 5;
+                }
+            }
+            Key::Six => {
+                if counter_initialized {
+                    action_counter *= 10;
+                    action_counter += 6;
+                } else {
+                    counter_initialized = true;
+                    action_counter = 6;
+                }
+            }
+            Key::Seven => {
+                if counter_initialized {
+                    action_counter *= 10;
+                    action_counter += 7;
+                } else {
+                    counter_initialized = true;
+                    action_counter = 7;
+                }
+            }
+            Key::Eight => {
+                if counter_initialized {
+                    action_counter *= 10;
+                    action_counter += 8;
+                } else {
+                    counter_initialized = true;
+                    action_counter = 8;
+                }
+            }
+            Key::Nine => {
+                if counter_initialized {
+                    action_counter *= 10;
+                    action_counter += 9;
+                } else {
+                    counter_initialized = true;
+                    action_counter = 9;
+                }
+            }
+
+            _ => {
+                // println!("You pressed {}", key);
+                continue;
+            }
         }
+        if macro_mode == 1 {
+            macro_mode = 2;
+        }
+        // }
     }
     mgr.terminate();
 }

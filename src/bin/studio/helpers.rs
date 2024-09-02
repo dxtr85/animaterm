@@ -536,6 +536,28 @@ pub fn build_selector() -> Graphic {
         false, false,
     );
     library.insert(24, vec![rd, h, ld, v, gt, v, ru, h, lu]);
+
+    // TODO: two frames for indicating macro recording phase
+    background = Color::red();
+    let r = Glyph::new(
+        'R', color, background, false, true, false, false, false, false, false, false, false, false,
+    );
+    let e = Glyph::new(
+        'E', color, background, false, true, false, false, false, false, false, false, false, false,
+    );
+    let c = Glyph::new(
+        'C', color, background, false, true, false, false, false, false, false, false, false, false,
+    );
+    let m = Glyph::new(
+        '*', color, background, false, true, false, false, false, false, false, false, false, false,
+    );
+    let l = Glyph::new(
+        'O', color, background, false, true, false, false, false, false, false, false, false, false,
+    );
+    library.insert(25, vec![r, e, c, m, gt, m, m, m, m]);
+    library.insert(26, vec![m, m, m, m, gt, m, r, e, c]);
+    library.insert(27, vec![r, e, c, l, gt, l, l, l, l]);
+    library.insert(28, vec![l, l, l, l, gt, l, r, e, c]);
     let frame_time = Timestamp::new(0, 40);
     let anim_default = Animation::new(
         true,
