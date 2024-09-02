@@ -40,8 +40,19 @@ let glyph = Some(Glyph::default());  // initially fill the screen with this
 // You can crank refresh_timeout down, but anything below 1ms won't make a difference,
 // other than high CPU usage.
 // With default 30ms you get as high as 33 FPS, probably enough for a terminal application.
-let refresh_timeout = Some(Duration::from_milis(10));  
-let mut mgr = Manager::new(capture_keyboard, cols, rows, glyph, refresh_timeout);
+let refresh_timeout = Some(Duration::from_millis(10));  
+// This is how you can define a macro recording key, and some optional macros:
+let looped = true;
+let macros = Some(vec![(Key::AltM, MacroSequence::empty()),
+                       (Key::F10,
+                        MacroSequence::new(
+                            true,
+                            vec![
+                                (Key::Right, Duration::from_millis(500)),
+                                (Key::Down, Duration::from_millis(500)),
+                                (Key::Left, Duration::from_millis(500)),
+                                (Key::Up, Duration::from_millis(500))]))]);
+let mut mgr = Manager::new(capture_keyboard, cols, rows, glyph, refresh_timeout, macros);
 ```
 
 Please also note that in order to see the progress you are making with this library
@@ -53,13 +64,11 @@ In order to keep your program running you can use a loop like this:
 ```no_run
 let mut keep_running = true;
  while keep_running {
-    if let Some(key) = mgr.read_key() {
-        match key {
-            Key::Q | Key::ShiftQ => {
-                keep_running = false;
-            }
-            _ => continue
+    match mgr.read_key() {
+        Key::Q | Key::ShiftQ => {
+            keep_running = false;
         }
+        _ => continue
     }
 }
 mgr.terminate();
@@ -141,17 +150,15 @@ For more agile solution allowing user-defined key bindings see how [studio](../.
 ```
 let mut keep_running = true;
 while keep_running {
-    if let Some(key) = mgr.read_key() {
-        match key {
-            Key::Left => mgr.move_graphic(graphic_id, layer, (-1, 0)),
-            Key::Right => mgr.move_graphic(graphic_id, layer, (1, 0)),
-            Key::Up => mgr.move_graphic(graphic_id, layer, (0, -1)),
-            Key::Down => mgr.move_graphic(graphic_id, layer, (0, 1)),
-            Key::Q | Key::ShiftQ => {
-                keep_running = false;
-            }
-            _ => continue,
+    match mgr.read_key() {
+        Key::Left => mgr.move_graphic(graphic_id, layer, (-1, 0)),
+        Key::Right => mgr.move_graphic(graphic_id, layer, (1, 0)),
+        Key::Up => mgr.move_graphic(graphic_id, layer, (0, -1)),
+        Key::Down => mgr.move_graphic(graphic_id, layer, (0, 1)),
+        Key::Q | Key::ShiftQ => {
+            keep_running = false;
         }
+        _ => continue,
     }
 }
  mgr.terminate();
