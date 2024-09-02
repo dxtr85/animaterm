@@ -12,7 +12,7 @@ project written in Rust I will try to create a generic library for terminal user
 By making your programs more user-friendly you have a higher chance of growing a happy user base
 of utilities you create.
 
-Allowing users customizing the look and feel of those solutions with community driven
+Allowing users to customize the look and feel of those solutions with community driven
 skins/themes and keybindings makes it more likely people will stay attached to those apps.
 
 # How to use it

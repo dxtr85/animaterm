@@ -106,6 +106,10 @@ impl Macros {
                     Instant::now(),
                 ));
             } else {
+                // We apply delay to previous key
+                if let Some((old_key, _timestamp)) = sequence.pop() {
+                    sequence.push((old_key, timestamp.elapsed()));
+                }
                 sequence.push((key.clone(), timestamp.elapsed()));
                 self.recording = Some((
                     rec_key,

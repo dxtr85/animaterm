@@ -1,6 +1,6 @@
 [package]
 name = "animaterm"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 authors = ["Jakub Mitoraj <dxtr85@gmail.com>"]
 description = "An easy to use terminal user interface library."
