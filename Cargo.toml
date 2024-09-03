@@ -1,9 +1,9 @@
 [package]
 name = "animaterm"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 authors = ["Jakub Mitoraj <dxtr85@gmail.com>"]
-description = "An easy to use terminal user interface library."
+description = "An easy to use terminal user interface library with keyboard macros support."
 license = "MIT"
 repository = "https://github.com/dxtr85/animaterm"
 

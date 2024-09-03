@@ -59,10 +59,8 @@ impl Macros {
                 running: None,
                 recording: None,
                 macros,
-                // key_send,
                 key_recv,
                 terminate_send,
-                // terminate_recv,
             }
         } else {
             Macros {
@@ -95,8 +93,12 @@ impl Macros {
                         Instant::now(),
                     ));
                 } else {
-                    self.macros
-                        .insert(rec_key.unwrap(), MacroSequence::new(looped, sequence));
+                    if sequence.is_empty() {
+                        let _ = self.macros.remove(&rec_key.unwrap());
+                    } else {
+                        self.macros
+                            .insert(rec_key.unwrap(), MacroSequence::new(looped, sequence));
+                    }
                     self.recording = None;
                 }
             } else if rec_key.is_none() {

@@ -186,6 +186,7 @@ mod style_window;
 use style_window::StyleWindow;
 mod colors_window;
 use colors_window::ColorsWindow;
+use colors_window::ColorsWindowArgs;
 
 fn main() {
     let mut args = parse_arguments();
@@ -386,7 +387,7 @@ fn main() {
     }
 
     mgr.set_graphic(vc_id, 0, true);
-    let glyph2 = glyph.clone();
+    let glyph2 = glyph;
     glyph.set_color(Color::red());
     let pb1t_id;
     let result = mgr.add_graphic(
@@ -517,21 +518,22 @@ fn main() {
     mgr.set_invisible(pb3t_id, true);
     mgr.set_invisible(pb3_id, true);
 
-    let mut colors_window = ColorsWindow::new(
-        mgr.get_message_sender(),
-        0,
-        0,
-        color_selector_id,
-        vc_id,
-        basic_sel_id,
-        pb1_id,
-        pb1t_id,
-        pb2_id,
-        pb2t_id,
-        pb3_id,
-        pb3t_id,
+    let cw_args = ColorsWindowArgs {
+        sender: mgr.get_message_sender(),
+        selected_tab: 0,
+        selected_vertical_cursor: 0,
+        color_window_id: color_selector_id,
+        vertical_cursor_id: vc_id,
+        basic_colors_id: basic_sel_id,
+        progress_bar_1_id: pb1_id,
+        progress_bar_1_title_id: pb1t_id,
+        progress_bar_2_id: pb2_id,
+        progress_bar_2_title_id: pb2t_id,
+        progress_bar_3_id: pb3_id,
+        progress_bar_3_title_id: pb3t_id,
         glyph_matrix_id,
-    );
+    };
+    let mut colors_window = ColorsWindow::new(cw_args);
     mgr.set_graphic(pb1_id, 0, false);
     mgr.set_graphic(pb2_id, 0, false);
     mgr.set_graphic(pb3_id, 0, false);
@@ -586,7 +588,7 @@ fn main() {
     }
 
     mgr.set_graphic(bg_vc_id, 0, true);
-    let glyph2 = glyph.clone();
+    let glyph2 = glyph;
     glyph.set_color(Color::red());
     let bg_pb1t_id;
     let result = mgr.add_graphic(
@@ -731,21 +733,22 @@ fn main() {
     }
     mgr.set_graphic(bg_basic_sel_id, 0, true);
 
-    let mut backgrounds_window = ColorsWindow::new(
-        mgr.get_message_sender(),
-        0,
-        0,
-        bg_sel_id,
-        bg_vc_id,
-        bg_basic_sel_id,
-        bg_pb1_id,
-        bg_pb1t_id,
-        bg_pb2_id,
-        bg_pb2t_id,
-        bg_pb3_id,
-        bg_pb3t_id,
+    let bw_args = ColorsWindowArgs {
+        sender: mgr.get_message_sender(),
+        selected_tab: 0,
+        selected_vertical_cursor: 0,
+        color_window_id: bg_sel_id,
+        vertical_cursor_id: bg_vc_id,
+        basic_colors_id: bg_basic_sel_id,
+        progress_bar_1_id: bg_pb1_id,
+        progress_bar_1_title_id: bg_pb1t_id,
+        progress_bar_2_id: bg_pb2_id,
+        progress_bar_2_title_id: bg_pb2t_id,
+        progress_bar_3_id: bg_pb3_id,
+        progress_bar_3_title_id: bg_pb3t_id,
         glyph_matrix_id,
-    );
+    };
+    let mut backgrounds_window = ColorsWindow::new(bw_args);
 
     // Workspace window
     let mut workspace_offset = ((start_col + 18) as isize, (start_row + 7) as isize);
@@ -1116,7 +1119,7 @@ fn main() {
                     mr += 1;
                     mgr.move_graphic(selector_id, 2, (0, 1))
                 } else {
-                    mgr.move_graphic(selector_id, 2, (0, mr as isize * (-1)));
+                    mgr.move_graphic(selector_id, 2, (0, -(mr as isize)));
                     let start_x = max(0, glyphs_offset.0) as usize + mc;
                     let start_y = max(0, glyphs_offset.1) as usize + mr;
                     mgr.clear_area(selector_layer, (start_x as usize, start_y as usize), (2, 3));
@@ -1335,7 +1338,7 @@ fn main() {
                 }
             }
             k if args.bindings.workspace_set_style.contains(&k) => {
-                let mut new_glyph = style_window.style_glyph.clone();
+                let mut new_glyph = style_window.style_glyph;
                 new_glyph.set_char(glyph_under_cursor.character);
                 new_glyph.set_color(glyph_under_cursor.color);
                 new_glyph.set_background(glyph_under_cursor.background);
@@ -1556,6 +1559,7 @@ fn main() {
 
                     let mut f = OpenOptions::new()
                         .create(true)
+                        .truncate(true)
                         .write(true)
                         .append(false)
                         .open(filename)
@@ -1567,7 +1571,7 @@ fn main() {
                         //     .expect("Unable to write data");
                         // f.write_all("\x1b[1B".as_bytes())
                         //     .expect("Unable to write data");
-                        let fmted = format!("\n");
+                        let fmted = "\n".to_string();
                         f.write_all(fmted.as_bytes()).expect("Unable to write data");
                     }
                     //     let fmted = format!("\n\x1b[{}D", self.wiersze[0].len());
@@ -1590,6 +1594,7 @@ fn main() {
 
                     let mut f = OpenOptions::new()
                         .create(true)
+                        .truncate(true)
                         .write(true)
                         .append(false)
                         .open(filename)
@@ -1601,7 +1606,7 @@ fn main() {
                         //     .expect("Unable to write data");
                         // f.write_all("\x1b[1B".as_bytes())
                         //     .expect("Unable to write data");
-                        let fmted = format!("\n");
+                        let fmted = "\n".to_string();
                         f.write_all(fmted.as_bytes()).expect("Unable to write data");
                     }
                     //     let fmted = format!("\n\x1b[{}D", self.wiersze[0].len());
@@ -1675,7 +1680,6 @@ fn main() {
 
                         let mut f = OpenOptions::new()
                             .create(true)
-                            .write(true)
                             .append(true)
                             .open(output_file)
                             .expect("Unable to create file");
@@ -1686,7 +1690,7 @@ fn main() {
                             //     .expect("Unable to write data");
                             // f.write_all("\x1b[1B".as_bytes())
                             //     .expect("Unable to write data");
-                            let fmted = format!("\n");
+                            let fmted = "\n".to_string();
                             f.write_all(fmted.as_bytes()).expect("Unable to write data");
                         }
                         //     let fmted = format!("\n\x1b[{}D", self.wiersze[0].len());

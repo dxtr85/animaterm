@@ -1,4 +1,4 @@
-# A library for terminal user interface (TUI) creation
+# A library for terminal user interface (TUI) creation supporting keyboard macros
 The goal is to make TUI creation fast & simple by providing sufficient documentation
 with many boiled down examples that will allow developers to focus on their application's logic
 instead of having to think too much about presentation layer annoyances.
@@ -46,7 +46,7 @@ let looped = true;
 let macros = Some(vec![(Key::AltM, MacroSequence::empty()),
                        (Key::F10,
                         MacroSequence::new(
-                            true,
+                            looped,
                             vec![
                                 (Key::Right, Duration::from_millis(500)),
                                 (Key::Down, Duration::from_millis(500)),

@@ -27,22 +27,23 @@ pub struct ColorsWindow {
     glyph_matrix_id: usize,
 }
 
+pub struct ColorsWindowArgs {
+    pub sender: mpsc::Sender<Message>,
+    pub selected_tab: usize,
+    pub selected_vertical_cursor: usize,
+    pub color_window_id: usize,
+    pub vertical_cursor_id: usize,
+    pub basic_colors_id: usize,
+    pub progress_bar_1_id: usize,
+    pub progress_bar_1_title_id: usize,
+    pub progress_bar_2_id: usize,
+    pub progress_bar_2_title_id: usize,
+    pub progress_bar_3_id: usize,
+    pub progress_bar_3_title_id: usize,
+    pub glyph_matrix_id: usize,
+}
 impl ColorsWindow {
-    pub fn new(
-        sender: mpsc::Sender<Message>,
-        selected_tab: usize,
-        selected_vertical_cursor: usize,
-        color_window_id: usize,
-        vertical_cursor_id: usize,
-        basic_colors_id: usize,
-        progress_bar_1_id: usize,
-        progress_bar_1_title_id: usize,
-        progress_bar_2_id: usize,
-        progress_bar_2_title_id: usize,
-        progress_bar_3_id: usize,
-        progress_bar_3_title_id: usize,
-        glyph_matrix_id: usize,
-    ) -> Self {
+    pub fn new(args: ColorsWindowArgs) -> Self {
         let basic_colors = [
             Color::black(),
             Color::red(),
@@ -54,10 +55,10 @@ impl ColorsWindow {
             Color::white(),
         ];
         ColorsWindow {
-            sender,
+            sender: args.sender,
             basic_colors,
-            selected_tab,
-            selected_vertical_cursor,
+            selected_tab: args.selected_tab,
+            selected_vertical_cursor: args.selected_vertical_cursor,
             basic_selected_color: 0,
             grayscale_selected_brightness: 0,
             eight_bit_selected_red: 0,
@@ -66,16 +67,16 @@ impl ColorsWindow {
             truecolor_bit_selected_red: 0,
             truecolor_bit_selected_green: 0,
             truecolor_bit_selected_blue: 0,
-            color_window_id,
-            vertical_cursor_id,
-            basic_colors_id,
-            progress_bar_1_id,
-            progress_bar_1_title_id,
-            progress_bar_2_id,
-            progress_bar_2_title_id,
-            progress_bar_3_id,
-            progress_bar_3_title_id,
-            glyph_matrix_id,
+            color_window_id: args.color_window_id,
+            vertical_cursor_id: args.vertical_cursor_id,
+            basic_colors_id: args.basic_colors_id,
+            progress_bar_1_id: args.progress_bar_1_id,
+            progress_bar_1_title_id: args.progress_bar_1_title_id,
+            progress_bar_2_id: args.progress_bar_2_id,
+            progress_bar_2_title_id: args.progress_bar_2_title_id,
+            progress_bar_3_id: args.progress_bar_3_id,
+            progress_bar_3_title_id: args.progress_bar_3_title_id,
+            glyph_matrix_id: args.glyph_matrix_id,
         }
     }
 
@@ -420,14 +421,12 @@ impl ColorsWindow {
             {
                 eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message")
             };
-        } else {
-            if self
-                .sender
-                .send(Message::SetGraphicColor(self.glyph_matrix_id, color))
-                .is_err()
-            {
-                eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphiccolor message")
-            };
+        } else if self
+            .sender
+            .send(Message::SetGraphicColor(self.glyph_matrix_id, color))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphiccolor message")
         }
         if self
             .sender

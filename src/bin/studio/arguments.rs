@@ -219,7 +219,7 @@ pub fn parse_arguments() -> Arguments {
         }
         match what_to_parse {
             WhatToParse::Name => {
-                if arg.starts_with("--") {
+                if let Some(_stripped) = arg.strip_prefix("--") {
                     what_to_parse = WhatToParse::Number;
                     name = match &arg[2..] {
                         "rows" => Some(ArgType::Rows),
@@ -274,20 +274,20 @@ pub fn parse_arguments() -> Arguments {
                         }
                     };
                 } else {
-                    match &name {
-                        &Some(ArgType::Glyphs) => {
+                    match name {
+                        Some(ArgType::Glyphs) => {
                             arguments.glyphs = Some(arg.trim().to_owned());
                         }
-                        &Some(ArgType::ConfigFile) => {
+                        Some(ArgType::ConfigFile) => {
                             arguments.config_file = Some(arg.trim().to_owned());
                         }
-                        &Some(ArgType::InputFile) => {
+                        Some(ArgType::InputFile) => {
                             arguments.input_file = Some(arg.trim().to_owned());
                         }
-                        &Some(ArgType::OutputFile) => {
+                        Some(ArgType::OutputFile) => {
                             arguments.output_file = Some(arg.trim().to_owned());
                         }
-                        &Some(ArgType::WallpaperFile) => {
+                        Some(ArgType::WallpaperFile) => {
                             arguments.wallpaper_file = Some(arg.trim().to_owned());
                         }
                         _ => {
@@ -301,7 +301,7 @@ pub fn parse_arguments() -> Arguments {
                 }
             }
             WhatToParse::Number => {
-                let parsed_number = usize::from_str_radix(arg.trim(), 10);
+                let parsed_number = arg.trim().parse::<usize>();
                 match parsed_number {
                     Ok(a_number) => {
                         number = Some(a_number);
@@ -351,9 +351,8 @@ pub fn parse_arguments() -> Arguments {
                     );
                     exit(1);
                 } else {
-                    let cols = isize::from_str_radix(splited[0], 10);
-                    let rows = isize::from_str_radix(splited[1], 10);
-                    //let mut result = None;
+                    let cols = splited[0].parse::<isize>();
+                    let rows = splited[1].parse::<isize>();
                     if cols.is_ok() && rows.is_ok() {
                         let result = Some((cols.clone().unwrap(), rows.clone().unwrap()));
                         match &name {
@@ -401,7 +400,6 @@ where
         let mut read_string = String::with_capacity(1024);
         let mut br = io::BufReader::new(file);
         if br.read_to_string(&mut read_string).is_ok() {
-            // let cs = 0;
             for line in read_string.lines() {
                 if line.starts_with(hash) || line.is_empty() {
                     continue;
@@ -425,10 +423,10 @@ fn parse_line(args: &mut Arguments, line: &str) {
     args.config_file = None;
     match splited[0] {
         "rows" => {
-            args.rows = usize::from_str_radix(splited[1], 10).ok();
+            args.rows = splited[1].parse::<usize>().ok();
         }
         "cols" => {
-            args.cols = usize::from_str_radix(splited[1], 10).ok();
+            args.cols = splited[1].parse::<usize>().ok();
         }
         "colors_offset" => {
             args.colors_offset = offset_from_str(splited[1]);
@@ -469,7 +467,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.colors_left = keys;
             }
         }
@@ -480,7 +478,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.colors_right = keys;
             }
         }
@@ -491,7 +489,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.colors_far_right = keys;
             }
         }
@@ -502,7 +500,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.colors_far_left = keys;
             }
         }
@@ -513,7 +511,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.colors_top = keys;
             }
         }
@@ -524,7 +522,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.colors_up = keys;
             }
         }
@@ -535,7 +533,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.colors_down = keys;
             }
         }
@@ -546,7 +544,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.colors_bottom = keys;
             }
         }
@@ -557,7 +555,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.colors_invisible = keys;
             }
         }
@@ -568,7 +566,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.colors_visible = keys;
             }
         }
@@ -579,7 +577,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.backgrounds_left = keys;
             }
         }
@@ -590,7 +588,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.backgrounds_right = keys;
             }
         }
@@ -601,7 +599,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.backgrounds_far_right = keys;
             }
         }
@@ -612,7 +610,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.backgrounds_far_left = keys;
             }
         }
@@ -623,7 +621,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.backgrounds_top = keys;
             }
         }
@@ -634,7 +632,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.backgrounds_up = keys;
             }
         }
@@ -645,7 +643,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.backgrounds_down = keys;
             }
         }
@@ -656,7 +654,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.backgrounds_bottom = keys;
             }
         }
@@ -667,7 +665,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.backgrounds_invisible = keys;
             }
         }
@@ -678,7 +676,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.backgrounds_visible = keys;
             }
         }
@@ -689,7 +687,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.glyphs_left = keys;
             }
         }
@@ -700,7 +698,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.glyphs_right = keys;
             }
         }
@@ -711,7 +709,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.glyphs_up = keys;
             }
         }
@@ -722,7 +720,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.glyphs_down = keys;
             }
         }
@@ -733,7 +731,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.glyphs_select = keys;
             }
         }
@@ -744,7 +742,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.glyphs_prev = keys;
             }
         }
@@ -755,7 +753,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.glyphs_next = keys;
             }
         }
@@ -766,7 +764,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.glyphs_home = keys;
             }
         }
@@ -777,7 +775,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.glyphs_end = keys;
             }
         }
@@ -788,7 +786,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.workspace_left = keys;
             }
         }
@@ -799,7 +797,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.workspace_right = keys;
             }
         }
@@ -810,7 +808,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.workspace_up = keys;
             }
         }
@@ -821,7 +819,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.workspace_down = keys;
             }
         }
@@ -832,7 +830,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.workspace_line_start = keys;
             }
         }
@@ -843,7 +841,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.workspace_line_end = keys;
             }
         }
@@ -854,7 +852,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.workspace_set_color = keys;
             }
         }
@@ -865,7 +863,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.workspace_set_background = keys;
             }
         }
@@ -876,7 +874,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.workspace_set_glyph = keys;
             }
         }
@@ -887,7 +885,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.workspace_set_style = keys;
             }
         }
@@ -898,7 +896,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.workspace_select_color = keys;
             }
         }
@@ -909,7 +907,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.workspace_select_background = keys;
             }
         }
@@ -920,7 +918,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.workspace_select_glyph = keys;
             }
         }
@@ -931,7 +929,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.workspace_select_style = keys;
             }
         }
@@ -942,7 +940,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.workspace_erase = keys;
             }
         }
@@ -953,7 +951,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.style_up = keys;
             }
         }
@@ -964,7 +962,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.style_down = keys;
             }
         }
@@ -975,7 +973,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.style_enable = keys;
             }
         }
@@ -986,7 +984,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.style_disable = keys;
             }
         }
@@ -997,7 +995,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.print_graphic = keys;
             }
         }
@@ -1008,7 +1006,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.print_screen = keys;
             }
         }
@@ -1019,7 +1017,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.action_counter_reset = keys;
             }
         }
@@ -1044,7 +1042,9 @@ fn parse_line(args: &mut Arguments, line: &str) {
                         .next()
                         .expect("Unable to read macro duration string");
                     let key = str_to_key(key_str).expect("Unable to parse macro key string");
-                    let delay = u64::from_str_radix(dur_str.trim(), 10)
+                    let delay = dur_str
+                        .trim()
+                        .parse::<u64>()
                         .expect("Unable to parse macro duration");
                     keys.push((key, Duration::from_millis(delay)));
                 }
@@ -1065,7 +1065,7 @@ fn parse_line(args: &mut Arguments, line: &str) {
                     keys.push(key);
                 }
             }
-            if keys.len() > 0 {
+            if !keys.is_empty() {
                 args.bindings.exit = keys;
             }
         }
@@ -1075,7 +1075,6 @@ fn parse_line(args: &mut Arguments, line: &str) {
             exit(1)
         }
     }
-    // println!("Got {}: {}", splited[0], splited[1]);
 }
 
 fn offset_from_str(text: &str) -> Option<(isize, isize)> {
@@ -1102,8 +1101,8 @@ fn offset_from_str(text: &str) -> Option<(isize, isize)> {
         );
         exit(1);
     } else {
-        let cols = isize::from_str_radix(splited[0], 10);
-        let rows = isize::from_str_radix(splited[1], 10);
+        let cols = splited[0].parse::<isize>();
+        let rows = splited[1].parse::<isize>();
         if let Ok(c) = cols {
             if let Ok(r) = rows {
                 Some((c, r))
