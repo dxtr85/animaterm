@@ -24,6 +24,11 @@ pub struct Glyph {
 }
 
 impl Glyph {
+    pub fn char(character: char) -> Self {
+        let mut glyph = Glyph::plain();
+        glyph.character = character;
+        glyph
+    }
     /// Create a new glyph.
     pub fn new(
         character: char,
@@ -442,13 +447,13 @@ impl Glyph {
                     if defining_truecolor {
                         match color_bytes_left_to_read {
                             3 => {
-                                color_red = u8::from_str_radix(token, 10).unwrap_or_default();
+                                color_red = token.parse::<u8>().unwrap_or_default();
                             }
                             2 => {
-                                color_green = u8::from_str_radix(token, 10).unwrap_or_default();
+                                color_green = token.parse::<u8>().unwrap_or_default();
                             }
                             1 => {
-                                color_blue = u8::from_str_radix(token, 10).unwrap_or_default();
+                                color_blue = token.parse::<u8>().unwrap_or_default();
                                 next_token = ExpectedToken::Any;
                                 if defining_background {
                                     self.set_background(Color::new_truecolor(
@@ -469,7 +474,7 @@ impl Glyph {
                     } else {
                         match color_bytes_left_to_read {
                             1 => {
-                                color_8bit = u8::from_str_radix(token, 10).unwrap_or_default();
+                                color_8bit = token.parse::<u8>().unwrap_or_default();
                                 next_token = ExpectedToken::Any;
                                 if defining_background {
                                     if color_8bit > 231 {

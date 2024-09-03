@@ -101,118 +101,109 @@ impl Graphic {
                 read_lines.push(line);
             }
         }
-        for line in read_lines {
-            if let Ok(line) = line {
-                if line.trim().starts_with(hash) {
-                    // eprintln!("hashowa");
-                    continue;
+        for line in read_lines.into_iter().flatten() {
+            if line.trim().starts_with(hash) {
+                continue;
+            }
+            if line.is_empty() {
+                continue;
+            }
+            let tokens: Vec<&str> = line.split_whitespace().collect();
+            match tokens[0] {
+                "invisible" => {
+                    invisible = true;
                 }
-                if line.is_empty() {
-                    eprintln!("pusta");
-                    continue;
-                }
-                let tokens: Vec<&str> = line.split_whitespace().collect();
-                match tokens[0] {
-                    "invisible" => {
-                        invisible = true;
-                    }
-                    "frame" => {
-                        if tokens.len() > 2 {
-                            let frame_name = tokens[1];
-                            let frame_file = Path::new(tokens[2]);
-                            let frame_result = if frame_file.is_absolute() {
-                                frame_from_file(&frame_file)
-                            } else {
-                                frame_from_file(&base_path.join(frame_file))
-                            };
-                            if let Some((cs, frame)) = frame_result {
-                                if cols > 0 {
-                                    if cols != cs {
-                                        eprintln!("Unable to add frame that has cols: {}, when expected is {}", cs,cols);
-                                        continue;
-                                    }
-                                } else {
-                                    cols = cs;
-                                    rows = frame.len() / cols;
-                                }
-
-                                names_mapping.insert(frame_name.to_owned(), next_lib_id);
-                                library.insert(next_lib_id, frame);
-                                create_graphic = true;
-                                next_lib_id += 1;
-                            }
+                "frame" => {
+                    if tokens.len() > 2 {
+                        let frame_name = tokens[1];
+                        let frame_file = Path::new(tokens[2]);
+                        let frame_result = if frame_file.is_absolute() {
+                            frame_from_file(&frame_file)
                         } else {
-                            eprintln!("Incorrect line(should be 'frame name filepath #maybe comment'): {} while building Graphic from file", line);
+                            frame_from_file(&base_path.join(frame_file))
+                        };
+                        if let Some((cs, frame)) = frame_result {
+                            if cols > 0 {
+                                if cols != cs {
+                                    eprintln!("Unable to add frame that has cols: {}, when expected is {}", cs,cols);
+                                    continue;
+                                }
+                            } else {
+                                cols = cs;
+                                rows = frame.len() / cols;
+                            }
+
+                            names_mapping.insert(frame_name.to_owned(), next_lib_id);
+                            library.insert(next_lib_id, frame);
+                            create_graphic = true;
+                            next_lib_id += 1;
                         }
+                    } else {
+                        eprintln!("Incorrect line(should be 'frame name filepath #maybe comment'): {} while building Graphic from file", line);
                     }
-                    "animation" => {
-                        let mut looping = false;
-                        let mut running = false;
-                        let start_time = Timestamp::now();
-                        let mut ordering: Vec<(usize, Timestamp)> = Vec::new();
-                        if tokens.len() > 2 {
-                            for t in &tokens[1..] {
-                                match t {
-                                    &"loop" => {
-                                        looping = true;
+                }
+                "animation" => {
+                    let mut looping = false;
+                    let mut running = false;
+                    let start_time = Timestamp::now();
+                    let mut ordering: Vec<(usize, Timestamp)> = Vec::new();
+                    if tokens.len() > 2 {
+                        for t in &tokens[1..] {
+                            match *t {
+                                "loop" => {
+                                    looping = true;
+                                }
+                                "run" => {
+                                    if running_anim.is_none() {
+                                        running = true;
                                     }
-                                    &"run" => {
-                                        if running_anim.is_none() {
-                                            running = true;
-                                        }
+                                }
+                                _ => {
+                                    if t.contains(hash) {
+                                        break;
                                     }
-                                    _ => {
-                                        if t.contains(hash) {
-                                            break;
-                                        }
-                                        if t.contains(colon) {
-                                            let frame_time: Vec<&str> = t.split(colon).collect();
-                                            if frame_time.len() != 2 {
-                                                eprint!("Unable to read animation definition from file, {} should be frame_id:time_ms  ",t);
-                                            } else if let Some(frame_id) =
-                                                names_mapping.get(frame_time[0])
-                                            {
-                                                if let Ok(msec) =
-                                                    u32::from_str_radix(frame_time[1], 10)
-                                                {
-                                                    ordering.push((
-                                                        *frame_id,
-                                                        Timestamp::new(0, msec),
-                                                    ))
-                                                } else {
-                                                    eprint!(
+                                    if t.contains(colon) {
+                                        let frame_time: Vec<&str> = t.split(colon).collect();
+                                        if frame_time.len() != 2 {
+                                            eprint!("Unable to read animation definition from file, {} should be frame_id:time_ms  ",t);
+                                        } else if let Some(frame_id) =
+                                            names_mapping.get(frame_time[0])
+                                        {
+                                            if let Ok(msec) = frame_time[1].parse::<u32>() {
+                                                ordering.push((*frame_id, Timestamp::new(0, msec)))
+                                            } else {
+                                                eprint!(
                                                     "Unable to read integer from {} (in {}) ",
                                                     frame_time[1], t
                                                 );
-                                                }
-                                            } else {
-                                                eprint!(
-                                                    "Unable to find frame with id {} ",
-                                                    frame_time[0]
-                                                );
                                             }
                                         } else {
-                                            eprint!("Unable to read animation definition from file, {} is missing ':' ", t);
+                                            eprint!(
+                                                "Unable to find frame with id {} ",
+                                                frame_time[0]
+                                            );
                                         }
+                                    } else {
+                                        eprint!("Unable to read animation definition from file, {} is missing ':' ", t);
                                     }
                                 }
                             }
-                            if running {
-                                current_frame = ordering
-                                    .last()
-                                    .expect("Running animation with no frame ordering defined")
-                                    .0;
-                                running_anim = Some(next_anim_id);
-                            }
-                            let a = Animation::new(running, looping, ordering, start_time);
-                            animations.insert(next_anim_id, a);
-                            next_anim_id += 1;
-                        } else {
-                            eprintln!("Incorrect line(should be 'animation [loop] [run] {{frame_name:duration=}}+ #maybe comment'): {} while building Graphic from file", line);
                         }
+                        if running {
+                            current_frame = ordering
+                                .last()
+                                .expect("Running animation with no frame ordering defined")
+                                .0;
+                            running_anim = Some(next_anim_id);
+                        }
+                        let a = Animation::new(running, looping, ordering, start_time);
+                        animations.insert(next_anim_id, a);
+                        next_anim_id += 1;
+                    } else {
+                        eprintln!("Incorrect line(should be 'animation [loop] [run] {{frame_name:duration=}}+ #maybe comment'): {} while building Graphic from file", line);
                     }
-                    &_ => {}
                 }
+                &_ => {}
             }
         }
         if create_graphic {
@@ -382,7 +373,6 @@ impl Graphic {
     pub fn pause_animation_on_frame(&mut self, anim_id: usize, frame_id: usize) {
         if let Some(animation) = self.animations.get_mut(&anim_id) {
             animation.pause_on_frame(frame_id);
-            //self.running_anim = None;
         }
     }
 

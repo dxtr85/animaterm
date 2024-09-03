@@ -18,7 +18,7 @@ pub fn ask_os_for_rows_and_cols() -> (usize, usize) {
             let output = String::from_utf8(data.stdout);
             if output.is_ok() {
                 let output = output.unwrap();
-                let number = usize::from_str_radix(output.trim(), 10);
+                let number = output.trim().parse::<usize>();
                 match number {
                     Ok(a_number) => a_number,
                     Err(e) => {
@@ -49,7 +49,7 @@ pub fn ask_os_for_rows_and_cols() -> (usize, usize) {
             let output = String::from_utf8(data.stdout);
             if output.is_ok() {
                 let output = output.unwrap();
-                let number = usize::from_str_radix(output.trim(), 10);
+                let number = output.trim().parse::<usize>();
                 match number {
                     Ok(a_number) => a_number,
                     Err(e) => {

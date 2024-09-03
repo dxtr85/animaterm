@@ -13,6 +13,8 @@ use std::io::Write;
 use std::mem::replace;
 use termios::{tcsetattr, Termios, ECHO, ICANON, TCSANOW};
 
+struct ShelvedItem(Display, HashMap<usize, (Graphic, usize, (isize, isize))>);
+
 pub struct Screen {
     pub rows: usize,
     pub cols: usize,
@@ -23,14 +25,7 @@ pub struct Screen {
     // it should be possible to move animation from one layer to another
     // a flag on every pixel should notify if a given pixel should be printed
     pub display: Display,
-    shelve: HashMap<
-        usize,
-        (
-            Display,
-            // HashMap<usize, (Animation, usize, (usize, usize))>,
-            HashMap<usize, (Graphic, usize, (isize, isize))>,
-        ),
-    >,
+    shelve: HashMap<usize, ShelvedItem>,
     shelve_id: usize,
     time: Timestamp,
     next_available_id: usize,
@@ -62,21 +57,21 @@ impl Screen {
     /// Create a new Screen instance with given dimentions and fills it with provided glyph.
     pub fn new(cols: Option<usize>, rows: Option<usize>, glyph: Option<Glyph>) -> Self {
         let (new_rows, new_cols) = ask_os_for_rows_and_cols();
-        let final_rows = if rows.is_none() {
+        let final_rows = if let Some(rows) = rows {
+            rows
+        } else {
             new_rows
-        } else {
-            rows.unwrap()
         };
-        let final_cols = if cols.is_none() {
-            new_cols
+        let final_cols = if let Some(cols) = cols {
+            cols
         } else {
-            cols.unwrap()
+            new_cols
         };
         let stdin = 0; // couldn't get std::os::unix::io::FromRawFd to work
                        // on /dev/stdin or /dev/tty
         let termios = Termios::from_fd(stdin).expect("Could not get Termios instance from stdin.");
         let new_termios = termios; // make a mutable copy of termios
-                                           // that we will modify
+                                   // that we will modify
         let c_x = final_cols;
         let c_y = final_rows;
         let mut dglyph = Glyph::default();
@@ -126,7 +121,7 @@ impl Screen {
         let old_graphics = self.graphics.drain().collect();
         if keep_existing {
             self.shelve
-                .insert(old_display.id, (old_display, old_graphics));
+                .insert(old_display.id, ShelvedItem(old_display, old_graphics));
             //return_id = Some(self.shelve_id);
             self.shelve_id += 1;
         }
@@ -137,14 +132,16 @@ impl Screen {
     /// Restore an old display, keep existing one if needed.
     pub fn restore_display(&mut self, display_id: usize, keep_existing: bool) -> Option<usize> {
         let mut return_id = None;
-        if let Some((shelved_display, shelved_graphics)) = self.shelve.remove(&display_id) {
+        if let Some(ShelvedItem(shelved_display, shelved_graphics)) =
+            self.shelve.remove(&display_id)
+        {
             return_id = Some(display_id);
             //let current_time = self.time.tick();
             let old_display = replace(&mut self.display, shelved_display);
             let old_graphics = replace(&mut self.graphics, shelved_graphics);
             if keep_existing {
                 self.shelve
-                    .insert(old_display.id, (old_display, old_graphics));
+                    .insert(old_display.id, ShelvedItem(old_display, old_graphics));
             }
             let to_print = self.refresh(true);
             self.print_all(to_print);
@@ -386,8 +383,8 @@ impl Screen {
         if let Some((mut graphic, layer, offset)) = self.graphics.remove(&graphic_id) {
             let result = graphic.empty_frame();
             self.graphics.insert(graphic_id, (graphic, layer, offset));
-            if result.is_some() {
-                self.set_graphic(&graphic_id, &result.unwrap(), true);
+            if let Some(result) = result {
+                self.set_graphic(&graphic_id, &result, true);
             }
             return result;
         }
@@ -403,8 +400,8 @@ impl Screen {
             }
             let result = graphic.clone_frame(fr_id);
             self.graphics.insert(graphic_id, (graphic, layer, offset));
-            if result.is_some() {
-                self.set_graphic(&graphic_id, &result.unwrap(), true);
+            if let Some(result) = result {
+                self.set_graphic(&graphic_id, &result, true);
             }
             return result;
         }
@@ -486,7 +483,7 @@ impl Screen {
     /// Update all graphics that run an animation.
     pub fn update_graphics(&mut self) {
         let mut pixels = vec![];
-        for (_id, (graphic, layer, offset)) in &mut self.graphics {
+        for (graphic, layer, offset) in self.graphics.values_mut() {
             let mut keep_running = false;
             if graphic.running_anim.is_none() {
                 if let Some((anim_id, when)) = graphic.awaiting_anim {
@@ -538,9 +535,7 @@ impl Screen {
                 to_clear.push(Pixel::new(x, y, gplain));
             }
         }
-        let mut to_update = Vec::with_capacity(1);
-        to_update.push((to_clear, layer));
-        self.update(to_update);
+        self.update(vec![(to_clear, layer)]);
         let to_print = self.refresh(false);
         self.print_all(to_print);
     }
@@ -935,7 +930,7 @@ impl Screen {
     /// Initialize required parameters for library to work as expected.
     pub fn initialize(&mut self) {
         self.termios.c_lflag &= !(ICANON | ECHO); // no echo and canonical mode
-        tcsetattr(self.stdin, TCSANOW, &mut self.termios)
+        tcsetattr(self.stdin, TCSANOW, &self.termios)
             .expect("Failed setting modified Termios buffer during initialization.");
         print!("\x1b[?1049h"); // use separate buffer
         print!("\x1b[2J"); // clear screen

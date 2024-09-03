@@ -184,6 +184,7 @@ mod arguments;
 use arguments::{parse_arguments, read_config_file, verify_cols_and_rows};
 mod style_window;
 use style_window::StyleWindow;
+use style_window::StyleWindowArgs;
 mod colors_window;
 use colors_window::ColorsWindow;
 use colors_window::ColorsWindowArgs;
@@ -955,10 +956,10 @@ fn main() {
     mgr.set_graphic(style_transparent_id, 0, true);
     mgr.set_graphic(style_strike_id, 0, true);
 
-    let mut style_window = StyleWindow::new(
-        mgr.get_message_sender(),
+    let sw_args = StyleWindowArgs {
+        style_glyph: Glyph::default(),
+        sender: mgr.get_message_sender(),
         glyph_matrix_id,
-        // style_window_id,
         style_selector_id,
         style_plain_id,
         style_bright_id,
@@ -970,7 +971,9 @@ fn main() {
         style_reverse_id,
         style_transparent_id,
         style_strike_id,
-    );
+        style_selector_value: 0,
+    };
+    let mut style_window = StyleWindow::new(sw_args);
 
     let mut c = 1; // worskpace column where cursor is placed
     let mut r = 1; // worskpace row where cursor is placed
