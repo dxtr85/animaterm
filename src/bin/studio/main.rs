@@ -958,7 +958,7 @@ fn main() {
     let mut style_window = StyleWindow::new(
         mgr.get_message_sender(),
         glyph_matrix_id,
-        style_window_id,
+        // style_window_id,
         style_selector_id,
         style_plain_id,
         style_bright_id,

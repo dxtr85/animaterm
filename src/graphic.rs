@@ -38,7 +38,7 @@ impl Graphic {
         library: HashMap<usize, Vec<Glyph>>,
         animations: Option<HashMap<usize, Animation>>,
     ) -> Self {
-        let next_lib_id = if library.len() > 0 {
+        let next_lib_id = if !library.is_empty() {
             library.keys().max().unwrap() + 1
         } else {
             0
@@ -46,7 +46,7 @@ impl Graphic {
         let mut next_anim_id = 0;
         let a = if animations.is_some() {
             let anim = animations.unwrap();
-            if anim.len() > 0 {
+            if !anim.is_empty() {
                 next_anim_id = anim.keys().max().unwrap() + 1
             };
             anim
@@ -169,29 +169,27 @@ impl Graphic {
                                             let frame_time: Vec<&str> = t.split(colon).collect();
                                             if frame_time.len() != 2 {
                                                 eprint!("Unable to read animation definition from file, {} should be frame_id:time_ms  ",t);
-                                            } else {
-                                                if let Some(frame_id) =
-                                                    names_mapping.get(frame_time[0])
+                                            } else if let Some(frame_id) =
+                                                names_mapping.get(frame_time[0])
+                                            {
+                                                if let Ok(msec) =
+                                                    u32::from_str_radix(frame_time[1], 10)
                                                 {
-                                                    if let Ok(msec) =
-                                                        u32::from_str_radix(frame_time[1], 10)
-                                                    {
-                                                        ordering.push((
-                                                            *frame_id,
-                                                            Timestamp::new(0, msec),
-                                                        ))
-                                                    } else {
-                                                        eprint!(
-                                                        "Unable to read integer from {} (in {}) ",
-                                                        frame_time[1], t
-                                                    );
-                                                    }
+                                                    ordering.push((
+                                                        *frame_id,
+                                                        Timestamp::new(0, msec),
+                                                    ))
                                                 } else {
                                                     eprint!(
-                                                        "Unable to find frame with id {} ",
-                                                        frame_time[0]
-                                                    );
+                                                    "Unable to read integer from {} (in {}) ",
+                                                    frame_time[1], t
+                                                );
                                                 }
+                                            } else {
+                                                eprint!(
+                                                    "Unable to find frame with id {} ",
+                                                    frame_time[0]
+                                                );
                                             }
                                         } else {
                                             eprint!("Unable to read animation definition from file, {} is missing ':' ", t);
@@ -262,14 +260,14 @@ impl Graphic {
         library.insert(0, text_to_frame(text, glyph));
         Graphic {
             rows,
-            cols: cols,
+            cols,
             current_frame: 0,
             invisible: false,
             running_anim: None,
             awaiting_anim: None,
             next_lib_id: 1,
             next_anim_id: 0,
-            library: library,
+            library,
             animations: HashMap::new(),
         }
     }
@@ -282,14 +280,14 @@ impl Graphic {
         }
         Graphic {
             rows: 1,
-            cols: cols,
+            cols,
             current_frame: 0,
             invisible: false,
             running_anim: None,
             awaiting_anim: None,
             next_lib_id: 1,
             next_anim_id: 0,
-            library: library,
+            library,
             animations: HashMap::new(),
         }
     }
@@ -429,7 +427,7 @@ impl Graphic {
         } else {
             let wframe = self.library.get(&self.current_frame);
             if let Some(frame) = wframe {
-                return frame.clone();
+                frame.clone()
             } else {
                 panic!(
                     "Unable to retrieve frame {}, available: {:?} (c: {}, r: {})",
@@ -446,12 +444,10 @@ impl Graphic {
     pub fn get_frame(&self, frame_id: usize) -> Result<Vec<Glyph>, AnimError> {
         if self.invisible {
             Ok(vec![Glyph::transparent(); self.cols * self.rows])
+        } else if let Some(frame) = self.library.get(&frame_id) {
+            Ok(frame.clone())
         } else {
-            if let Some(frame) = self.library.get(&frame_id) {
-                return Ok(frame.clone());
-            } else {
-                return Err(AnimError::FrameNotFound);
-            }
+            Err(AnimError::FrameNotFound)
         }
     }
 
@@ -549,7 +545,7 @@ impl Graphic {
                     changed.push(Pixel::new(
                         (offset.0 + (i % self.cols) as isize) as usize,
                         (offset.1 + (i / self.cols) as isize) as usize,
-                        new_glyph.clone(),
+                        new_glyph,
                     ));
                 }
             }

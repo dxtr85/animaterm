@@ -443,7 +443,7 @@ pub fn build_glyph_matrix(index_file: Option<String>) -> Graphic {
                                 line, file_name
                             );
                         }
-                        if glyph_codes.len() > 0 {
+                        if !glyph_codes.is_empty() {
                             glyph_codes_lines.push(glyph_codes);
                         }
                     }
@@ -452,9 +452,9 @@ pub fn build_glyph_matrix(index_file: Option<String>) -> Graphic {
                 for code_line in glyph_codes_lines.into_iter().take(rows) {
                     let mut added = 0;
                     for code in code_line.into_iter().take(cols) {
-                        g.set_char(char::from_u32(code as u32).unwrap());
+                        g.set_char(char::from_u32(code).unwrap());
                         //(sp + i as u32) as char
-                        let _old = replace(&mut frame[next_to_replace], g.clone());
+                        let _old = replace(&mut frame[next_to_replace], g);
                         next_to_replace += 1;
                         added += 1;
                     }
@@ -483,7 +483,7 @@ pub fn build_glyph_matrix(index_file: Option<String>) -> Graphic {
     }
     library.insert(
         avail_index,
-        wrap_border_around(frame, cols, border, Some("default".into())),
+        wrap_border_around(frame, cols, border, Some("default")),
     );
 
     Graphic::new(cols + 2, rows + 2, avail_index, library, None)

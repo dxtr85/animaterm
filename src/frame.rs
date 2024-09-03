@@ -24,7 +24,7 @@ where
                 for char in line.chars() {
                     match char {
                         '\x1b' => {
-                            if style_definition.len() > 0 {
+                            if !style_definition.is_empty() {
                                 glyph.update_from_str(&style_definition);
                                 style_definition.clear();
                             }
@@ -57,8 +57,8 @@ where
                     }
                 }
             }
-            cs = cs / rs;
-            if frame.len() > 0 {
+            cs /= rs;
+            if !frame.is_empty() {
                 result = Some((cs, frame));
             } else {
                 eprintln!("Frame empty!");

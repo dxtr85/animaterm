@@ -736,19 +736,17 @@ impl ColorsWindow {
                         {
                             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message")
                         };
-                    } else {
-                        if self
-                            .sender
-                            .send(Message::SetGraphicColor(
-                                self.glyph_matrix_id,
-                                self.basic_colors[self.basic_selected_color],
-                            ))
-                            .is_err()
-                        {
-                            eprintln!(
-                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
-                            )
-                        };
+                    } else if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            self.basic_colors[self.basic_selected_color],
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                        )
                     }
                 }
                 (1, 1) => {
@@ -780,19 +778,17 @@ impl ColorsWindow {
                         {
                             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message")
                         };
-                    } else {
-                        if self
-                            .sender
-                            .send(Message::SetGraphicColor(
-                                self.glyph_matrix_id,
-                                Color::new_gray(self.grayscale_selected_brightness),
-                            ))
-                            .is_err()
-                        {
-                            eprintln!(
-                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
-                            )
-                        };
+                    } else if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_gray(self.grayscale_selected_brightness),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                        )
                     }
                 }
                 (1, 2) => {
@@ -828,23 +824,21 @@ impl ColorsWindow {
                         {
                             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message")
                         };
-                    } else {
-                        if self
-                            .sender
-                            .send(Message::SetGraphicColor(
-                                self.glyph_matrix_id,
-                                Color::new_8bit(
-                                    self.eight_bit_selected_red,
-                                    self.eight_bit_selected_green,
-                                    self.eight_bit_selected_blue,
-                                ),
-                            ))
-                            .is_err()
-                        {
-                            eprintln!(
-                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphiccolor message"
-                            )
-                        };
+                    } else if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphiccolor message"
+                        )
                     }
                 }
                 (2, 2) => {
@@ -880,23 +874,21 @@ impl ColorsWindow {
                         {
                             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message")
                         };
-                    } else {
-                        if self
-                            .sender
-                            .send(Message::SetGraphicColor(
-                                self.glyph_matrix_id,
-                                Color::new_8bit(
-                                    self.eight_bit_selected_red,
-                                    self.eight_bit_selected_green,
-                                    self.eight_bit_selected_blue,
-                                ),
-                            ))
-                            .is_err()
-                        {
-                            eprintln!(
-                                "\x1b[97;41;5mERR\x1b[m Unable to send SetgraphicColor message"
-                            )
-                        };
+                    } else if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetgraphicColor message"
+                        )
                     }
                 }
                 (3, 2) => {
@@ -932,23 +924,21 @@ impl ColorsWindow {
                         {
                             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message")
                         };
-                    } else {
-                        if self
-                            .sender
-                            .send(Message::SetGraphicColor(
-                                self.glyph_matrix_id,
-                                Color::new_8bit(
-                                    self.eight_bit_selected_red,
-                                    self.eight_bit_selected_green,
-                                    self.eight_bit_selected_blue,
-                                ),
-                            ))
-                            .is_err()
-                        {
-                            eprintln!(
-                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
-                            )
-                        };
+                    } else if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                        )
                     }
                 }
                 (1, 3) => {
@@ -984,23 +974,21 @@ impl ColorsWindow {
                         {
                             eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message")
                         };
-                    } else {
-                        if self
-                            .sender
-                            .send(Message::SetGraphicColor(
-                                self.glyph_matrix_id,
-                                Color::new_truecolor(
-                                    self.truecolor_bit_selected_red,
-                                    self.truecolor_bit_selected_green,
-                                    self.truecolor_bit_selected_blue,
-                                ),
-                            ))
-                            .is_err()
-                        {
-                            eprintln!(
-                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
-                            )
-                        };
+                    } else if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                        )
                     }
                 }
                 (2, 3) => {
@@ -1038,23 +1026,21 @@ impl ColorsWindow {
                                 "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                             )
                         };
-                    } else {
-                        if self
-                            .sender
-                            .send(Message::SetGraphicColor(
-                                self.glyph_matrix_id,
-                                Color::new_truecolor(
-                                    self.truecolor_bit_selected_red,
-                                    self.truecolor_bit_selected_green,
-                                    self.truecolor_bit_selected_blue,
-                                ),
-                            ))
-                            .is_err()
-                        {
-                            eprintln!(
-                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
-                            )
-                        };
+                    } else if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                        )
                     }
                 }
                 (3, 3) => {
@@ -1092,23 +1078,21 @@ impl ColorsWindow {
                                 "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                             )
                         };
-                    } else {
-                        if self
-                            .sender
-                            .send(Message::SetGraphicColor(
-                                self.glyph_matrix_id,
-                                Color::new_truecolor(
-                                    self.truecolor_bit_selected_red,
-                                    self.truecolor_bit_selected_green,
-                                    self.truecolor_bit_selected_blue,
-                                ),
-                            ))
-                            .is_err()
-                        {
-                            eprintln!(
-                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
-                            )
-                        };
+                    } else if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                        )
                     }
                 }
                 _ => {}
@@ -1396,19 +1380,17 @@ impl ColorsWindow {
                                 "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                             )
                         };
-                    } else {
-                        if self
-                            .sender
-                            .send(Message::SetGraphicColor(
-                                self.glyph_matrix_id,
-                                self.basic_colors[self.basic_selected_color],
-                            ))
-                            .is_err()
-                        {
-                            eprintln!(
-                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
-                            )
-                        };
+                    } else if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            self.basic_colors[self.basic_selected_color],
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                        )
                     }
                 }
                 (1, 1) => {
@@ -1441,19 +1423,17 @@ impl ColorsWindow {
                                 "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                             )
                         };
-                    } else {
-                        if self
-                            .sender
-                            .send(Message::SetGraphicColor(
-                                self.glyph_matrix_id,
-                                Color::new_gray(self.grayscale_selected_brightness),
-                            ))
-                            .is_err()
-                        {
-                            eprintln!(
-                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
-                            )
-                        };
+                    } else if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_gray(self.grayscale_selected_brightness),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                        )
                     }
                 }
                 (1, 2) => {
@@ -1490,23 +1470,21 @@ impl ColorsWindow {
                                 "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                             )
                         };
-                    } else {
-                        if self
-                            .sender
-                            .send(Message::SetGraphicColor(
-                                self.glyph_matrix_id,
-                                Color::new_8bit(
-                                    self.eight_bit_selected_red,
-                                    self.eight_bit_selected_green,
-                                    self.eight_bit_selected_blue,
-                                ),
-                            ))
-                            .is_err()
-                        {
-                            eprintln!(
-                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
-                            )
-                        };
+                    } else if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                        )
                     }
                 }
                 (2, 2) => {
@@ -1543,23 +1521,21 @@ impl ColorsWindow {
                                 "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                             )
                         };
-                    } else {
-                        if self
-                            .sender
-                            .send(Message::SetGraphicColor(
-                                self.glyph_matrix_id,
-                                Color::new_8bit(
-                                    self.eight_bit_selected_red,
-                                    self.eight_bit_selected_green,
-                                    self.eight_bit_selected_blue,
-                                ),
-                            ))
-                            .is_err()
-                        {
-                            eprintln!(
-                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
-                            )
-                        };
+                    } else if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                        )
                     }
                 }
                 (3, 2) => {
@@ -1596,23 +1572,21 @@ impl ColorsWindow {
                                 "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                             )
                         };
-                    } else {
-                        if self
-                            .sender
-                            .send(Message::SetGraphicColor(
-                                self.glyph_matrix_id,
-                                Color::new_8bit(
-                                    self.eight_bit_selected_red,
-                                    self.eight_bit_selected_green,
-                                    self.eight_bit_selected_blue,
-                                ),
-                            ))
-                            .is_err()
-                        {
-                            eprintln!(
-                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
-                            )
-                        };
+                    } else if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_8bit(
+                                self.eight_bit_selected_red,
+                                self.eight_bit_selected_green,
+                                self.eight_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                        )
                     }
                 }
                 (1, 3) => {
@@ -1650,23 +1624,21 @@ impl ColorsWindow {
                                 "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                             )
                         };
-                    } else {
-                        if self
-                            .sender
-                            .send(Message::SetGraphicColor(
-                                self.glyph_matrix_id,
-                                Color::new_truecolor(
-                                    self.truecolor_bit_selected_red,
-                                    self.truecolor_bit_selected_green,
-                                    self.truecolor_bit_selected_blue,
-                                ),
-                            ))
-                            .is_err()
-                        {
-                            eprintln!(
-                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
-                            )
-                        };
+                    } else if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                        )
                     }
                 }
                 (2, 3) => {
@@ -1705,23 +1677,21 @@ impl ColorsWindow {
                                 "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                             )
                         };
-                    } else {
-                        if self
-                            .sender
-                            .send(Message::SetGraphicColor(
-                                self.glyph_matrix_id,
-                                Color::new_truecolor(
-                                    self.truecolor_bit_selected_red,
-                                    self.truecolor_bit_selected_green,
-                                    self.truecolor_bit_selected_blue,
-                                ),
-                            ))
-                            .is_err()
-                        {
-                            eprintln!(
-                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
-                            )
-                        };
+                    } else if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                        )
                     }
                 }
                 (3, 3) => {
@@ -1759,23 +1729,21 @@ impl ColorsWindow {
                                 "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                             )
                         };
-                    } else {
-                        if self
-                            .sender
-                            .send(Message::SetGraphicColor(
-                                self.glyph_matrix_id,
-                                Color::new_truecolor(
-                                    self.truecolor_bit_selected_red,
-                                    self.truecolor_bit_selected_green,
-                                    self.truecolor_bit_selected_blue,
-                                ),
-                            ))
-                            .is_err()
-                        {
-                            eprintln!(
-                                "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
-                            )
-                        };
+                    } else if self
+                        .sender
+                        .send(Message::SetGraphicColor(
+                            self.glyph_matrix_id,
+                            Color::new_truecolor(
+                                self.truecolor_bit_selected_red,
+                                self.truecolor_bit_selected_green,
+                                self.truecolor_bit_selected_blue,
+                            ),
+                        ))
+                        .is_err()
+                    {
+                        eprintln!(
+                            "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message"
+                        )
                     }
                 }
                 _ => {}
@@ -1814,17 +1782,15 @@ impl ColorsWindow {
                             "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                         )
                     };
-                } else {
-                    if self
-                        .sender
-                        .send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_gray(self.grayscale_selected_brightness),
-                        ))
-                        .is_err()
-                    {
-                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
-                    };
+                } else if self
+                    .sender
+                    .send(Message::SetGraphicColor(
+                        self.glyph_matrix_id,
+                        Color::new_gray(self.grayscale_selected_brightness),
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
                 }
             }
             (1, 2) => {
@@ -1857,21 +1823,19 @@ impl ColorsWindow {
                             "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                         )
                     };
-                } else {
-                    if self
-                        .sender
-                        .send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ))
-                        .is_err()
-                    {
-                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
-                    };
+                } else if self
+                    .sender
+                    .send(Message::SetGraphicColor(
+                        self.glyph_matrix_id,
+                        Color::new_8bit(
+                            self.eight_bit_selected_red,
+                            self.eight_bit_selected_green,
+                            self.eight_bit_selected_blue,
+                        ),
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
                 }
             }
             (2, 2) => {
@@ -1905,21 +1869,19 @@ impl ColorsWindow {
                             "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                         )
                     };
-                } else {
-                    if self
-                        .sender
-                        .send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ))
-                        .is_err()
-                    {
-                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
-                    };
+                } else if self
+                    .sender
+                    .send(Message::SetGraphicColor(
+                        self.glyph_matrix_id,
+                        Color::new_8bit(
+                            self.eight_bit_selected_red,
+                            self.eight_bit_selected_green,
+                            self.eight_bit_selected_blue,
+                        ),
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
                 }
             }
             (3, 2) => {
@@ -1953,21 +1915,19 @@ impl ColorsWindow {
                             "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                         )
                     };
-                } else {
-                    if self
-                        .sender
-                        .send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ))
-                        .is_err()
-                    {
-                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
-                    };
+                } else if self
+                    .sender
+                    .send(Message::SetGraphicColor(
+                        self.glyph_matrix_id,
+                        Color::new_8bit(
+                            self.eight_bit_selected_red,
+                            self.eight_bit_selected_green,
+                            self.eight_bit_selected_blue,
+                        ),
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
                 }
             }
             (1, 3) => {
@@ -2005,21 +1965,19 @@ impl ColorsWindow {
                             "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                         )
                     };
-                } else {
-                    if self
-                        .sender
-                        .send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ))
-                        .is_err()
-                    {
-                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
-                    };
+                } else if self
+                    .sender
+                    .send(Message::SetGraphicColor(
+                        self.glyph_matrix_id,
+                        Color::new_truecolor(
+                            self.truecolor_bit_selected_red,
+                            self.truecolor_bit_selected_green,
+                            self.truecolor_bit_selected_blue,
+                        ),
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
                 }
             }
             (2, 3) => {
@@ -2057,21 +2015,19 @@ impl ColorsWindow {
                             "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                         )
                     };
-                } else {
-                    if self
-                        .sender
-                        .send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ))
-                        .is_err()
-                    {
-                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
-                    };
+                } else if self
+                    .sender
+                    .send(Message::SetGraphicColor(
+                        self.glyph_matrix_id,
+                        Color::new_truecolor(
+                            self.truecolor_bit_selected_red,
+                            self.truecolor_bit_selected_green,
+                            self.truecolor_bit_selected_blue,
+                        ),
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
                 }
             }
             (3, 3) => {
@@ -2110,21 +2066,19 @@ impl ColorsWindow {
                             "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                         )
                     };
-                } else {
-                    if self
-                        .sender
-                        .send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ))
-                        .is_err()
-                    {
-                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
-                    };
+                } else if self
+                    .sender
+                    .send(Message::SetGraphicColor(
+                        self.glyph_matrix_id,
+                        Color::new_truecolor(
+                            self.truecolor_bit_selected_red,
+                            self.truecolor_bit_selected_green,
+                            self.truecolor_bit_selected_blue,
+                        ),
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
                 }
             }
             _ => {}
@@ -2164,17 +2118,15 @@ impl ColorsWindow {
                             "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                         )
                     };
-                } else {
-                    if self
-                        .sender
-                        .send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_gray(self.grayscale_selected_brightness),
-                        ))
-                        .is_err()
-                    {
-                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
-                    };
+                } else if self
+                    .sender
+                    .send(Message::SetGraphicColor(
+                        self.glyph_matrix_id,
+                        Color::new_gray(self.grayscale_selected_brightness),
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
                 }
             }
             (1, 2) => {
@@ -2207,21 +2159,19 @@ impl ColorsWindow {
                             "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                         )
                     };
-                } else {
-                    if self
-                        .sender
-                        .send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ))
-                        .is_err()
-                    {
-                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
-                    };
+                } else if self
+                    .sender
+                    .send(Message::SetGraphicColor(
+                        self.glyph_matrix_id,
+                        Color::new_8bit(
+                            self.eight_bit_selected_red,
+                            self.eight_bit_selected_green,
+                            self.eight_bit_selected_blue,
+                        ),
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
                 }
             }
             (2, 2) => {
@@ -2254,21 +2204,19 @@ impl ColorsWindow {
                             "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                         )
                     };
-                } else {
-                    if self
-                        .sender
-                        .send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ))
-                        .is_err()
-                    {
-                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
-                    };
+                } else if self
+                    .sender
+                    .send(Message::SetGraphicColor(
+                        self.glyph_matrix_id,
+                        Color::new_8bit(
+                            self.eight_bit_selected_red,
+                            self.eight_bit_selected_green,
+                            self.eight_bit_selected_blue,
+                        ),
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
                 }
             }
             (3, 2) => {
@@ -2302,21 +2250,19 @@ impl ColorsWindow {
                             "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                         )
                     };
-                } else {
-                    if self
-                        .sender
-                        .send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_8bit(
-                                self.eight_bit_selected_red,
-                                self.eight_bit_selected_green,
-                                self.eight_bit_selected_blue,
-                            ),
-                        ))
-                        .is_err()
-                    {
-                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
-                    };
+                } else if self
+                    .sender
+                    .send(Message::SetGraphicColor(
+                        self.glyph_matrix_id,
+                        Color::new_8bit(
+                            self.eight_bit_selected_red,
+                            self.eight_bit_selected_green,
+                            self.eight_bit_selected_blue,
+                        ),
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
                 }
             }
             (1, 3) => {
@@ -2354,21 +2300,19 @@ impl ColorsWindow {
                             "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                         )
                     };
-                } else {
-                    if self
-                        .sender
-                        .send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ))
-                        .is_err()
-                    {
-                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
-                    };
+                } else if self
+                    .sender
+                    .send(Message::SetGraphicColor(
+                        self.glyph_matrix_id,
+                        Color::new_truecolor(
+                            self.truecolor_bit_selected_red,
+                            self.truecolor_bit_selected_green,
+                            self.truecolor_bit_selected_blue,
+                        ),
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
                 }
             }
             (2, 3) => {
@@ -2406,21 +2350,19 @@ impl ColorsWindow {
                             "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                         )
                     };
-                } else {
-                    if self
-                        .sender
-                        .send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ))
-                        .is_err()
-                    {
-                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
-                    };
+                } else if self
+                    .sender
+                    .send(Message::SetGraphicColor(
+                        self.glyph_matrix_id,
+                        Color::new_truecolor(
+                            self.truecolor_bit_selected_red,
+                            self.truecolor_bit_selected_green,
+                            self.truecolor_bit_selected_blue,
+                        ),
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
                 }
             }
             (3, 3) => {
@@ -2458,21 +2400,19 @@ impl ColorsWindow {
                             "\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicBackground message"
                         )
                     };
-                } else {
-                    if self
-                        .sender
-                        .send(Message::SetGraphicColor(
-                            self.glyph_matrix_id,
-                            Color::new_truecolor(
-                                self.truecolor_bit_selected_red,
-                                self.truecolor_bit_selected_green,
-                                self.truecolor_bit_selected_blue,
-                            ),
-                        ))
-                        .is_err()
-                    {
-                        eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
-                    };
+                } else if self
+                    .sender
+                    .send(Message::SetGraphicColor(
+                        self.glyph_matrix_id,
+                        Color::new_truecolor(
+                            self.truecolor_bit_selected_red,
+                            self.truecolor_bit_selected_green,
+                            self.truecolor_bit_selected_blue,
+                        ),
+                    ))
+                    .is_err()
+                {
+                    eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SetGraphicColor message")
                 }
             }
             _ => {}

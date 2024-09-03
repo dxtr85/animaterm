@@ -20,7 +20,7 @@ pub fn progress_bar(
             states.push(s)
         }
     }
-    states.push(full.clone());
+    states.push(full);
     let mut library = HashMap::with_capacity(width * total_states);
     let mut ordering = Vec::with_capacity(total_states);
     let mut contstruction_state = vec![empty; width];
@@ -30,7 +30,7 @@ pub fn progress_bar(
         for state_no in 0..total_states {
             let _r = replace(
                 &mut contstruction_state[i],
-                states.get(state_no).unwrap().clone(),
+                *states.get(state_no).unwrap(),
             );
             library.insert(j, contstruction_state.clone());
             j += 1;
@@ -54,9 +54,9 @@ pub fn message_box(
     height: usize,
 ) -> Graphic {
     let mut mbox = Vec::with_capacity(width * height);
-    let mut cgl = glyph.clone();
+    let mut cgl = glyph;
     cgl.set_char('╭');
-    mbox.push(cgl.clone());
+    mbox.push(cgl);
     let mut i = 1;
     if let Some(name) = title {
         for c in name.chars() {
@@ -64,32 +64,32 @@ pub fn message_box(
                 break;
             }
             cgl.set_char(c);
-            mbox.push(cgl.clone());
+            mbox.push(cgl);
             i += 1;
         }
     }
     cgl.set_char('─');
     for _i in i..width - 1 {
-        mbox.push(cgl.clone());
+        mbox.push(cgl);
     }
     cgl.set_char('╮');
-    mbox.push(cgl.clone());
+    mbox.push(cgl);
 
     let mut text = content.split_whitespace();
     let mut word = text.next();
     for _j in 1..height - 1 {
         cgl.set_char('│');
-        mbox.push(cgl.clone());
+        mbox.push(cgl);
         i = 2;
-        mbox.push(glyph.clone());
+        mbox.push(glyph);
         if let Some(mut content) = word {
             while content.len() < width.saturating_sub(i + 1) {
                 for c in content.chars() {
                     cgl.set_char(c);
-                    mbox.push(cgl.clone());
+                    mbox.push(cgl);
                     i += 1;
                 }
-                mbox.push(glyph.clone());
+                mbox.push(glyph);
                 i += 1;
                 word = text.next();
                 if let Some(help) = word {
@@ -99,24 +99,24 @@ pub fn message_box(
                 }
             }
             for _g in i..width - 1 {
-                mbox.push(glyph.clone());
+                mbox.push(glyph);
             }
         } else {
             for _i in 1..width - 2 {
-                mbox.push(glyph.clone());
+                mbox.push(glyph);
             }
         }
         cgl.set_char('│');
-        mbox.push(cgl.clone());
+        mbox.push(cgl);
     }
     cgl.set_char('╰');
-    mbox.push(cgl.clone());
+    mbox.push(cgl);
     cgl.set_char('─');
     for _i in 1..width - 1 {
-        mbox.push(cgl.clone());
+        mbox.push(cgl);
     }
     cgl.set_char('╯');
-    mbox.push(cgl.clone());
+    mbox.push(cgl);
 
     let mut library = HashMap::new();
     library.insert(0, mbox);
@@ -139,7 +139,7 @@ pub fn wrap_border_around(
     result.push(border[0]);
     let mut start = 0;
     if let Some(text) = title {
-        let mut g = border[1].clone();
+        let mut g = border[1];
         for character in text.chars().take(cols.saturating_sub(2)) {
             g.set_char(character);
             start += 1;
@@ -154,7 +154,7 @@ pub fn wrap_border_around(
     for chunk in frame.chunks(cols) {
         result.push(border[3]);
         for glyph in chunk {
-            result.push(glyph.clone());
+            result.push(*glyph);
         }
         result.push(border[4]);
     }

@@ -64,6 +64,6 @@ impl GlyphCake {
             eprintln!("Cake has no glyphs!");
             return Glyph::default();
         };
-        glyph.unwrap().unwrap().clone()
+        glyph.unwrap().unwrap()
     }
 }

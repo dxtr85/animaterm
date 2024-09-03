@@ -6,7 +6,7 @@ use std::process::Command;
 /// Ask OS how many rows and cols current terminal has.
 pub fn ask_os_for_rows_and_cols() -> (usize, usize) {
     let filtered_env: HashMap<String, String> = env::vars()
-        .filter(|&(ref k, _)| k == "TERM" || k == "TZ" || k == "LANG" || k == "PATH")
+        .filter(|(k, _)| k == "TERM" || k == "TZ" || k == "LANG" || k == "PATH")
         .collect();
     let rows = match Command::new("tput")
         .arg("lines")

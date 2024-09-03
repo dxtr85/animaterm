@@ -6,7 +6,7 @@ pub struct StyleWindow {
     pub style_glyph: Glyph,
     sender: mpsc::Sender<Message>,
     glyph_matrix_id: usize,
-    style_window_id: usize,
+    // style_window_id: usize,
     style_selector_id: usize,
     style_plain_id: usize,
     style_bright_id: usize,
@@ -25,7 +25,7 @@ impl StyleWindow {
     pub fn new(
         sender: mpsc::Sender<Message>,
         glyph_matrix_id: usize,
-        style_window_id: usize,
+        // style_window_id: usize,
         style_selector_id: usize,
         style_plain_id: usize,
         style_bright_id: usize,
@@ -42,7 +42,7 @@ impl StyleWindow {
             style_glyph: Glyph::default(),
             sender,
             glyph_matrix_id,
-            style_window_id,
+            // style_window_id,
             style_selector_id,
             style_plain_id,
             style_bright_id,
@@ -127,7 +127,6 @@ impl StyleWindow {
     // }
 
     pub fn disable_selected_style(&mut self) {
-        if self.style_window_id == 0 {} // TODO: only to get rid of unused variable warning
         match self.style_selector_value {
             0 => {
                 if self

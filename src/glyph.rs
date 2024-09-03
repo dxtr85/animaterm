@@ -181,7 +181,7 @@ impl Glyph {
 
     /// Update a glyph with style information provided as &str.
     pub fn update_from_str(&mut self, style_definition: &str) {
-        if style_definition.len() == 0 {
+        if style_definition.is_empty() {
             eprintln!("can not update empty style");
             return;
         }
@@ -201,7 +201,7 @@ impl Glyph {
                 'm' => {
                     if tokens_started {
                         tokens_started = false;
-                        if current_token.len() > 0 {
+                        if !current_token.is_empty() {
                             tokens.push(current_token.clone());
                             current_token.clear();
                         }
@@ -210,7 +210,7 @@ impl Glyph {
                     }
                 }
                 ';' => {
-                    if current_token.len() > 0 {
+                    if !current_token.is_empty() {
                         tokens.push(current_token.clone());
                         current_token.clear();
                     }
@@ -477,20 +477,16 @@ impl Glyph {
                                     } else {
                                         self.set_background(Color::EightBit(color_8bit));
                                     }
+                                } else if color_8bit > 231 {
+                                    self.set_color(Color::new_gray(color_8bit - 232));
                                 } else {
-                                    if color_8bit > 231 {
-                                        self.set_color(Color::new_gray(color_8bit - 232));
-                                    } else {
-                                        self.set_color(Color::EightBit(color_8bit));
-                                    }
+                                    self.set_color(Color::EightBit(color_8bit));
                                 }
                             }
                             _ => continue,
                         }
                     }
-                    if color_bytes_left_to_read > 0 {
-                        color_bytes_left_to_read -= 1;
-                    }
+                    color_bytes_left_to_read = color_bytes_left_to_read.saturating_sub(1);
                 }
             }
         }

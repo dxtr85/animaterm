@@ -75,7 +75,7 @@ impl Screen {
         let stdin = 0; // couldn't get std::os::unix::io::FromRawFd to work
                        // on /dev/stdin or /dev/tty
         let termios = Termios::from_fd(stdin).expect("Could not get Termios instance from stdin.");
-        let new_termios = termios.clone(); // make a mutable copy of termios
+        let new_termios = termios; // make a mutable copy of termios
                                            // that we will modify
         let c_x = final_cols;
         let c_y = final_rows;
@@ -188,7 +188,7 @@ impl Screen {
                     layer,
                     max(current_state.2 .0 - 1 + current_state.0.cols as isize, 0) as usize,
                     max(current_state.2 .1, 0) as usize,
-                    (offset.0).abs() as usize - 1,
+                    (offset.0).unsigned_abs() - 1,
                     current_state.0.rows,
                 ));
 
@@ -210,7 +210,7 @@ impl Screen {
                     max(current_state.2 .0, 0) as usize,
                     max(current_state.2 .1 - 1 + current_state.0.rows as isize, 0) as usize,
                     current_state.0.cols + 1,
-                    (offset.1).abs() as usize - 1,
+                    (offset.1).unsigned_abs() - 1,
                 ));
             } else if offset.1 > 0 && current_state.2 .1 + offset.1 > 0 {
                 cl_args.push((
@@ -299,10 +299,7 @@ impl Screen {
             if skip_border {
                 let max_c = graphic.cols - 1;
                 let max_r = graphic.rows;
-                pixels = pixels
-                    .into_iter()
-                    .filter(|p| p.x > 0 && p.x < max_c && p.y > 0 && p.y < max_r)
-                    .collect();
+                pixels.retain(|p| p.x > 0 && p.x < max_c && p.y > 0 && p.y < max_r);
             }
             for p in pixels {
                 to_print.push((p.x, p.y, p.g));
@@ -596,7 +593,7 @@ impl Screen {
         let mut first_glyph = true;
         for (_x, y, glyph) in glyphs {
             if y != last_line {
-                if line_text.len() > 0 {
+                if !line_text.is_empty() {
                     result.push(line_text);
                     line_text = String::new();
                     first_glyph = true;
@@ -613,7 +610,7 @@ impl Screen {
             }
             first_glyph = false;
         }
-        if result.len() > 0 {
+        if !result.is_empty() {
             let mut last = result.pop().unwrap();
             last.push_str("\x1b[0m");
             result.push(last);
