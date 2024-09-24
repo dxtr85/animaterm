@@ -1,6 +1,6 @@
 [package]
 name = "animaterm"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
 authors = ["Jakub Mitoraj <dxtr85@gmail.com>"]
 description = "An easy to use terminal user interface library with keyboard macros support."
