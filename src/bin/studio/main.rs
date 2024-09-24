@@ -1006,7 +1006,11 @@ fn main() {
     let mut action_counter = 1;
     let mut counter_initialized = false;
     loop {
-        let key_pressed = mgr.read_key();
+        let read_result = mgr.read_key();
+        if read_result.is_none() {
+            continue;
+        }
+        let key_pressed = read_result.unwrap();
         if macro_mode == 2 && !args.bindings.macro_key.contains(&key_pressed) {
             if macro_loop {
                 mgr.set_graphic(selector_id, 28, true);

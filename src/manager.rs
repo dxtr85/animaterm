@@ -375,47 +375,45 @@ impl Manager {
     }
 
     /// Use this method to get a Key value of what user pressed on his keyboard.
-    pub fn read_key(&mut self) -> Key {
-        loop {
-            // print!("l");
-            if self.macros.running.is_some() && self.macros.recording.is_none() {
-                let key_from_macro = self.macros.key_recv.try_recv();
-                match key_from_macro {
-                    Ok(key) => return key,
-                    Err(mpsc::TryRecvError::Disconnected) => {
-                        // println!("disconnected");
-                        let (_, key_recv) = std::sync::mpsc::channel();
-                        self.macros.key_recv = key_recv;
-                        self.macros.running = None;
-                    }
-                    Err(_e) => {
-                        // println!("Other error: {}", _e);
-                    }
+    pub fn read_key(&mut self) -> Option<Key> {
+        if self.macros.running.is_some() && self.macros.recording.is_none() {
+            let key_from_macro = self.macros.key_recv.try_recv();
+            match key_from_macro {
+                Ok(key) => return Some(key),
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    // println!("disconnected");
+                    let (_, key_recv) = std::sync::mpsc::channel();
+                    self.macros.key_recv = key_recv;
+                    self.macros.running = None;
                 }
-            } else if self.macros.running.is_some() {
-                // Stop a running macro when recording a new one
-                self.macros.stop();
+                Err(_e) => {
+                    // println!("Other error: {}", _e);
+                }
             }
-            let k_rcvr = self.key_receiver.take();
-            let read_result = self.read_bytes(&k_rcvr);
-            self.key_receiver = k_rcvr;
-            if let Some(keys_read) = read_result {
-                if let Some(key) = map_bytes_to_key(keys_read) {
-                    // println!("me: {}", self.macros.enabled);
-                    if self.macros.enabled {
-                        if self.macros.is_record_key(&key) || self.macros.recording.is_some() {
-                            self.macros.record(&key);
-                            return key;
-                        } else if !self.macros.run(&key) {
-                            return key;
-                        }
-                    } else {
-                        // println!("{}", key);
-                        return key;
+        } else if self.macros.running.is_some() {
+            // Stop a running macro when recording a new one
+            self.macros.stop();
+        }
+        let k_rcvr = self.key_receiver.take();
+        let read_result = self.read_bytes(&k_rcvr);
+        self.key_receiver = k_rcvr;
+        if let Some(keys_read) = read_result {
+            if let Some(key) = map_bytes_to_key(keys_read) {
+                // println!("me: {}", self.macros.enabled);
+                if self.macros.enabled {
+                    if self.macros.is_record_key(&key) || self.macros.recording.is_some() {
+                        self.macros.record(&key);
+                        return Some(key);
+                    } else if !self.macros.run(&key) {
+                        return Some(key);
                     }
+                } else {
+                    // println!("{}", key);
+                    return Some(key);
                 }
             }
         }
+        None
     }
 
     /// Use this method to get a String of what user has entered up to Enter key.
