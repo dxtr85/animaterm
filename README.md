@@ -63,16 +63,17 @@ placed on the screen so far.
 In order to keep your program running you can use a loop like this:
 ```no_run
 let mut keep_running = true;
- while keep_running {
-    match mgr.read_key() {
-        Key::Q | Key::ShiftQ => {
-            keep_running = false;
+while keep_running {
+    if let Some(key) = mgr.read_key() {
+        match key {
+            Key::Q | Key::ShiftQ => {
+                keep_running = false;
+            }
+            _ => continue
         }
-        _ => continue
     }
 }
 mgr.terminate();
-
 ```
 ## Functionality
 With `mgr` under your control you can do all kinds of things:
@@ -150,15 +151,17 @@ For more agile solution allowing user-defined key bindings see how [studio](../.
 ```
 let mut keep_running = true;
 while keep_running {
-    match mgr.read_key() {
-        Key::Left => mgr.move_graphic(graphic_id, layer, (-1, 0)),
-        Key::Right => mgr.move_graphic(graphic_id, layer, (1, 0)),
-        Key::Up => mgr.move_graphic(graphic_id, layer, (0, -1)),
-        Key::Down => mgr.move_graphic(graphic_id, layer, (0, 1)),
-        Key::Q | Key::ShiftQ => {
-            keep_running = false;
+    if let Some(key) = mgr.read_key() {
+        match key {
+            Key::Left => mgr.move_graphic(graphic_id, layer, (-1, 0)),
+            Key::Right => mgr.move_graphic(graphic_id, layer, (1, 0)),
+            Key::Up => mgr.move_graphic(graphic_id, layer, (0, -1)),
+            Key::Down => mgr.move_graphic(graphic_id, layer, (0, 1)),
+            Key::Q | Key::ShiftQ => {
+                keep_running = false;
+            }
+            _ => continue,
         }
-        _ => continue,
     }
 }
  mgr.terminate();

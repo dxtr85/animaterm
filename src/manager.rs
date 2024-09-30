@@ -1,4 +1,6 @@
+use crate::helpers::map_bytes_to_private_char;
 use crate::macros::MacroSequence;
+use crate::prelude::map_key_to_char;
 
 use super::animation::Animation;
 use super::color::Color;
@@ -445,7 +447,19 @@ impl Manager {
             if let Some(keys_read) = self.read_bytes(&k_rcvr) {
                 if !keys_read.is_empty() {
                     let _replaced = replace(&mut self.key_receiver, k_rcvr);
-                    return String::from_utf8_lossy(&keys_read).chars().next();
+                    let char_str = String::from_utf8_lossy(&keys_read);
+                    let ch_len = char_str.len();
+                    if ch_len > 1 {
+                        let mut ch_iter = char_str.chars();
+                        let first_char = ch_iter.next();
+                        if ch_iter.next().is_none() {
+                            return first_char;
+                        } else {
+                            return map_bytes_to_private_char(keys_read);
+                        }
+                    } else {
+                        return char_str.chars().next();
+                    }
                 }
             }
         }

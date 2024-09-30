@@ -279,6 +279,7 @@ pub mod prelude {
     pub use crate::graphic::Graphic;
     pub use crate::helpers::map_bytes_to_key;
     pub use crate::helpers::map_key_to_char;
+    pub use crate::helpers::map_private_char_to_key;
     pub use crate::key::Key;
     pub use crate::macros::MacroSequence;
     pub use crate::manager::Manager;
