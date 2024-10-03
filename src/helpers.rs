@@ -229,8 +229,10 @@ pub fn map_bytes_to_private_char(bytes: Vec<u8>) -> Option<char> {
         }
         4 => {
             let key = match bytes[2] {
-                51 => Some('\u{e08a}'), // Key::Delete, // 27,91,51.126
+                49 => Some('\u{e087}'), // Key::Home,   // 27,91,49,126
                 50 => Some('\u{e08b}'), // Key::Insert, // 27,91,50,126
+                51 => Some('\u{e08a}'), // Key::Delete, // 27,91,51.126
+                52 => Some('\u{e088}'), // Key::End,    // 27,91,52,126
                 53 => Some('\u{e08c}'), // Key::PgUp,   // 27,91,53,126
                 54 => Some('\u{e08d}'), // Key::PgDn,   // 27.91.54.126
                 _ => None,
@@ -1059,8 +1061,10 @@ pub fn map_bytes_to_key(bytes: Vec<u8>) -> Option<Key> {
         }
         4 => {
             let key = match bytes[2] {
-                51 => Key::Delete, // 27,91,51.126
+                49 => Key::Home,   // 27,91,49,126
                 50 => Key::Insert, // 27,91,50,126
+                51 => Key::Delete, // 27,91,51.126
+                52 => Key::End,    // 27,91,52.126
                 53 => Key::PgUp,   // 27,91,53,126
                 54 => Key::PgDn,   // 27.91.54.126
                 _ => match bytes[0] {

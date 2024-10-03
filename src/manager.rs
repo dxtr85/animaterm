@@ -320,7 +320,7 @@ impl Manager {
             next_screen_id: 1,
             sender,
             key_receiver,
-            key_recv_timeout: Duration::from_millis(1),
+            key_recv_timeout: Duration::from_millis(16),
             result_receiver: Some(result_receiver.into_iter()),
             macros,
         }
@@ -354,7 +354,7 @@ impl Manager {
         let mut keys_read: Vec<u8> = Vec::with_capacity(10);
         if let Some(key_rcvr) = receiver {
             let mut all_bytes_read = false;
-            if let Ok(first_byte) = key_rcvr.recv_timeout(Duration::from_millis(1)) {
+            if let Ok(first_byte) = key_rcvr.recv_timeout(self.key_recv_timeout) {
                 keys_read.push(first_byte);
                 if first_byte != 27 && first_byte < 128 {
                     all_bytes_read = true
@@ -440,9 +440,6 @@ impl Manager {
     pub fn read_char(&mut self) -> Option<char> {
         let k_rcvr = self.key_receiver.take();
         k_rcvr.as_ref()?;
-        // if k_rcvr.is_none() {
-        //     return None;
-        // };
         loop {
             if let Some(keys_read) = self.read_bytes(&k_rcvr) {
                 if !keys_read.is_empty() {
