@@ -16,6 +16,7 @@ pub fn ask_os_for_rows_and_cols() -> (usize, usize) {
     {
         Ok(data) => {
             let output = String::from_utf8(data.stdout);
+            eprintln!("OS tput lines result: {:?}", output);
             if output.is_ok() {
                 let output = output.unwrap();
                 let number = output.trim().parse::<usize>();
@@ -47,6 +48,7 @@ pub fn ask_os_for_rows_and_cols() -> (usize, usize) {
     {
         Ok(data) => {
             let output = String::from_utf8(data.stdout);
+            eprintln!("OS tput cols result: {:?}", output);
             if output.is_ok() {
                 let output = output.unwrap();
                 let number = output.trim().parse::<usize>();
@@ -78,7 +80,7 @@ pub fn map_bytes_to_private_char(bytes: Vec<u8>) -> Option<char> {
     let how_many = bytes.len();
     match how_many {
         2 => {
-            let key = match bytes[1] {
+            match bytes[1] {
                 1 => Some('\u{e000}'),   //Key::AltCtrlA,
                 2 => Some('\u{e001}'),   // Key::AltCtrlB,
                 3 => Some('\u{e002}'),   // Key::AltCtrlC,
@@ -207,11 +209,10 @@ pub fn map_bytes_to_private_char(bytes: Vec<u8>) -> Option<char> {
                 126 => Some('\u{e07d}'), // Key::AltTilde,
                 127 => Some('\u{e07e}'), // Key::AltDelete,
                 _ => None,
-            };
-            key
+            }
         }
         3 => {
-            let key = match bytes[1..3] {
+            match bytes[1..3] {
                 [79, 80] => Some('\u{e07f}'), // Key::F1,       // 27,79,80
                 [79, 81] => Some('\u{e080}'), // Key::F2,       // 27,79,81
                 [79, 82] => Some('\u{e081}'), // Key::F3,       // 27,79,82
@@ -224,11 +225,10 @@ pub fn map_bytes_to_private_char(bytes: Vec<u8>) -> Option<char> {
                 [91, 70] => Some('\u{e088}'), // Key::End,      // 27,91,70
                 [91, 90] => Some('\u{e089}'), // Key::ShiftTab, // 27,91,90
                 _ => None,
-            };
-            key
+            }
         }
         4 => {
-            let key = match bytes[2] {
+            match bytes[2] {
                 49 => Some('\u{e087}'), // Key::Home,   // 27,91,49,126
                 50 => Some('\u{e08b}'), // Key::Insert, // 27,91,50,126
                 51 => Some('\u{e08a}'), // Key::Delete, // 27,91,51.126
@@ -236,12 +236,11 @@ pub fn map_bytes_to_private_char(bytes: Vec<u8>) -> Option<char> {
                 53 => Some('\u{e08c}'), // Key::PgUp,   // 27,91,53,126
                 54 => Some('\u{e08d}'), // Key::PgDn,   // 27.91.54.126
                 _ => None,
-            };
-            key
+            }
         }
 
         5 => {
-            let key = match bytes[2..4] {
+            match bytes[2..4] {
                 [49, 53] => Some('\u{e08e}'), // Key::F5,   //      27,91,49,53,126
                 [49, 55] => Some('\u{e08f}'), // Key::F6,   //      27,91,49,55,126
                 [49, 56] => Some('\u{e090}'), // Key::F7,   //      27,91,49,56,126
@@ -252,12 +251,11 @@ pub fn map_bytes_to_private_char(bytes: Vec<u8>) -> Option<char> {
                 [50, 52] => Some('\u{e095}'), // Key::F12,  //      27,91,50,52,126
                 [50, 57] => Some('\u{e096}'), // Key::Menu, //      27,91,50,57,126
                 _ => None,
-            };
-            key
+            }
         }
 
         6 => {
-            let key = match bytes[4..6] {
+            match bytes[4..6] {
                 [50, 80] => Some('\u{e097}'), // Key::ShiftF1,          //      27,91,49,59,50,80
                 [51, 80] => Some('\u{e098}'), // Key::AltF1,            //      27,91,49,59,51,80
                 [52, 80] => Some('\u{e099}'), // Key::AltShiftF1,       //      27,91,49,59,52,80
@@ -318,12 +316,11 @@ pub fn map_bytes_to_private_char(bytes: Vec<u8>) -> Option<char> {
                 [55, 66] => Some('\u{e0cd}'), // Key::AltCtrlDown,      // 27,91,49,59,55,66
                 [56, 66] => Some('\u{e0ce}'), // Key::AltCtrlShiftDown, // 27,91,49,59,56,66
                 _ => None,
-            };
-            key
+            }
         }
 
         7 => {
-            let key = match bytes[3..6] {
+            match bytes[3..6] {
                 [49, 53] => Some('\u{e0cf}'), // Key::F5,                  //      27,91,49,53,126
                 [53, 59, 50] => Some('\u{e0d0}'), // Key::ShiftF5,         //      27,91,49,53,59,50,126
                 [53, 59, 51] => Some('\u{e0d1}'), // Key::AltF5,           //      27,91,49,53,59,51,126
@@ -382,8 +379,7 @@ pub fn map_bytes_to_private_char(bytes: Vec<u8>) -> Option<char> {
                 [52, 59, 55] => Some('\u{e106}'), // Key::AltCtrlF12,      //      27,91,49,52,59,55,126
                 [52, 59, 56] => Some('\u{e107}'), // Key::AltCtrlShiftF12, //      27,91,49,52,59,56,126
                 _ => None,
-            };
-            key
+            }
         }
         _ => None,
     }

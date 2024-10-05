@@ -1,6 +1,5 @@
 use crate::helpers::map_bytes_to_private_char;
 use crate::macros::MacroSequence;
-use crate::prelude::map_key_to_char;
 
 use super::animation::Animation;
 use super::color::Color;
