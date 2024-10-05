@@ -57,7 +57,6 @@ impl Screen {
     /// Create a new Screen instance with given dimentions and fills it with provided glyph.
     pub fn new(cols: Option<usize>, rows: Option<usize>, glyph: Option<Glyph>) -> Self {
         let (new_rows, new_cols) = ask_os_for_rows_and_cols();
-        eprintln!("OS provided {} rows and {} cols", new_rows, new_cols);
         let final_rows = if let Some(rows) = rows {
             rows
         } else {

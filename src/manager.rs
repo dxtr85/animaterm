@@ -181,7 +181,6 @@ impl Manager {
                                 .is_err()
                             {
                                 eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send FailGettingGlyph message")
-                                // }
                             };
                         }
                         Message::SetGraphic(graphic_id, frame_id, force) => {
@@ -241,7 +240,6 @@ impl Manager {
                                 eprintln!(
                                     "\x1b[97;41;5mERR\x1b[m Unable to send FailAddingFrame message"
                                 )
-                                // }
                             };
                         }
                         Message::ClearArea(layer, offset, size) => {
@@ -264,7 +262,6 @@ impl Manager {
                                 eprintln!(
                                     "\x1b[97;41;5mERR\x1b[m Unable to send FailAddingFrame message"
                                 )
-                                // }
                             };
                         }
                         Message::NewDisplay(display_id, keep_existing) => {
@@ -305,7 +302,6 @@ impl Manager {
                     }
                     if buffer[0] > 0 && key_sender.send(buffer[0]).is_err() {
                         finish = true;
-                        // }
                     }
                 }
             });

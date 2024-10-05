@@ -16,7 +16,6 @@ pub fn ask_os_for_rows_and_cols() -> (usize, usize) {
     {
         Ok(data) => {
             let output = String::from_utf8(data.stdout);
-            eprintln!("OS tput lines result: {:?}", output);
             if output.is_ok() {
                 let output = output.unwrap();
                 let number = output.trim().parse::<usize>();
@@ -48,7 +47,6 @@ pub fn ask_os_for_rows_and_cols() -> (usize, usize) {
     {
         Ok(data) => {
             let output = String::from_utf8(data.stdout);
-            eprintln!("OS tput cols result: {:?}", output);
             if output.is_ok() {
                 let output = output.unwrap();
                 let number = output.trim().parse::<usize>();
