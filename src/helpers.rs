@@ -10,7 +10,6 @@ pub fn ask_os_for_rows_and_cols() -> (usize, usize) {
         .collect();
     let rows = match Command::new("tput")
         .arg("lines")
-        .env_clear()
         .envs(&filtered_env)
         .output()
     {
@@ -41,7 +40,6 @@ pub fn ask_os_for_rows_and_cols() -> (usize, usize) {
 
     let cols = match Command::new("tput")
         .arg("cols")
-        .env_clear()
         .envs(&filtered_env)
         .output()
     {
