@@ -345,9 +345,9 @@ impl Manager {
         self.sender.clone()
     }
 
-    fn read_bytes(&self, receiver: &Option<mpsc::Receiver<u8>>) -> Option<Vec<u8>> {
+    fn read_bytes(&self) -> Option<Vec<u8>> {
         let mut keys_read: Vec<u8> = Vec::with_capacity(10);
-        if let Some(key_rcvr) = receiver {
+        if let Some(key_rcvr) = &self.key_receiver {
             let mut all_bytes_read = false;
             if let Ok(first_byte) = key_rcvr.recv_timeout(self.key_recv_timeout) {
                 keys_read.push(first_byte);
@@ -391,12 +391,9 @@ impl Manager {
             // Stop a running macro when recording a new one
             self.macros.stop();
         }
-        let k_rcvr = self.key_receiver.take();
-        let read_result = self.read_bytes(&k_rcvr);
-        self.key_receiver = k_rcvr;
+        let read_result = self.read_bytes();
         if let Some(keys_read) = read_result {
             if let Some(key) = map_bytes_to_key(keys_read) {
-                // println!("me: {}", self.macros.enabled);
                 if self.macros.enabled {
                     if self.macros.is_record_key(&key) || self.macros.recording.is_some() {
                         self.macros.record(&key);
@@ -405,7 +402,6 @@ impl Manager {
                         return Some(key);
                     }
                 } else {
-                    // println!("{}", key);
                     return Some(key);
                 }
             }
@@ -415,11 +411,10 @@ impl Manager {
 
     /// Use this method to get a String of what user has entered up to Enter key.
     pub fn read_line(&mut self) -> String {
-        let k_rcvr = self.key_receiver.take();
         let mut all_bytes: Vec<u8> = Vec::with_capacity(128);
         let mut enter_pressed = false;
         while !enter_pressed {
-            if let Some(mut keys_read) = self.read_bytes(&k_rcvr) {
+            if let Some(mut keys_read) = self.read_bytes() {
                 if keys_read.len() == 1 && keys_read[0] == 10 {
                     enter_pressed = true;
                 } else if !keys_read.is_empty() {
@@ -427,33 +422,31 @@ impl Manager {
                 }
             }
         }
-        let _replaced = replace(&mut self.key_receiver, k_rcvr);
         String::from_utf8_lossy(&all_bytes).into_owned()
     }
 
     /// Use this method to get a char of what user has entered on his keyboard.
     pub fn read_char(&mut self) -> Option<char> {
-        let k_rcvr = self.key_receiver.take();
-        k_rcvr.as_ref()?;
-        loop {
-            if let Some(keys_read) = self.read_bytes(&k_rcvr) {
-                if !keys_read.is_empty() {
-                    let _replaced = replace(&mut self.key_receiver, k_rcvr);
-                    let char_str = String::from_utf8_lossy(&keys_read);
-                    let ch_len = char_str.len();
-                    if ch_len > 1 {
-                        let mut ch_iter = char_str.chars();
-                        let first_char = ch_iter.next();
-                        if ch_iter.next().is_none() {
-                            return first_char;
-                        } else {
-                            return map_bytes_to_private_char(keys_read);
-                        }
+        if let Some(keys_read) = self.read_bytes() {
+            if !keys_read.is_empty() {
+                let char_str = String::from_utf8_lossy(&keys_read);
+                let ch_len = char_str.len();
+                if ch_len > 1 {
+                    let mut ch_iter = char_str.chars();
+                    let first_char = ch_iter.next();
+                    if ch_iter.next().is_none() {
+                        first_char
                     } else {
-                        return char_str.chars().next();
+                        map_bytes_to_private_char(keys_read)
                     }
+                } else {
+                    return char_str.chars().next();
                 }
+            } else {
+                None
             }
+        } else {
+            None
         }
     }
 
