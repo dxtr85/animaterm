@@ -12,4 +12,5 @@ pub enum AnimOk {
     GraphicAdded(usize),
     GraphicCreated(Graphic),
     PrintScreen(Vec<String>),
+    FrameSwapped(Vec<Glyph>),
 }

@@ -43,6 +43,7 @@ pub enum Message {
     SetGraphicBackground(usize, Color),
     SetGraphicStyle(usize, Glyph),
     SetInvisible(usize, bool),
+    SwapFrame(usize, usize, Vec<Glyph>),
     MoveGraphic(usize, usize, (isize, isize)),
     MoveCursor(usize, usize),
     DeleteGraphic(usize),
@@ -166,6 +167,16 @@ impl Manager {
                         }
                         Message::SetGlyph(gid, glyph, col, row) => {
                             screen.set_glyph(gid, glyph, col, row);
+                        }
+                        Message::SwapFrame(gid, fid, new_frame) => {
+                            if let Some(old_frame) = screen.swap_frame(gid, fid, new_frame) {
+                                if result_sender
+                                    .send(Result::Ok(AnimOk::FrameSwapped(old_frame)))
+                                    .is_err()
+                                {
+                                    eprintln!("\x1b[97;41;5mERR\x1b[m Failed to swap a Frame");
+                                }
+                            }
                         }
                         Message::GetGlyph(gid, col, row) => {
                             let result = screen.get_glyph(gid, col, row);
@@ -440,7 +451,7 @@ impl Manager {
                         map_bytes_to_private_char(keys_read)
                     }
                 } else {
-                    return char_str.chars().next();
+                    char_str.chars().next()
                 }
             } else {
                 None
@@ -740,6 +751,26 @@ impl Manager {
         };
     }
 
+    /// Change an existing Frame in Graphic's library
+    pub fn swap_frame(
+        &mut self,
+        g_id: usize,
+        f_id: usize,
+        new_frame: Vec<Glyph>,
+    ) -> Option<Vec<Glyph>> {
+        if self
+            .sender
+            .send(Message::SwapFrame(g_id, f_id, new_frame))
+            .is_err()
+        {
+            eprintln!("\x1b[97;41;5mERR\x1b[m Unable to send SwapFrame message")
+        };
+        let result = self.read_result();
+        if let Ok(AnimOk::FrameSwapped(old_frame)) = result {
+            return Some(old_frame);
+        }
+        None
+    }
     /// Delete a graphic from current display.
     pub fn delete_graphic(&self, gid: usize) {
         if self.sender.send(Message::DeleteGraphic(gid)).is_err() {

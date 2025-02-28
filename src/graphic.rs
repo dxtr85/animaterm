@@ -543,4 +543,15 @@ impl Graphic {
         }
         changed
     }
+
+    /// Swap existing frame with a new value, returning old frame on success.
+    pub fn swap_frame(&mut self, frame_id: usize, new_frame: Vec<Glyph>) -> Option<Vec<Glyph>> {
+        if new_frame.len() != self.rows * self.cols {
+            return None;
+        }
+        if !self.library.contains_key(&frame_id) {
+            return None;
+        }
+        self.library.insert(frame_id, new_frame)
+    }
 }

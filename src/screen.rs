@@ -422,6 +422,20 @@ impl Screen {
         }
     }
 
+    /// Swap graphic's Frame to a new value.
+    pub fn swap_frame(
+        &mut self,
+        graphic_id: usize,
+        frame_id: usize,
+        new_frame: Vec<Glyph>,
+    ) -> Option<Vec<Glyph>> {
+        if let Some((graphic, _layer, _offset)) = self.graphics.get_mut(&graphic_id) {
+            graphic.swap_frame(frame_id, new_frame)
+        } else {
+            None
+        }
+    }
+
     /// Add an animation to a graphic.
     pub fn add_animation(&mut self, graphic_id: usize, a: Animation) -> Option<usize> {
         if let Some((mut graphic, layer, offset)) = self.graphics.remove(&graphic_id) {
