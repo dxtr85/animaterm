@@ -170,12 +170,11 @@ impl Manager {
                         }
                         Message::SwapFrame(gid, fid, new_frame) => {
                             if let Some(old_frame) = screen.swap_frame(gid, fid, new_frame) {
-                                if result_sender
-                                    .send(Result::Ok(AnimOk::FrameSwapped(old_frame)))
-                                    .is_err()
-                                {
-                                    eprintln!("\x1b[97;41;5mERR\x1b[m Failed to swap a Frame");
-                                }
+                                let _ =
+                                    result_sender.send(Result::Ok(AnimOk::FrameSwapped(old_frame)));
+                            } else {
+                                let _ = result_sender
+                                    .send(Result::Err(AnimError::FailAddingFrame(fid)));
                             }
                         }
                         Message::GetGlyph(gid, col, row) => {
